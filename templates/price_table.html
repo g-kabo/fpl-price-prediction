@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FPL Price Miss Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@600&display=swap">
+<style>
+:root {
+  color-scheme: light;
+  --ground:        #fbfbfc;
+  --surface:       #ffffff;
+  --surface-sunk:  #f4f5f7;
+  --surface-hi:    #eef1f6;
+  --line:          #e0e2e7;
+  --line-strong:   #c8ccd4;
+  --ink:           #111214;
+  --ink-2:         #5a5d63;
+  --ink-3:         #868b93;
+  --accent:        #2a78d6;
+  --second:        #eb6834;
+  --warm:          #e34948;
+  --cool:          #2a78d6;
+  --warm-wash:     #fbe9e9;
+  --cool-wash:     #e4eefb;
+  --shadow:        0 1px 2px rgba(17,18,20,.05), 0 8px 24px -18px rgba(17,18,20,.3);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ground:       #17181a;
+    --surface:      #1e1f22;
+    --surface-sunk: #232529;
+    --surface-hi:   #2a2d33;
+    --line:         #2e3034;
+    --line-strong:  #43464c;
+    --ink:          #f2f3f5;
+    --ink-2:        #a8acb4;
+    --ink-3:        #7d828b;
+    --accent:       #3987e5;
+    --second:       #d95926;
+    --warm:         #e66767;
+    --cool:         #3987e5;
+    --warm-wash:    #3a2224;
+    --cool-wash:    #16263c;
+    --shadow:       0 1px 2px rgba(0,0,0,.4), 0 8px 24px -18px rgba(0,0,0,.85);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ground:       #17181a;
+  --surface:      #1e1f22;
+  --surface-sunk: #232529;
+  --surface-hi:   #2a2d33;
+  --line:         #2e3034;
+  --line-strong:  #43464c;
+  --ink:          #f2f3f5;
+  --ink-2:        #a8acb4;
+  --ink-3:        #7d828b;
+  --accent:       #3987e5;
+  --second:       #d95926;
+  --warm:         #e66767;
+  --cool:         #3987e5;
+  --warm-wash:    #3a2224;
+  --cool-wash:    #16263c;
+  --shadow:       0 1px 2px rgba(0,0,0,.4), 0 8px 24px -18px rgba(0,0,0,.85);
+}
+
+* { box-sizing: border-box; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+  padding-inline: 20px;
+  padding-block: 0 56px;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1180px; margin: 0 auto; }
+
+/* ---------- header ---------- */
+header { padding-block: 40px 22px; }
+.kicker {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11px; letter-spacing: .13em; text-transform: uppercase;
+  color: var(--ink-3); margin: 0 0 11px;
+}
+h1 {
+  font-family: "IBM Plex Serif", Georgia, serif; font-weight: 600;
+  font-size: clamp(25px, 4vw, 34px); line-height: 1.1; letter-spacing: -.016em;
+  margin: 0 0 10px; text-wrap: balance;
+}
+.lede { color: var(--ink-2); max-width: 66ch; margin: 0; font-size: 14.5px; }
+.lede code {
+  font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .88em;
+  background: var(--surface-sunk); padding: 1px 5px; border-radius: 2px; color: var(--ink);
+}
+
+/* ---------- controls ---------- */
+.toolbar {
+  position: sticky; top: 0; z-index: 20; background: var(--ground);
+  padding-block: 14px 12px; border-bottom: 1px solid var(--line);
+}
+.control-row { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field > label {
+  font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 10px;
+  letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3);
+}
+input[type="search"], select {
+  font-family: inherit; font-size: 13.5px; color: var(--ink);
+  background: var(--surface); border: 1px solid var(--line-strong);
+  border-radius: 3px; padding: 7px 10px; min-height: 34px;
+}
+input[type="search"] { width: 220px; }
+input[type="search"]::placeholder { color: var(--ink-3); }
+select { min-width: 150px; cursor: pointer; }
+.seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 3px; overflow: hidden; }
+.seg button {
+  font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11px; letter-spacing: .05em;
+  background: var(--surface); color: var(--ink-2); border: 0;
+  border-right: 1px solid var(--line); padding: 0 12px; min-height: 34px;
+  cursor: pointer; text-transform: uppercase;
+}
+.seg button:last-child { border-right: 0; }
+.seg button:hover { background: var(--surface-sunk); color: var(--ink); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--ground); }
+.btn {
+  font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11px;
+  letter-spacing: .05em; text-transform: uppercase; cursor: pointer;
+  background: var(--surface); color: var(--ink-2); border: 1px solid var(--line-strong);
+  border-radius: 3px; padding: 0 12px; min-height: 34px;
+}
+.btn:hover { background: var(--surface-sunk); color: var(--ink); }
+.btn[disabled] { opacity: .45; cursor: default; }
+button:focus-visible, input:focus-visible, select:focus-visible, th:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+.spacer { flex: 1 1 auto; }
+#copy-status {
+  font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11px;
+  color: var(--ink-3); min-width: 1px;
+}
+
+/* ---------- summary ---------- */
+.summary {
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 1px;
+  background: var(--line); border: 1px solid var(--line); margin-top: 16px;
+}
+.stat { background: var(--surface); padding: 11px 13px 10px; }
+.stat-label {
+  font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 9.5px;
+  letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3); margin: 0 0 6px;
+}
+.stat-value {
+  font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 19px;
+  font-weight: 500; line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums;
+}
+.stat-value.warm { color: var(--warm); }
+.stat-value.cool { color: var(--cool); }
+
+/* ---------- table ---------- */
+/* The wrapper is deliberately a scroll container on BOTH axes. Setting only
+   overflow-x makes the browser compute overflow-y to auto anyway, and a
+   sticky thead then pins to this element rather than the viewport — which
+   leaves the header floating in the middle of the page. Owning the vertical
+   scroll here instead means the header sticks to the top of this panel,
+   which is what it should do. */
+.table-wrap {
+  margin-top: 18px; border: 1px solid var(--line); border-radius: 3px;
+  background: var(--surface); box-shadow: var(--shadow);
+  overflow: auto; max-height: min(74vh, 920px); overscroll-behavior: contain;
+}
+table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 13px;
+  font-variant-numeric: tabular-nums; }
+thead th {
+  position: sticky; top: 0; z-index: 10; background: var(--surface-sunk);
+  font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 10px;
+  font-weight: 500; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3);
+  text-align: right; white-space: nowrap; padding: 10px 11px;
+  cursor: pointer; user-select: none;
+  /* A sticky cell does not carry its own border reliably once it detaches,
+     so the rule under the header is drawn as a shadow instead. */
+  box-shadow: inset 0 -1px 0 var(--line-strong);
+}
+thead th:first-child, tbody td:first-child { text-align: left; }
+thead th:last-child, tbody td:last-child { text-align: left; cursor: default; }
+thead th:hover { color: var(--ink); background: var(--surface-hi); }
+thead th .arrow { opacity: 0; margin-left: 4px; }
+thead th[aria-sort] { color: var(--ink); }
+thead th[aria-sort] .arrow { opacity: 1; }
+tbody td { padding: 7px 11px; text-align: right; white-space: nowrap;
+  border-bottom: 1px solid var(--line); font-family: "IBM Plex Mono", ui-monospace, monospace; }
+tbody td:first-child { font-family: "IBM Plex Sans", sans-serif; font-weight: 500; }
+tbody td.club, tbody td.flags { font-family: "IBM Plex Sans", sans-serif; }
+tbody tr:hover td { background: var(--surface-sunk); }
+tbody tr:last-child td { border-bottom: 0; }
+.miss { font-weight: 600; padding-inline: 8px; border-radius: 2px; }
+.miss.warm { color: var(--warm); background: var(--warm-wash); }
+.miss.cool { color: var(--cool); background: var(--cool-wash); }
+.miss.flat { color: var(--ink-3); }
+.pos {
+  font-size: 10.5px; letter-spacing: .06em; color: var(--ink-2);
+  border: 1px solid var(--line-strong); border-radius: 2px; padding: 1px 5px;
+}
+.pill {
+  display: inline-block; font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 9.5px; letter-spacing: .05em; text-transform: uppercase;
+  padding: 1.5px 5px; border-radius: 2px; border: 1px solid var(--line-strong);
+  color: var(--ink-2); background: var(--surface-sunk); margin-right: 3px;
+}
+.pill.alert { border-color: var(--warm); color: var(--warm); background: transparent; }
+.dim { color: var(--ink-3); }
+.empty { padding: 46px 20px; text-align: center; color: var(--ink-3); }
+.empty strong { display: block; color: var(--ink-2); margin-bottom: 5px; font-size: 15px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+footer { margin-top: 24px; font-size: 12px; color: var(--ink-3); }
+footer code { font-family: "IBM Plex Mono", ui-monospace, monospace;
+  background: var(--surface-sunk); padding: 1px 5px; border-radius: 2px; }
+
+@media (max-width: 900px) {
+  .summary { grid-template-columns: repeat(3, 1fr); }
+  /* The toolbar wraps to several rows at this width and would eat most of a
+     short viewport, so it scrolls away and the table panel takes the height. */
+  .toolbar { position: static; }
+  .table-wrap { max-height: min(78vh, 920px); }
+}
+@media (max-width: 520px) {
+  .summary { grid-template-columns: repeat(2, 1fr); }
+  input[type="search"] { width: 100%; }
+  .field { flex: 1 1 100%; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<header>
+  <p class="kicker">FPL price model &middot; <span id="season-label">2026-27</span> backtest</p>
+  <h1>Every price the model got wrong</h1>
+  <p class="lede">
+    Every player scored in the backtest, generated from <code id="source-label">notable.csv</code>.
+    Sort any column, filter by position or by the groups the report highlights, and the statistics
+    above the table recompute for whatever is on screen.
+  </p>
+</header>
+
+<div class="toolbar">
+  <div class="control-row">
+    <div class="field">
+      <label for="q">Search</label>
+      <input type="search" id="q" placeholder="Player or club&hellip;" autocomplete="off">
+    </div>
+    <div class="field">
+      <label id="pos-label">Position</label>
+      <div class="seg" role="group" aria-labelledby="pos-label" id="pos">
+        <button type="button" data-v="ALL" aria-pressed="true">All</button>
+        <button type="button" data-v="GK" aria-pressed="false">GK</button>
+        <button type="button" data-v="DEF" aria-pressed="false">DEF</button>
+        <button type="button" data-v="MID" aria-pressed="false">MID</button>
+        <button type="button" data-v="FWD" aria-pressed="false">FWD</button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="group">Group</label>
+      <select id="group">
+        <option value="">All players</option>
+        <option value="over">Biggest over-predictions</option>
+        <option value="under">Biggest under-predictions</option>
+        <option value="repositioned">Reclassified by FPL</option>
+        <option value="missed interval">Missed the interval</option>
+        <option value="best call">Best calls</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="miss">Minimum miss</label>
+      <select id="miss">
+        <option value="0">Any</option>
+        <option value="0.25">&plusmn; &pound;0.25m or more</option>
+        <option value="0.5">&plusmn; &pound;0.50m or more</option>
+        <option value="0.75">&plusmn; &pound;0.75m or more</option>
+        <option value="1">&plusmn; &pound;1.00m or more</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="flag">Flag</label>
+      <select id="flag">
+        <option value="">Any</option>
+        <option value="outside interval">Outside interval</option>
+        <option value="moved club">Moved club</option>
+        <option value="-&gt;">Changed position</option>
+        <option value="none">No flags</option>
+      </select>
+    </div>
+    <div class="spacer"></div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <div style="display:flex; gap:8px; align-items:center">
+        <button type="button" class="btn" id="download">Download CSV</button>
+        <button type="button" class="btn" id="copy">Copy rows</button>
+        <button type="button" class="btn" id="reset">Reset</button>
+        <span id="copy-status" role="status" aria-live="polite"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="summary" id="summary"></div>
+
+<div class="table-wrap">
+  <table id="tbl">
+    <caption class="sr-only">Predicted against actual starting prices</caption>
+    <thead id="thead"></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  <div class="empty" id="empty" hidden>
+    <strong>Nothing matches those filters.</strong>
+    Try clearing the search box or widening the minimum miss.
+  </div>
+</div>
+
+<footer>
+  <p>Miss is signed: <strong>positive</strong> means FPL priced the player above the model,
+    <strong>negative</strong> means the model asked more than FPL did. Prices in &pound;m.
+    Minutes and points are the scored season&rsquo;s totals &mdash; the model&rsquo;s inputs.
+    Regenerate this file with <code>python report.py</code>.</p>
+</footer>
+
+</div>
+
+<script>
+window.__TABLE = /*__DATA__*/;
+</script>
+<script>
+(function () {
+  "use strict";
+  const T = window.__TABLE;
+  if (!T) return;
+
+  const I = { NAME: 0, CLUB: 1, POS: 2, MINS: 3, PTS: 4, START: 5, PRED: 6, ACT: 7, MISS: 8, FLAGS: 9, GROUPS: 10 };
+  const COLS = [
+    { key: I.NAME,  label: "Player",    type: "text" },
+    { key: I.CLUB,  label: "Club",      type: "text" },
+    { key: I.POS,   label: "Pos",       type: "text" },
+    { key: I.MINS,  label: "Mins",      type: "num" },
+    { key: I.PTS,   label: "Pts",       type: "num" },
+    { key: I.START, label: "Prev",      type: "num" },
+    { key: I.PRED,  label: "Predicted", type: "num" },
+    { key: I.ACT,   label: "Actual",    type: "num" },
+    { key: I.MISS,  label: "Miss",      type: "num" },
+    { key: I.FLAGS, label: "Flags",     type: "none" }
+  ];
+
+  document.getElementById("season-label").textContent = T.season;
+  document.getElementById("source-label").textContent = T.source;
+  COLS[I.START].label = T.prevSeasonLabel || "Prev";
+
+  const rows = T.rows;
+  const money = v => "£" + v.toFixed(2);
+  const signed = v => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(2);
+  const esc = s => String(s).replace(/[&<>"]/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  const state = { q: "", pos: "ALL", group: "", miss: 0, flag: "", sort: I.MISS, dir: "desc" };
+
+  /* ---------- header ---------- */
+  const thead = document.getElementById("thead");
+  thead.innerHTML = "<tr>" + COLS.map((c, i) =>
+    '<th scope="col" data-i="' + i + '"' +
+    (c.type === "none" ? "" : ' tabindex="0" role="button"') +
+    ">" + c.label + '<span class="arrow">↓</span></th>').join("") + "</tr>";
+
+  function headerSort(e) {
+    const th = e.target.closest("th");
+    if (!th) return;
+    const col = COLS[+th.dataset.i];
+    if (!col || col.type === "none") return;
+    if (state.sort === col.key) {
+      state.dir = state.dir === "desc" ? "asc" : "desc";
+    } else {
+      state.sort = col.key;
+      state.dir = col.type === "num" ? "desc" : "asc";
+    }
+    render();
+  }
+  thead.addEventListener("click", headerSort);
+  thead.addEventListener("keydown", e => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); headerSort(e); }
+  });
+
+  /* ---------- filtering ---------- */
+  function filtered() {
+    const q = state.q.trim().toLowerCase();
+    return rows.filter(r => {
+      if (q && !(r[I.NAME].toLowerCase().includes(q) || r[I.CLUB].toLowerCase().includes(q)))
+        return false;
+      if (state.pos !== "ALL" && r[I.POS] !== state.pos) return false;
+      if (state.group && r[I.GROUPS].indexOf(state.group) === -1) return false;
+      if (state.miss && Math.abs(r[I.MISS]) < state.miss) return false;
+      if (state.flag === "none") { if (r[I.FLAGS].length) return false; }
+      else if (state.flag === "->") {
+        if (!r[I.FLAGS].some(f => f.indexOf("->") !== -1)) return false;
+      } else if (state.flag) {
+        if (r[I.FLAGS].indexOf(state.flag) === -1) return false;
+      }
+      return true;
+    });
+  }
+
+  function sorted(list) {
+    const k = state.sort, mul = state.dir === "asc" ? 1 : -1;
+    const isText = typeof rows[0][k] === "string";
+    return list.slice().sort((a, b) => {
+      // Miss sorts by magnitude, so "biggest miss" works in one click either way.
+      if (k === I.MISS) return (Math.abs(a[k]) - Math.abs(b[k])) * mul;
+      if (isText) return a[k].localeCompare(b[k]) * mul;
+      return (a[k] - b[k]) * mul;
+    });
+  }
+
+  /* ---------- summary ---------- */
+  function summarise(list) {
+    const host = document.getElementById("summary");
+    if (!list.length) {
+      host.innerHTML = '<div class="stat"><p class="stat-label">Players</p>' +
+        '<div class="stat-value">0</div></div>';
+      return;
+    }
+    const n = list.length;
+    const errs = list.map(r => r[I.MISS]);
+    const rmse = Math.sqrt(errs.reduce((s, e) => s + e * e, 0) / n);
+    const mae = errs.reduce((s, e) => s + Math.abs(e), 0) / n;
+    const bias = errs.reduce((s, e) => s + e, 0) / n;
+    const within = errs.filter(e => Math.abs(e) <= 0.25).length / n;
+    const naive = Math.sqrt(list.reduce((s, r) =>
+      s + Math.pow(r[I.START] - r[I.ACT], 2), 0) / n);
+    const gain = naive ? 1 - rmse / naive : 0;
+
+    host.innerHTML = [
+      { l: "Players shown", v: n + (n === rows.length ? "" : " / " + rows.length), c: "" },
+      { l: "RMSE", v: "£" + rmse.toFixed(3) + "m", c: "" },
+      { l: "Mean miss", v: "£" + mae.toFixed(3) + "m", c: "" },
+      { l: "Bias", v: signed(bias), c: bias > 0.02 ? "warm" : bias < -0.02 ? "cool" : "" },
+      { l: "Within £0.25m", v: (within * 100).toFixed(1) + "%", c: "" },
+      { l: "vs carry-forward", v: (gain * 100).toFixed(1) + "%", c: gain > 0 ? "cool" : "warm" }
+    ].map(s => '<div class="stat"><p class="stat-label">' + s.l + "</p>" +
+      '<div class="stat-value ' + s.c + '">' + s.v + "</div></div>").join("");
+  }
+
+  /* ---------- render ---------- */
+  let visible = [];
+  function render() {
+    const list = sorted(filtered());
+    visible = list;
+    summarise(list);
+
+    document.querySelectorAll("#thead th").forEach(th => {
+      const col = COLS[+th.dataset.i];
+      if (col && col.key === state.sort && col.type !== "none") {
+        th.setAttribute("aria-sort", state.dir === "asc" ? "ascending" : "descending");
+        th.querySelector(".arrow").textContent = state.dir === "asc" ? "↑" : "↓";
+      } else {
+        th.removeAttribute("aria-sort");
+      }
+    });
+
+    const tbody = document.getElementById("tbody");
+    document.getElementById("empty").hidden = list.length > 0;
+    tbody.innerHTML = list.map(r => {
+      const m = r[I.MISS];
+      const cls = Math.abs(m) <= 0.25 ? "flat" : m > 0 ? "warm" : "cool";
+      const flags = r[I.FLAGS].length
+        ? r[I.FLAGS].map(f => '<span class="pill' +
+            (f === "moved club" ? "" : " alert") + '">' + esc(f) + "</span>").join("")
+        : '<span class="dim">—</span>';
+      return "<tr>" +
+        "<td>" + esc(r[I.NAME]) + "</td>" +
+        '<td class="club">' + esc(r[I.CLUB]) + "</td>" +
+        '<td><span class="pos">' + r[I.POS] + "</span></td>" +
+        "<td>" + r[I.MINS].toLocaleString("en-GB") + "</td>" +
+        "<td>" + r[I.PTS] + "</td>" +
+        '<td class="dim">' + money(r[I.START]) + "</td>" +
+        "<td>" + money(r[I.PRED]) + "</td>" +
+        "<td>" + money(r[I.ACT]) + "</td>" +
+        '<td><span class="miss ' + cls + '">' + signed(m) + "</span></td>" +
+        '<td class="flags">' + flags + "</td>" +
+      "</tr>";
+    }).join("");
+  }
+
+  /* ---------- controls ---------- */
+  const q = document.getElementById("q");
+  q.addEventListener("input", () => { state.q = q.value; render(); });
+  document.getElementById("pos").addEventListener("click", e => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    state.pos = b.dataset.v;
+    b.parentElement.querySelectorAll("button").forEach(x =>
+      x.setAttribute("aria-pressed", String(x === b)));
+    render();
+  });
+  const group = document.getElementById("group");
+  group.addEventListener("change", () => { state.group = group.value; render(); });
+  const miss = document.getElementById("miss");
+  miss.addEventListener("change", () => { state.miss = parseFloat(miss.value); render(); });
+  const flag = document.getElementById("flag");
+  flag.addEventListener("change", () => { state.flag = flag.value; render(); });
+
+  document.getElementById("reset").addEventListener("click", () => {
+    state.q = ""; state.pos = "ALL"; state.group = ""; state.miss = 0; state.flag = "";
+    state.sort = I.MISS; state.dir = "desc";
+    q.value = ""; group.value = ""; miss.value = "0"; flag.value = "";
+    document.querySelectorAll("#pos button").forEach(b =>
+      b.setAttribute("aria-pressed", String(b.dataset.v === "ALL")));
+    render();
+  });
+
+  /* ---------- export ---------- */
+  const status = document.getElementById("copy-status");
+  function say(msg) {
+    status.textContent = msg;
+    window.setTimeout(() => { status.textContent = ""; }, 2600);
+  }
+  function tabular(sep, quote) {
+    const cell = v => {
+      const s = String(v);
+      return quote && /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    const header = COLS.map(c => cell(c.label)).join(sep);
+    const body = visible.map(r => [
+      r[I.NAME], r[I.CLUB], r[I.POS], r[I.MINS], r[I.PTS],
+      r[I.START].toFixed(2), r[I.PRED].toFixed(2), r[I.ACT].toFixed(2),
+      r[I.MISS].toFixed(2), r[I.FLAGS].join("; ")
+    ].map(cell).join(sep)).join("\n");
+    return header + "\n" + body;
+  }
+
+  document.getElementById("download").addEventListener("click", () => {
+    if (!visible.length) { say("nothing to export"); return; }
+    // A BOM keeps Excel on Windows from mangling the accented names.
+    const blob = new Blob(["﻿" + tabular(",", true)],
+      { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "price_misses_" + T.season.replace("-", "_") + "_filtered.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    say(visible.length + " rows downloaded");
+  });
+
+  document.getElementById("copy").addEventListener("click", async () => {
+    if (!visible.length) { say("nothing to copy"); return; }
+    const text = tabular("\t", false);
+    try {
+      await navigator.clipboard.writeText(text);
+      say(visible.length + " rows copied");
+      return;
+    } catch (err) { /* fall through to the legacy path */ }
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      say(ok ? visible.length + " rows copied" : "copy blocked by the browser");
+    } catch (err) {
+      say("copy blocked by the browser");
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

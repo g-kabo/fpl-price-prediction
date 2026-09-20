@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# Trained model artefact — 6 MB binary, regenerate with train_and_save.py
+models/*.joblib
+
+# Pipeline outputs — regenerate with run_pipeline.py / backtest.py
+output/
+
+# Editor / OS
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini

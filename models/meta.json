@@ -1,0 +1,287 @@
+{
+  "score_season": 2025,
+  "predict_season": 2026,
+  "train_through": 2024,
+  "training_rows": 3812,
+  "n_predictors": 39,
+  "columns": [
+    "start_cost",
+    "cost_change_start",
+    "total_points",
+    "minutes",
+    "transfers_in",
+    "transfers_out",
+    "goals_scored",
+    "assists",
+    "bps",
+    "clean_sheets",
+    "points_per_game",
+    "value_season",
+    "goals_per_min",
+    "assists_per_min",
+    "bps_per_min",
+    "points_per_mins",
+    "cleansheets_per_min",
+    "no_mins",
+    "element_type_DEF",
+    "element_type_MID",
+    "element_type_FWD",
+    "team_name_Arsenal",
+    "team_name_Aston_Villa",
+    "team_name_Bournemouth",
+    "team_name_Brentford",
+    "team_name_Brighton",
+    "team_name_Burnley",
+    "team_name_Chelsea",
+    "team_name_Crystal_Palace",
+    "team_name_Everton",
+    "team_name_Leicester",
+    "team_name_Liverpool",
+    "team_name_Man_City",
+    "team_name_Man_Utd",
+    "team_name_Newcastle",
+    "team_name_Southampton",
+    "team_name_Spurs",
+    "team_name_West_Ham",
+    "team_name_Wolves"
+  ],
+  "teams_retained": [
+    "Arsenal",
+    "Aston Villa",
+    "Bournemouth",
+    "Brentford",
+    "Brighton",
+    "Burnley",
+    "Chelsea",
+    "Crystal Palace",
+    "Everton",
+    "Leicester",
+    "Liverpool",
+    "Man City",
+    "Man Utd",
+    "Newcastle",
+    "Southampton",
+    "Spurs",
+    "West Ham",
+    "Wolves"
+  ],
+  "rsquared_adj": 0.9385275865166005,
+  "sigma": 0.30827883721562566,
+  "ranges": {
+    "start_cost": {
+      "min": 3.9999999999999996,
+      "median": 5.0,
+      "max": 15.0
+    },
+    "cost_change_start": {
+      "min": -1.0,
+      "median": -0.1,
+      "max": 1.6
+    },
+    "total_points": {
+      "min": -1.0,
+      "median": 48.0,
+      "max": 344.0
+    },
+    "minutes": {
+      "min": 0.0,
+      "median": 1231.0,
+      "max": 3420.0
+    },
+    "transfers_in": {
+      "min": 0.0,
+      "median": 89660.5,
+      "max": 10811759.0
+    },
+    "transfers_out": {
+      "min": 0.0,
+      "median": 113948.0,
+      "max": 9878367.0
+    },
+    "goals_scored": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 36.0
+    },
+    "assists": {
+      "min": 0.0,
+      "median": 1.0,
+      "max": 23.0
+    },
+    "bps": {
+      "min": -3.0,
+      "median": 216.0,
+      "max": 1133.0
+    },
+    "clean_sheets": {
+      "min": 0.0,
+      "median": 3.0,
+      "max": 21.0
+    },
+    "points_per_game": {
+      "min": 0.0,
+      "median": 2.3,
+      "max": 9.1
+    },
+    "value_season": {
+      "min": -0.2,
+      "median": 9.8,
+      "max": 38.7
+    },
+    "goals_per_min": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 0.030303030303030304
+    },
+    "assists_per_min": {
+      "min": 0.0,
+      "median": 0.00030864197530864197,
+      "max": 0.25
+    },
+    "bps_per_min": {
+      "min": -0.15384615384615385,
+      "median": 0.17671233805429976,
+      "max": 5.0
+    },
+    "points_per_mins": {
+      "min": 0.0,
+      "median": 0.03888888888888889,
+      "max": 1.0
+    },
+    "cleansheets_per_min": {
+      "min": 0.0,
+      "median": 0.0025222283399923724,
+      "max": 0.01639344262295082
+    },
+    "no_mins": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 1.0
+    },
+    "element_type_DEF": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 1.0
+    },
+    "element_type_MID": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 1.0
+    },
+    "element_type_FWD": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 1.0
+    },
+    "team_name_Arsenal": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 1.0
+    },
+    "team_name_Aston_Villa": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 1.0
+    },
+    "team_name_Bournemouth": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 1.0
+    },
+    "team_name_Brentford": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 1.0
+    },
+    "team_name_Brighton": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 1.0
+    },
+    "team_name_Burnley": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 1.0
+    },
+    "team_name_Chelsea": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 1.0
+    },
+    "team_name_Crystal_Palace": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 1.0
+    },
+    "team_name_Everton": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 1.0
+    },
+    "team_name_Leicester": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 1.0
+    },
+    "team_name_Liverpool": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 1.0
+    },
+    "team_name_Man_City": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 1.0
+    },
+    "team_name_Man_Utd": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 1.0
+    },
+    "team_name_Newcastle": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 1.0
+    },
+    "team_name_Southampton": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 1.0
+    },
+    "team_name_Spurs": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 1.0
+    },
+    "team_name_West_Ham": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 1.0
+    },
+    "team_name_Wolves": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 1.0
+    }
+  },
+  "source_mtimes": {
+    "config.py": 1789849874.081195,
+    "clean.py": 1789173690.5519168,
+    "features.py": 1789173489.0368733,
+    "model.py": 1789175425.2568333,
+    "data/master_team_list.csv": 1789173561.0408077,
+    "data/players_raw_2017-18.csv": 1789173561.901663,
+    "data/players_raw_2018-19.csv": 1789173562.1759582,
+    "data/players_raw_2019-20.csv": 1789173562.4379733,
+    "data/players_raw_2020-21.csv": 1789173562.7636118,
+    "data/players_raw_2021-22.csv": 1789173563.039099,
+    "data/players_raw_2022-23.csv": 1789173563.2934766,
+    "data/players_raw_2023-24.csv": 1789173563.568386,
+    "data/players_raw_2024-25.csv": 1789173563.8274105,
+    "data/players_raw_2025-26.csv": 1789173564.1357,
+    "data/players_raw_2026-27.csv": 1789173564.400387,
+    "data/teams_2024-25.csv": 1789173561.2229166,
+    "data/teams_2025-26.csv": 1789173561.4262664,
+    "data/teams_2026-27.csv": 1789173561.6354928
+  }
+}

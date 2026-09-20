@@ -1,0 +1,299 @@
+/* Visual layer for the price-prediction app.
+   Dash serves anything in assets/ automatically, so this loads after
+   Bootstrap and can override it without !important in most places. */
+
+:root {
+  --ink:        #1a1d21;
+  --ink-soft:   #5c636a;
+  --ink-faint:  #868e96;
+  --line:       #e3e6ea;
+  --ground:     #f4f6f8;
+  --accent:     #2b5cd9;
+  --accent-bg:  #eaf0fd;
+  --rise:       #0f7b4a;
+  --fall:       #c92a3d;
+}
+
+body {
+  background: var(--ground);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- navbar ---------------------------------------------------- */
+
+.navbar-brand {
+  color: var(--ink) !important;
+  letter-spacing: -0.01em;
+}
+
+/* Bootstrap's pill styling only colours the active item; the resting and
+   hover states are ours, so inactive links read as clickable rather than
+   as dead text. */
+.navbar .nav-pill {
+  color: var(--ink-soft);
+  font-weight: 500;
+  font-size: 0.92rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 6px;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.navbar .nav-pill:hover {
+  color: var(--ink);
+  background: var(--ground);
+}
+
+.navbar .nav-pill.active {
+  color: var(--accent) !important;
+  background: var(--accent-bg) !important;
+  font-weight: 600;
+}
+
+.model-stamp {
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+}
+
+/* ---------- page furniture -------------------------------------------- */
+
+h4 {
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+}
+
+.card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+hr {
+  border-color: var(--line);
+  opacity: 1;
+}
+
+/* ---------- form ------------------------------------------------------- */
+
+.form-label {
+  color: var(--ink);
+  font-size: 0.8rem;
+  letter-spacing: 0.005em;
+}
+
+.form-control,
+.form-select {
+  border-color: var(--line);
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(43, 92, 217, 0.12);
+}
+
+/* Spinners on twelve number inputs is visual noise; the fields are typed
+   into or prefilled, never nudged one at a time. */
+.form-control[type="number"]::-webkit-outer-spin-button,
+.form-control[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.form-control[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* ---------- result card ------------------------------------------------ */
+
+.result-card {
+  position: sticky;
+  top: 5rem;
+}
+
+.result-label {
+  color: var(--ink-faint);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+/* The headline price is the one number the page exists to show, so it gets
+   tabular figures and tight tracking to read as a figure, not a word. */
+.result-price {
+  font-size: 2.9rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.035em;
+  color: var(--ink);
+}
+
+/* The interval drawn rather than only printed. The track is the 95% range,
+   the filled dot is the point estimate, and the vertical tick is today's
+   price -- so "is the model saying up or down, and how sure is it?" is one
+   glance instead of three numbers compared in your head. */
+.interval-bar {
+  position: relative;
+  height: 12px;
+}
+
+.interval-track {
+  position: absolute;
+  inset: 4px 0;
+  background: linear-gradient(90deg, var(--line), #c9d4ea, var(--line));
+  border-radius: 2px;
+}
+
+.interval-marker {
+  position: absolute;
+  top: 0;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px #fff, 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.interval-current {
+  position: absolute;
+  top: -2px;
+  width: 2px;
+  height: 16px;
+  margin-left: -1px;
+  background: var(--ink-faint);
+  border-radius: 1px;
+}
+
+.interval-ends {
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.interval-caption {
+  color: var(--ink-faint);
+  font-size: 0.68rem;
+}
+
+.text-success { color: var(--rise) !important; }
+.text-danger  { color: var(--fall) !important; }
+
+/* ---------- derived panel ---------------------------------------------- */
+
+.bg-light {
+  background: #fafbfc !important;
+  border-color: var(--line) !important;
+}
+
+/* ---------- tables ------------------------------------------------------ */
+
+.table {
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 0;
+}
+
+.table > thead th {
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.table > :not(caption) > * > * {
+  padding: 0.4rem 0.6rem;
+}
+
+/* Dash DataTable ships its own markup, so it needs its own rules. */
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.72rem !important;
+  color: var(--ink-soft);
+}
+
+.dash-table-container .dash-cell {
+  font-variant-numeric: tabular-nums;
+}
+
+.dash-table-container input.dash-filter--case {
+  display: none;
+}
+
+/* ---------- dropdowns --------------------------------------------------- */
+
+.Select-control,
+.dash-dropdown .Select-control {
+  border-color: var(--line) !important;
+  border-radius: 6px !important;
+}
+
+.is-focused:not(.is-open) > .Select-control {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px rgba(43, 92, 217, 0.12) !important;
+}
+
+/* Club multi-select. Twenty clubs selected would otherwise stack twenty
+   chips and shove the controls row down the page, so the control keeps a
+   two-row height and scrolls past that. */
+.proj-clubs .Select-control {
+  max-height: 62px;
+  overflow-y: auto;
+}
+
+.proj-clubs .Select-value {
+  background: var(--accent-bg) !important;
+  border-color: rgba(43, 92, 217, 0.25) !important;
+  color: var(--accent) !important;
+  font-size: 0.78rem;
+}
+
+.proj-clubs .Select-value-icon {
+  border-right-color: rgba(43, 92, 217, 0.25) !important;
+}
+
+.proj-clubs .Select-placeholder {
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+}
+
+/* X-axis selector; it belongs to the chart, so it reads as chart chrome
+   rather than as another page control. */
+.proj-xaxis .form-check-label {
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+}
+
+.proj-xaxis .form-check-input:checked {
+  background-color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* The contribution table shares its row with the waterfall, so it gets a
+   narrower column than it used to have to itself. */
+.contribution-table {
+  font-size: 0.78rem;
+}
+
+.contribution-table td,
+.contribution-table th {
+  padding: 0.3rem 0.4rem;
+  vertical-align: middle;
+}
+
+/* ---------- alerts ------------------------------------------------------ */
+
+.alert {
+  border-radius: 8px;
+  border-width: 1px;
+}
+
+.alert-light {
+  background: #fff;
+  border-color: var(--line);
+  color: var(--ink-soft);
+}
