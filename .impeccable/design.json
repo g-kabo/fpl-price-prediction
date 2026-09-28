@@ -1,0 +1,616 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-28T19:21:31+00:00",
+  "title": "Design System: FPL Price Prediction",
+  "extensions": {
+    "colorMeta": {
+      "aubergine": {
+        "role": "primary",
+        "displayName": "Transfer-Market Aubergine",
+        "canonical": "#2b0033",
+        "tonalRamp": [
+          "#18001d",
+          "#3a0e42",
+          "#592d62",
+          "#7b4d84",
+          "#9e6ea7",
+          "#c290cb",
+          "#e7b4f1",
+          "#fae7fe"
+        ]
+      },
+      "aubergine-2": {
+        "role": "primary",
+        "displayName": "Raised Aubergine",
+        "canonical": "#3b0a47",
+        "tonalRamp": [
+          "#17001e",
+          "#3a0946",
+          "#5a2b67",
+          "#7c4b89",
+          "#9f6cad",
+          "#c38ed2",
+          "#e8b2f8",
+          "#f9e8fe"
+        ]
+      },
+      "aubergine-3": {
+        "role": "primary",
+        "displayName": "Plum Link",
+        "canonical": "#57206a",
+        "tonalRamp": [
+          "#16001f",
+          "#3a054b",
+          "#5c256f",
+          "#7e4692",
+          "#a168b6",
+          "#c58adc",
+          "#e8b1fe",
+          "#f8e8fe"
+        ]
+      },
+      "on-dark": {
+        "role": "neutral",
+        "displayName": "On-dark",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "on-dark-soft": {
+        "role": "neutral",
+        "displayName": "On-dark Soft",
+        "canonical": "#dccbe3",
+        "tonalRamp": [
+          "#110616",
+          "#2c1f31",
+          "#4a3c50",
+          "#6a5b70",
+          "#8b7c92",
+          "#af9eb5",
+          "#d3c2da",
+          "#f8e8ff"
+        ]
+      },
+      "cyan": {
+        "role": "secondary",
+        "displayName": "Floodlight Cyan",
+        "canonical": "#05e2ff",
+        "tonalRamp": [
+          "#000e11",
+          "#012b31",
+          "#074b55",
+          "#126d7b",
+          "#0a92a6",
+          "#14b9d1",
+          "#02e1fe",
+          "#d0f7fe"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Aubergine Ink",
+        "canonical": "#1b0a21",
+        "tonalRamp": [
+          "#130419",
+          "#2f1d35",
+          "#4d3a54",
+          "#6d5975",
+          "#8f7997",
+          "#b29cbb",
+          "#d7c0e0",
+          "#f8e8fe"
+        ]
+      },
+      "ink-soft": {
+        "role": "neutral",
+        "displayName": "Muted Ink",
+        "canonical": "#5b4a63",
+        "tonalRamp": [
+          "#120518",
+          "#2d1e34",
+          "#4b3b53",
+          "#6b5a73",
+          "#8d7a96",
+          "#b09db9",
+          "#d5c1de",
+          "#f7e8fe"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Soft Rule",
+        "canonical": "#e6e0ea",
+        "tonalRamp": [
+          "#0d0910",
+          "#27232a",
+          "#454048",
+          "#645f67",
+          "#858089",
+          "#a8a2ac",
+          "#ccc6d0",
+          "#f2ecf6"
+        ]
+      },
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "Firm Rule",
+        "canonical": "#cbbfd2",
+        "tonalRamp": [
+          "#0f0714",
+          "#2a212f",
+          "#483e4d",
+          "#675d6d",
+          "#897d8f",
+          "#aca0b2",
+          "#d0c4d7",
+          "#f6e9fd"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "canonical": "#f6f4f8",
+        "tonalRamp": [
+          "#0c0b0d",
+          "#262427",
+          "#434144",
+          "#626064",
+          "#838185",
+          "#a6a4a8",
+          "#cac8cc",
+          "#efedf1"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "tint": {
+        "role": "neutral",
+        "displayName": "Lilac Tint",
+        "canonical": "#f1ebf4",
+        "tonalRamp": [
+          "#0d090f",
+          "#28232a",
+          "#454047",
+          "#645f67",
+          "#858088",
+          "#a8a3ab",
+          "#ccc7cf",
+          "#f2ecf5"
+        ]
+      },
+      "rise": {
+        "role": "tertiary",
+        "displayName": "Rise Green",
+        "canonical": "#007a3f",
+        "tonalRamp": [
+          "#000f04",
+          "#012e14",
+          "#075029",
+          "#12743e",
+          "#34985b",
+          "#5cbc7d",
+          "#81e2a0",
+          "#c7ffd6"
+        ]
+      },
+      "rise-fill": {
+        "role": "tertiary",
+        "displayName": "Rise Volt",
+        "canonical": "#00ff85",
+        "tonalRamp": [
+          "#001004",
+          "#032e14",
+          "#0d4f28",
+          "#03753a",
+          "#1a9b52",
+          "#26c46a",
+          "#26ef80",
+          "#c8fed5"
+        ]
+      },
+      "rise-on": {
+        "role": "tertiary",
+        "displayName": "Rise On-Fill",
+        "canonical": "#00341b",
+        "tonalRamp": [
+          "#000f05",
+          "#002e17",
+          "#1e4d32",
+          "#3e6d51",
+          "#5f8f71",
+          "#82b293",
+          "#a5d7b6",
+          "#cafddb"
+        ]
+      },
+      "fall": {
+        "role": "tertiary",
+        "displayName": "Fall Pink-Red",
+        "canonical": "#d6004f",
+        "tonalRamp": [
+          "#1e0005",
+          "#4b0017",
+          "#7d062c",
+          "#b21143",
+          "#e8275d",
+          "#fe7087",
+          "#fdb1b9",
+          "#fee8ea"
+        ]
+      },
+      "fall-fill": {
+        "role": "tertiary",
+        "displayName": "Fall Fill",
+        "canonical": "#e0004d",
+        "tonalRamp": [
+          "#1e0004",
+          "#4a0415",
+          "#7b0f2a",
+          "#b5043d",
+          "#eb1e56",
+          "#fa7385",
+          "#fbb3b8",
+          "#fee8e9"
+        ]
+      },
+      "fall-on-dark": {
+        "role": "tertiary",
+        "displayName": "Fall on Dark",
+        "canonical": "#ff5c93",
+        "tonalRamp": [
+          "#1d0109",
+          "#490220",
+          "#7a0a3a",
+          "#ae1757",
+          "#dc3a76",
+          "#f9719a",
+          "#feafc3",
+          "#fee8ed"
+        ]
+      },
+      "gk": {
+        "role": "tertiary",
+        "displayName": "Goalkeeper Amber",
+        "canonical": "#f5b400",
+        "tonalRamp": [
+          "#120a00",
+          "#312202",
+          "#553e09",
+          "#7d5a01",
+          "#a57a15",
+          "#d09b1f",
+          "#febd1f",
+          "#ffeccb"
+        ]
+      },
+      "def": {
+        "role": "tertiary",
+        "displayName": "Defender Teal",
+        "canonical": "#00b8d4",
+        "tonalRamp": [
+          "#000e12",
+          "#002b33",
+          "#044b57",
+          "#0d6d7e",
+          "#2291a6",
+          "#03b9d5",
+          "#4edefb",
+          "#d2f6ff"
+        ]
+      },
+      "mid": {
+        "role": "tertiary",
+        "displayName": "Midfielder Violet",
+        "canonical": "#7c4dff",
+        "tonalRamp": [
+          "#0d012b",
+          "#280167",
+          "#470ba7",
+          "#662be1",
+          "#835eff",
+          "#a294fd",
+          "#c6c1fd",
+          "#edecfe"
+        ]
+      },
+      "fwd": {
+        "role": "tertiary",
+        "displayName": "Forward Orange",
+        "canonical": "#ff6d00",
+        "tonalRamp": [
+          "#180500",
+          "#401701",
+          "#6c2c05",
+          "#9b430f",
+          "#d05909",
+          "#fe782e",
+          "#fdb696",
+          "#ffe9e0"
+        ]
+      },
+      "pitch-a": {
+        "role": "neutral",
+        "displayName": "Pitch Stripe Light",
+        "canonical": "#16904a",
+        "tonalRamp": [
+          "#000f04",
+          "#012e13",
+          "#075026",
+          "#13743b",
+          "#279a53",
+          "#53be75",
+          "#79e499",
+          "#c7ffd4"
+        ]
+      },
+      "pitch-b": {
+        "role": "neutral",
+        "displayName": "Pitch Stripe Dark",
+        "canonical": "#138643",
+        "tonalRamp": [
+          "#001004",
+          "#042e13",
+          "#025024",
+          "#0a7539",
+          "#309955",
+          "#59bd77",
+          "#7fe39a",
+          "#c9fed4"
+        ]
+      },
+      "pitch-line": {
+        "role": "neutral",
+        "displayName": "Chalk",
+        "canonical": "rgba(255, 255, 255, 0.5)"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "The one page title in the hero band, uppercase."
+      },
+      "price": {
+        "displayName": "Price",
+        "purpose": "The predicted price inside the answer tag."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Page section titles, uppercase; player name at 2.4rem."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Titles inside cards and sheets, uppercase."
+      },
+      "figure": {
+        "displayName": "Figure",
+        "purpose": "Prices and stats in list rows and name plates, tabular."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Running text; prose capped at 60 to 72ch."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "List headers, chips, field labels."
+      },
+      "fine": {
+        "displayName": "Fine",
+        "purpose": "Footnotes and method notes, ink-soft."
+      }
+    },
+    "shadows": [
+      {
+        "name": "ambient",
+        "value": "0 1px 2px rgba(43, 0, 51, 0.06), 0 6px 18px rgba(43, 0, 51, 0.07)",
+        "purpose": "Every resting container: list, panel, pitch, sheet."
+      },
+      {
+        "name": "shirt-rest",
+        "value": "drop-shadow(0 4px 6px rgba(0, 0, 0, 0.25))",
+        "purpose": "Filter on pitch shirts at rest."
+      },
+      {
+        "name": "shirt-hover",
+        "value": "drop-shadow(0 8px 10px rgba(0, 0, 0, 0.35))",
+        "purpose": "Filter on a hovered pitch shirt."
+      },
+      {
+        "name": "player-card",
+        "value": "-20px 0 60px rgba(43, 0, 51, 0.25)",
+        "purpose": "The sliding player card only."
+      },
+      {
+        "name": "focus",
+        "value": "0 0 0 3px rgba(124, 77, 255, 0.45)",
+        "purpose": "Focus ring everywhere; violet so it never reads as a direction."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Shirt lift (0.2s), player-card slide (0.5s), card sections rising (0.55s, staggered 0.06s), details chevron."
+      },
+      {
+        "name": "state-fast",
+        "value": "0.12s to 0.15s ease",
+        "purpose": "Colour and border changes on buttons, tabs, rows, steppers."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "prefers-reduced-motion: reduce",
+        "purpose": "All animation and transition removed."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "narrow-desktop",
+        "value": "1100px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "The standard action on light surfaces: outlined, quiet, optional leading icon.",
+      "html": "<button class=\"ds-btn-ghost\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><path d=\"M3 8a5 5 0 1 0 1.6-3.7\"/><path d=\"M3 2v3h3\"/></svg>Reset</button>",
+      "css": ".ds-btn-ghost { display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border-radius:8px; font-family: var(--font); font-weight:600; font-size:0.95rem; color: var(--aubergine); background: var(--surface); border:1px solid var(--line-strong); cursor:pointer; transition: background-color .15s ease, border-color .15s ease; } .ds-btn-ghost:hover { background: var(--tint); border-color: var(--aubergine-3); } .ds-btn-ghost:focus-visible { outline:none; box-shadow: var(--focus); }"
+    },
+    {
+      "name": "On-dark Button",
+      "kind": "button",
+      "refersTo": "button-on-dark",
+      "description": "Actions inside the aubergine chrome (Refresh, Projection settings).",
+      "html": "<div class=\"ds-dark\"><button class=\"ds-btn-on-dark\">Projection settings</button></div>",
+      "css": ".ds-dark { background: var(--aubergine); padding:16px; } .ds-btn-on-dark { display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border-radius:8px; font-family: var(--font); font-weight:600; font-size:0.95rem; color: var(--on-dark); background: transparent; border:1px solid rgba(255,255,255,.28); cursor:pointer; transition: background-color .15s ease, border-color .15s ease; } .ds-btn-on-dark:hover { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.5); } .ds-btn-on-dark:focus-visible { outline:none; box-shadow: var(--focus); }"
+    },
+    {
+      "name": "Header Navigation",
+      "kind": "nav",
+      "refersTo": "nav-tab",
+      "description": "Tabs in the sticky aubergine header; the active tab carries a cyan underline.",
+      "html": "<nav class=\"ds-nav\"><span class=\"ds-brand\"><span class=\"ds-mark\"></span>FPL <b>Price Prediction</b></span><a class=\"ds-tab ds-active\" href=\"#\">Price Watch</a><a class=\"ds-tab\" href=\"#\">What if</a><a class=\"ds-tab\" href=\"#\">How it works</a></nav>",
+      "css": ".ds-nav { display:flex; align-items:stretch; gap:4px; min-height:64px; padding:0 24px; background: var(--aubergine); } .ds-brand { display:flex; align-items:center; gap:10px; margin-right:36px; color: var(--on-dark); font-family: var(--font-fig); font-size:1.35rem; font-weight:500; } .ds-brand b { font-weight:800; } .ds-mark { width:34px; height:34px; border-radius:8px; background: var(--cyan); } .ds-tab { display:flex; align-items:center; padding:0 14px; color: var(--on-dark-soft); font-family: var(--font); font-weight:600; font-size:.98rem; text-decoration:none; border-bottom:3px solid transparent; transition: color .15s ease, border-color .15s ease; } .ds-tab:hover { color: var(--on-dark); } .ds-tab.ds-active { color: var(--on-dark); border-bottom-color: var(--cyan); } .ds-tab:focus-visible { outline:none; box-shadow: var(--focus); }"
+    },
+    {
+      "name": "Delta Chips",
+      "kind": "chip",
+      "refersTo": "delta-rise",
+      "description": "The predicted move, classified on the one £0.1m threshold: rise, fall, or holds.",
+      "html": "<span class=\"ds-delta ds-rise\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 16 16\" fill=\"currentColor\"><path d=\"M7.25 4.3a1 1 0 0 1 1.5 0l4.8 5.5A1 1 0 0 1 12.8 11.5H3.2a1 1 0 0 1-.75-1.7z\"/></svg>+£0.6m</span> <span class=\"ds-delta ds-fall\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 16 16\" fill=\"currentColor\"><path d=\"M7.25 11.7a1 1 0 0 0 1.5 0l4.8-5.5A1 1 0 0 0 12.8 4.5H3.2a1 1 0 0 0-.75 1.7z\"/></svg>−£0.4m</span> <span class=\"ds-delta ds-hold\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 16 16\" fill=\"currentColor\"><rect x=\"3\" y=\"7.25\" width=\"10\" height=\"1.5\" rx=\".75\"/></svg>Holds</span>",
+      "css": ".ds-delta { display:inline-flex; align-items:center; gap:3px; padding:3px 12px 3px 8px; border-radius:999px; font-family: var(--font-fig); font-weight:700; font-size:1.05rem; font-variant-numeric: tabular-nums; white-space:nowrap; } .ds-rise { background: var(--rise-fill); color: var(--rise-on); } .ds-fall { background: var(--fall-fill); color:#fff; } .ds-hold { background: var(--tint); color: var(--ink-soft); }"
+    },
+    {
+      "name": "Position Pills",
+      "kind": "chip",
+      "refersTo": "position-pill-gk",
+      "description": "Position marker; the colours avoid green and red, which mean direction.",
+      "html": "<span class=\"ds-pos ds-gk\">GK</span> <span class=\"ds-pos ds-def\">DEF</span> <span class=\"ds-pos ds-mid\">MID</span> <span class=\"ds-pos ds-fwd\">FWD</span>",
+      "css": ".ds-pos { display:inline-block; min-width:38px; padding:1px 7px; border-radius:4px; font-family: var(--font-fig); font-weight:700; font-size:.82rem; line-height:1.35; text-align:center; color: var(--ink); } .ds-gk { background: var(--gk); } .ds-def { background: var(--def); } .ds-mid { background: var(--mid); color:#fff; } .ds-fwd { background: var(--fwd); }"
+    },
+    {
+      "name": "Segmented Control",
+      "kind": "custom",
+      "refersTo": "segmented-option-selected",
+      "description": "Pill-track toggle (Risers / Fallers, sort and form modes).",
+      "html": "<div class=\"ds-seg\"><button class=\"ds-seg-opt ds-on\">Risers</button><button class=\"ds-seg-opt\">Fallers</button></div>",
+      "css": ".ds-seg { display:inline-flex; gap:2px; padding:4px; background: var(--tint); border-radius:999px; } .ds-seg-opt { padding:7px 18px; border:0; border-radius:999px; background:transparent; font-family: var(--font); font-weight:700; font-size:.95rem; color: var(--ink-soft); cursor:pointer; transition: background-color .15s ease, color .15s ease; } .ds-seg-opt:hover { color: var(--aubergine); } .ds-seg-opt.ds-on { background: var(--aubergine); color: var(--on-dark); } .ds-seg-opt:focus-visible { outline:none; box-shadow: var(--focus); }"
+    },
+    {
+      "name": "Shirt Spot",
+      "kind": "custom",
+      "refersTo": "name-plate",
+      "description": "Signature: club shirt, white name plate, aubergine price strip reading today's price then next season's.",
+      "html": "<div class=\"ds-pitch\"><button class=\"ds-spot\"><svg class=\"ds-shirt\" viewBox=\"0 0 64 64\"><path d=\"M18 22 L18 58 L46 58 L46 22 L46 9 L38 4 Q32 10 26 4 L18 9 Z\" fill=\"#6cabdd\"/><path d=\"M18 9 L5 17 L11 28 L18 23 Z\" fill=\"#6cabdd\"/><path d=\"M46 9 L59 17 L53 28 L46 23 Z\" fill=\"#6cabdd\"/><path d=\"M26 4 Q32 10 38 4\" fill=\"none\" stroke=\"#fff\" stroke-width=\"3\"/><path d=\"M26 4 Q32 10 38 4 L46 9 L59 17 L53 28 L46 23 L46 58 L18 58 L18 23 L11 28 L5 17 L18 9 Z\" fill=\"none\" stroke=\"rgba(27,10,33,0.35)\" stroke-width=\"1.2\" stroke-linejoin=\"round\"/></svg><span class=\"ds-plate\">Gvardiol</span><span class=\"ds-strip\">£5.7m → <b>£7.0m</b></span></button></div>",
+      "css": ".ds-pitch { padding:20px; border-radius:14px; background: repeating-linear-gradient(180deg, var(--pitch-a) 0, var(--pitch-a) 64px, var(--pitch-b) 64px, var(--pitch-b) 128px); } .ds-spot { display:flex; flex-direction:column; align-items:center; width:128px; padding:4px 0 0; background:none; border:0; border-radius:8px; cursor:pointer; transition: transform .2s var(--ease-out); } .ds-spot:hover { transform: translateY(-4px); } .ds-spot:focus-visible { outline:none; box-shadow: 0 0 0 3px var(--cyan); } .ds-shirt { width:60px; height:60px; filter: drop-shadow(0 4px 6px rgba(0,0,0,.25)); transition: filter .2s ease; } .ds-spot:hover .ds-shirt { filter: drop-shadow(0 8px 10px rgba(0,0,0,.35)); } .ds-plate { display:block; width:100%; margin-top:4px; padding:3px 6px; background: var(--surface); color: var(--ink); font-family: var(--font-fig); font-weight:700; font-size:.98rem; border-radius:5px 5px 0 0; } .ds-strip { display:block; width:100%; padding:3px 6px; background: var(--aubergine); color: var(--on-dark-soft); font-family: var(--font-fig); font-weight:600; font-size:.95rem; border-radius:0 0 5px 5px; font-variant-numeric: tabular-nums; } .ds-strip b { font-weight:800; color: var(--rise-fill); }"
+    },
+    {
+      "name": "Answer Price Tag",
+      "kind": "card",
+      "refersTo": "price-tag",
+      "description": "Signature: the predicted price as a tag with a punched hole, above the 95% likely-range bar.",
+      "html": "<div class=\"ds-answer\"><div class=\"ds-tag\"><div class=\"ds-tag-label\">Predicted 2027-28 price</div><div class=\"ds-tag-price\">£14.6m</div></div><div class=\"ds-range\"><div class=\"ds-band\"></div><div class=\"ds-point\"></div></div></div>",
+      "css": ".ds-answer { padding:20px; background: var(--surface); } .ds-tag { position:relative; display:inline-block; padding:14px 26px 14px 44px; background: var(--aubergine); color: var(--on-dark); border-radius:6px 14px 14px 6px; } .ds-tag::before { content:''; position:absolute; left:16px; top:50%; width:12px; height:12px; margin-top:-6px; border-radius:50%; background: var(--surface); } .ds-tag-label { font-family: var(--font); font-size:.9rem; font-weight:600; color: var(--on-dark-soft); } .ds-tag-price { font-family: var(--font-fig); font-size:3.6rem; font-weight:800; line-height:.95; font-variant-numeric: tabular-nums; } .ds-range { position:relative; height:14px; margin-top:30px; background: var(--tint); border-radius:999px; } .ds-band { position:absolute; top:0; bottom:0; left:15%; width:65%; background:#cdb3d8; border-radius:999px; } .ds-point { position:absolute; top:50%; left:42%; width:22px; height:22px; margin:-11px 0 0 -11px; border-radius:50%; background: var(--aubergine); border:4px solid var(--cyan); box-shadow: 0 2px 6px rgba(43,0,51,.35); }"
+    },
+    {
+      "name": "Stat Chip Editor",
+      "kind": "input",
+      "refersTo": "stat-chip",
+      "description": "An editable season figure: label, large condensed number, a stepper each side, a hint.",
+      "html": "<div class=\"ds-stat\"><label class=\"ds-stat-label\">Goals</label><div class=\"ds-stat-row\"><button class=\"ds-step\" type=\"button\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" fill=\"currentColor\"><rect x=\"2\" y=\"7.25\" width=\"12\" height=\"1.5\" rx=\".75\"/></svg></button><input class=\"ds-stat-input\" value=\"27\"><button class=\"ds-step\" type=\"button\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" fill=\"currentColor\"><rect x=\"2\" y=\"7.25\" width=\"12\" height=\"1.5\" rx=\".75\"/><rect x=\"7.25\" y=\"2\" width=\"1.5\" height=\"12\" rx=\".75\"/></svg></button></div><div class=\"ds-stat-hint\">Seen 0 to 36.</div></div>",
+      "css": ".ds-stat { display:flex; flex-direction:column; gap:4px; width:196px; padding:10px 12px; background: var(--paper); border-radius:10px; } .ds-stat:focus-within { background: var(--tint); } .ds-stat-label { font-family: var(--font); font-weight:600; font-size:.9rem; color: var(--ink); } .ds-stat-row { display:flex; align-items:center; gap:6px; } .ds-stat-input { flex:1; min-width:0; height:40px; padding:0 4px; border:0; border-bottom:2px solid var(--line-strong); background:transparent; text-align:center; font-family: var(--font-fig); font-size:1.55rem; font-weight:700; font-variant-numeric: tabular-nums; color: var(--aubergine); } .ds-stat-input:focus { outline:none; border-bottom-color: var(--aubergine-3); } .ds-step { display:grid; place-items:center; width:32px; height:32px; flex:none; border:1px solid var(--line-strong); border-radius:50%; background: var(--surface); color: var(--aubergine); cursor:pointer; transition: background-color .12s ease, border-color .12s ease, transform .12s ease; } .ds-step:hover { background: var(--aubergine); border-color: var(--aubergine); color: var(--on-dark); } .ds-step:active { transform: scale(.92); } .ds-step:focus-visible { outline:none; box-shadow: var(--focus); } .ds-stat-hint { font-family: var(--font); font-size:.8rem; line-height:1.35; color: var(--ink-soft); }"
+    },
+    {
+      "name": "Transfer List Row",
+      "kind": "card",
+      "refersTo": "list-row",
+      "description": "Aubergine header over 60px clickable rows; the predicted price in heavy aubergine.",
+      "html": "<div class=\"ds-list\"><div class=\"ds-lh\"><span>Player</span><span>Today</span><span>2027-28</span></div><button class=\"ds-lr\"><span class=\"ds-who\"><b>Cherki</b><small>Man City</small></span><span class=\"ds-now\">£7.8m</span><span class=\"ds-pred\">£9.5m</span></button></div>",
+      "css": ".ds-list { background: var(--surface); border:1px solid var(--line); border-radius:10px; box-shadow: var(--shadow); overflow:hidden; } .ds-lh, .ds-lr { display:grid; grid-template-columns: minmax(0,1fr) 84px 84px; align-items:center; gap:12px; padding:0 20px; } .ds-lh { height:40px; background: var(--aubergine); color: var(--on-dark-soft); font-family: var(--font); font-weight:600; font-size:.88rem; } .ds-lr { width:100%; min-height:60px; border:0; background: var(--surface); text-align:left; color: var(--ink); cursor:pointer; transition: background-color .12s ease; } .ds-lr:hover { background: var(--tint); } .ds-lr:focus-visible { outline:none; box-shadow: inset var(--focus); } .ds-who { display:flex; flex-direction:column; font-family: var(--font); } .ds-who small { color: var(--ink-soft); } .ds-now, .ds-pred { font-family: var(--font-fig); font-size:1.15rem; font-weight:600; text-align:right; } .ds-pred { font-weight:800; color: var(--aubergine); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Transfer Market",
+    "overview": "The app lives inside the game its users already open every night. It borrows Fantasy Premier League's own grammar instead of a dashboard's: deep aubergine chrome, a striped pitch with an XI of club shirts, a name plate and price tag under every shirt, position pills, a transfer list, and a player card that slides in from the right. A stranger to the model should recognise the furniture before reading a word, and trust the answer because it is presented the way prices are always presented to them.\n\nThe page is a light, dense working surface (paper ground, white list and panel surfaces) framed top and bottom by aubergine chrome. Figures carry the weight: Barlow Condensed, heavy, uppercase for headings and tabular for every price. Colour is spent sparingly and with meaning. Cyan marks the chrome (brand, active tab, selection, the predicted point on the range bar); green and pink-red mark a price moving and nothing else; four saturated position colours sort players. Motion is short and ease-out: shirts lift on hover, the player card slides in and its sections rise in sequence, and all of it is removed under reduced-motion.\n\nThe build rejects the admin-dashboard stack of a form, then a card, then a chart. Even the What-if editor is a player sheet: the answer pinned as a price tag on the left, the season's figures as editable stat chips on the right.",
+    "keyCharacteristics": [
+      "Aubergine chrome frames a light paper working surface; no dark mode.",
+      "Figures in heavy Barlow Condensed with tabular numerals; UI text in Barlow.",
+      "Club-coloured SVG shirts drawn from kit facts, never crests or photos.",
+      "Direction colour is reserved: green rises, pink-red falls, a neutral tint holds.",
+      "Every predicted price is shown as a tag: today's price, then next season's.",
+      "Desktop-first; phone layout and screen-reader semantics are not yet designed."
+    ],
+    "rules": [
+      {
+        "name": "The Direction-Only Rule",
+        "body": "In the interface, green and pink-red mean a price is moving and nothing else: not success, not error, not a brand accent. The pitch turf and club kits are the world's own materials and are exempt; position colours and chart series avoid both hues.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Threshold Rule",
+        "body": "A price has moved when the predicted change is at least £0.1m either way; anything smaller holds. Every chip, tag, verdict and colour uses that one threshold.",
+        "section": "colors"
+      },
+      {
+        "name": "The Cyan-Is-Chrome Rule",
+        "body": "Cyan decorates the frame and marks the current selection. It never encodes a value.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Price Rule",
+        "body": "Every price and stat is set in Barlow Condensed with tabular numerals, written £7.5m, and signed with a true minus (−£0.4m) or ± when it rounds to zero.",
+        "section": "typography"
+      },
+      {
+        "name": "The Condensed Voice Rule",
+        "body": "Headings are Barlow Condensed and uppercase; sentences are Barlow in sentence case. Do not set running text in the condensed face.",
+        "section": "typography"
+      },
+      {
+        "name": "The Lift Means Reach Rule",
+        "body": "Shadows deepen only for things the user is about to open. Resting surfaces all share the one ambient shadow.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** show every predicted price as a pair, today's then next season's, with the predicted figure heavier.",
+      "**Do** classify every move with the one £0.1m threshold before choosing a colour or a word.",
+      "**Do** give every position both its colour and its marker shape in charts.",
+      "**Do** draw club shirts from kit colours, with a neutral kit for clubs outside the table.",
+      "**Do** set prices and stats in Barlow Condensed with tabular numerals, using a true minus sign.",
+      "**Do** keep chart styling on the light surface: aubergine hover labels, soft-rule gridlines, Barlow type.",
+      "**Do** honour reduced-motion by removing all animation and transition."
+    ],
+    "donts": [
+      "**Don't** use green or pink-red in the interface for anything but price direction; the pitch and club kits are the only exceptions.",
+      "**Don't** use cyan to encode data.",
+      "**Don't** fall back to the stacked form, then card, then chart arrangement; present players on the pitch, in the list, or on a sheet.",
+      "**Don't** use club crests or photographed shirts.",
+      "**Don't** add a dark mode by inverting the light palette; one would need its own steps.",
+      "**Don't** treat phone layout or screen-reader behaviour as designed; both are open work."
+    ]
+  }
+}

@@ -46,14 +46,18 @@ on 8050). Three pages:
 
 | Page | Inputs | Predicts |
 |---|---|---|
-| `/` | prefilled from any completed 2025-26 season, then editable | 2026-27 start price |
-| `/manual` | typed from scratch, seeded at the training medians | 2026-27 start price |
-| `/projected` | **live** 2026-27 form from the FPL API, projected to 38 gameweeks | 2027-28 start price |
+| `/` Price Watch | **live** 2026-27 form from the FPL API, projected to 38 gameweeks | 2027-28 start price |
+| `/lab` What if | any completed 2025-26 season, or the training medians, then editable | 2026-27 start price |
+| `/how-it-works` | none: the method, and the backtest's accuracy | |
 
-Every page shows the 95% prediction interval, the features the model *derives*
-from your inputs, and a per-term breakdown of the price. That last one is exact
-rather than approximate: the model is linear, so the contributions sum to the
-point estimate.
+The old `/projected`, `/player` and `/manual` routes redirect to the new ones.
+`/?player=<code>` opens that player's card directly.
+
+Every player view shows the 95% prediction interval, a plain-English reading
+of the price, and a per-term breakdown. That last one is exact rather than
+approximate: the model is linear, so the contributions sum to the point
+estimate. The features the model *derives* from your inputs sit under "Model
+details" beneath it. The visual system is documented in `DESIGN.md`.
 
 The derived panel shows rates **per 90 minutes**, plus minutes themselves as
 90s played, because a match is the unit anyone thinks in: 0.82 goals per 90 is a

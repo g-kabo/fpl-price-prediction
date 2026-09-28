@@ -11,11 +11,11 @@ that here would let the app and the pipeline drift apart silently.
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
 import dash_bootstrap_components as dbc
-import numpy as np
 import pandas as pd
 from dash import dcc, html
 
@@ -44,71 +44,124 @@ def field_id(page: str, field: str) -> dict:
     return {"page": page, "field": field}
 
 
-def build_fields(page: str, values: dict, ranges: dict) -> list:
-    """The numeric grid plus the two dropdowns, as Bootstrap rows."""
-    cells = []
-    for name, label, step, integer in schema.NUMERIC_FIELDS:
-        bounds = ranges.get(name, {})
-        hint = schema.FIELD_HELP.get(name, "")
-        if bounds:
-            span = f"fitted {_fmt(bounds['min'])} – {_fmt(bounds['max'])}"
-            hint = f"{hint} {span}".strip() if hint else span
+#: The form in chunks a manager would recognise, rather than one flat grid
+#: of twelve boxes. Every numeric field appears exactly once.
+FIELD_GROUPS: list[tuple[str, list[str]]] = [
+    ("Price", ["start_cost", "cost_change_start", "value_season"]),
+    ("Playing time", ["minutes", "total_points", "points_per_game"]),
+    ("Returns", ["goals_scored", "assists", "clean_sheets", "bps"]),
+    ("Popularity", ["transfers_in", "transfers_out"]),
+]
 
-        cells.append(
-            dbc.Col(
-                [
-                    dbc.Label(label, html_for=str(field_id(page, name)), size="sm",
-                              className="mb-1 fw-semibold"),
-                    dbc.Input(
-                        id=field_id(page, name),
-                        type="number",
-                        value=values.get(name),
-                        step=step,
-                        debounce=True,
-                        size="sm",
-                    ),
-                    html.Small(hint, className="text-muted d-block mt-1",
-                               style={"fontSize": "0.72rem", "lineHeight": "1.2"}),
-                ],
-                md=3, sm=6, xs=12, className="mb-3",
-            )
-        )
 
-    categorical = dbc.Row(
+def dom_id(component_id: dict) -> str:
+    """The id Dash actually renders for a pattern-matching component.
+
+    Dash serialises a dict id as compact JSON with sorted keys, so a
+    ``<label for=...>`` built from ``str(dict)`` points at nothing.
+    """
+    return json.dumps(component_id, sort_keys=True, separators=(",", ":"))
+
+
+#: How far one press of a stepper moves each figure: a unit someone would
+#: actually nudge by. A transfer at a time, or a minute at a time, would
+#: take a thousand presses to change anything.
+STEPS: dict[str, float] = {
+    "start_cost": 0.1, "cost_change_start": 0.1, "value_season": 0.5,
+    "minutes": 90, "total_points": 5, "points_per_game": 0.1,
+    "goals_scored": 1, "assists": 1, "clean_sheets": 1, "bps": 25,
+    "transfers_in": 100_000, "transfers_out": 100_000,
+}
+
+
+def step_id(page: str, field: str, direction: int) -> dict:
+    return {"page": page, "step": field, "dir": direction}
+
+
+def _field(page: str, name: str, label: str, step: float, values: dict, ranges: dict):
+    """One figure as a stat chip: label, the number, and a stepper each side."""
+    bounds = ranges.get(name, {})
+    hint = schema.FIELD_HELP.get(name, "")
+    if bounds:
+        seen = f"Seen {_fmt(bounds['min'])} to {_fmt(bounds['max'])}."
+        hint = f"{hint} {seen}".strip()
+    nudge = _fmt(STEPS.get(name, step))
+
+    return html.Div(
         [
-            dbc.Col(
+            html.Label(label, htmlFor=dom_id(field_id(page, name)), className="chip-label"),
+            html.Div(
                 [
-                    dbc.Label("Position", size="sm", className="mb-1 fw-semibold"),
-                    dcc.Dropdown(
-                        id=field_id(page, schema.POSITION_FIELD),
-                        options=[{"label": p, "value": p} for p in schema.POSITIONS],
-                        value=values.get(schema.POSITION_FIELD, "MID"),
-                        clearable=False,
-                    ),
+                    html.Button(html.I(className="bi bi-dash-lg"), id=step_id(page, name, -1),
+                                n_clicks=0, type="button", className="stepper",
+                                title=f"Down {nudge}"),
+                    dbc.Input(id=field_id(page, name), type="number", value=values.get(name),
+                              step=step, debounce=True, className="chip-input"),
+                    html.Button(html.I(className="bi bi-plus-lg"), id=step_id(page, name, 1),
+                                n_clicks=0, type="button", className="stepper",
+                                title=f"Up {nudge}"),
                 ],
-                md=3, sm=6, xs=12, className="mb-3",
+                className="chip-row",
             ),
-            dbc.Col(
-                [
-                    dbc.Label("Team", size="sm", className="mb-1 fw-semibold"),
-                    dcc.Dropdown(
-                        id=field_id(page, schema.TEAM_FIELD),
-                        options=team_dropdown_options(),
-                        value=values.get(schema.TEAM_FIELD, config.OTHER_TEAM),
-                        clearable=False,
-                    ),
-                    html.Small(
-                        "Clubs outside the model's fitted set score as “other”.",
-                        className="text-muted d-block mt-1",
-                        style={"fontSize": "0.72rem"},
-                    ),
-                ],
-                md=5, sm=6, xs=12, className="mb-3",
-            ),
-        ]
+            html.Div(hint, className="chip-hint"),
+        ],
+        className="stat-chip",
     )
 
-    return [dbc.Row(cells), categorical]
+
+def build_fields(page: str, values: dict, ranges: dict) -> list:
+    """The editable season, grouped, plus position and club."""
+    spec = {name: (label, step) for name, label, step, _ in schema.NUMERIC_FIELDS}
+
+    groups = [
+        html.Fieldset(
+            [html.Legend(title, className="group-title"),
+             html.Div([_field(page, name, *spec[name], values, ranges) for name in names],
+                      className="group-fields")],
+            className="group",
+        )
+        for title, names in FIELD_GROUPS
+    ]
+
+    role = html.Fieldset(
+        [
+            html.Legend("Role", className="group-title"),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Div("Position", className="field-label"),
+                            dbc.RadioItems(
+                                id=field_id(page, schema.POSITION_FIELD),
+                                options=[{"label": p, "value": p} for p in schema.POSITIONS],
+                                value=values.get(schema.POSITION_FIELD, "MID"),
+                                inline=True, className="pos-picker",
+                            ),
+                        ],
+                        className="field",
+                    ),
+                    html.Div(
+                        [
+                            html.Div("Club", className="field-label"),
+                            dcc.Dropdown(
+                                id=field_id(page, schema.TEAM_FIELD),
+                                options=team_dropdown_options(),
+                                value=values.get(schema.TEAM_FIELD, config.OTHER_TEAM),
+                                clearable=False,
+                            ),
+                            html.Div("Clubs with too little history in the data "
+                                     "share one setting.", className="field-hint"),
+                        ],
+                        className="field field-wide",
+                    ),
+                ],
+                className="group-fields",
+            ),
+        ],
+        className="group",
+    )
+
+    return [*groups, role]
 
 
 def team_dropdown_options() -> list[dict]:
@@ -120,7 +173,7 @@ def team_dropdown_options() -> list[dict]:
     Fulham is missing.
     """
     kept = model_store.team_options()
-    options = [{"label": f"Other / not fitted ({config.OTHER_TEAM})",
+    options = [{"label": "Any other club",
                 "value": config.OTHER_TEAM}]
     options += [{"label": team, "value": team} for team in kept]
     return options
@@ -169,139 +222,6 @@ def predict(values: dict) -> tuple[pd.DataFrame, pd.DataFrame]:
     fitted = model_store.get_model()
     row = row_from_values(values)
     return fitted.predict_with_interval(row), row
-
-
-def result_card(interval: pd.DataFrame, start_cost: float, subtitle: str = "") -> html.Div:
-    """Headline price, interval and the change against the current price."""
-    pred = float(interval["pred"].iloc[0])
-    lower = float(interval["pred_lower"].iloc[0])
-    upper = float(interval["pred_upper"].iloc[0])
-    on_grid = round(pred / PRICE_GRID) * PRICE_GRID
-    delta = pred - float(start_cost or 0.0)
-
-    if delta > 0.05:
-        tone, arrow, word = "success", "▲", "rise"
-    elif delta < -0.05:
-        tone, arrow, word = "danger", "▼", "fall"
-    else:
-        tone, arrow, word = "secondary", "—", "no change"
-
-    # A prediction interval spanning £1.2m on a £6m player is the honest
-    # headline the point estimate hides, so draw it rather than only
-    # printing it: the marker's position within the bar shows at a glance
-    # whether the prediction sits above or below today's price.
-    span = max(upper - lower, 0.01)
-    marker = min(max((pred - lower) / span, 0.0), 1.0)
-    current_pos = min(max((float(start_cost or 0.0) - lower) / span, 0.0), 1.0)
-
-    return dbc.Card(
-        dbc.CardBody(
-            [
-                html.Div(subtitle or "Predicted starting price",
-                         className="result-label"),
-                html.Div(f"£{on_grid:.1f}m", className="fw-bold lh-1 my-2 result-price"),
-                html.Div(f"point estimate £{pred:.2f}m",
-                         className="text-muted", style={"fontSize": "0.78rem"}),
-
-                html.Div(
-                    [
-                        html.Div(className="interval-track"),
-                        html.Div(className="interval-current",
-                                 style={"left": f"{current_pos * 100:.1f}%"}),
-                        html.Div(className="interval-marker",
-                                 style={"left": f"{marker * 100:.1f}%"}),
-                    ],
-                    className="interval-bar mt-4 mb-2",
-                ),
-                html.Div(
-                    [
-                        html.Span(f"£{lower:.2f}m"),
-                        html.Span("95% prediction interval", className="interval-caption"),
-                        html.Span(f"£{upper:.2f}m"),
-                    ],
-                    className="d-flex justify-content-between interval-ends",
-                ),
-
-                html.Hr(className="my-3"),
-                html.Div(
-                    [
-                        html.Span("vs current price", className="text-muted",
-                                  style={"fontSize": "0.75rem"}),
-                        html.Span(
-                            f"{arrow} £{abs(delta):.2f}m {word}" if word != "no change"
-                            else f"{arrow} no change",
-                            className=f"fw-semibold text-{tone}",
-                        ),
-                    ],
-                    className="d-flex justify-content-between align-items-center",
-                ),
-            ]
-        ),
-        className="shadow-sm result-card",
-    )
-
-
-def derived_panel(row: pd.DataFrame) -> html.Div:
-    """What the model derived from the entered values.
-
-    Worth showing because the derivation has a discontinuity: at zero
-    minutes every rate is defined as 0 rather than undefined, and
-    ``no_mins`` flips on. Without this panel that behaviour is invisible.
-
-    Rates are shown per 90 minutes rather than per minute, because a match
-    is the unit anyone thinks in: 0.22 goals per 90 is a striker having a
-    quiet season, while the same number written as 0.0024 per minute is
-    just small. The per-minute figure is kept underneath each one, since
-    that is what the coefficients multiply and what the contribution table
-    names, and a panel that showed only the readable version would leave
-    the two impossible to reconcile.
-    """
-    derived = features.add_rate_features(row)
-
-    minutes = float(row["minutes"].iloc[0])
-    derived[schema.MATCHES_FIELD] = minutes / schema.MINUTES_PER_MATCH
-
-    items = []
-    for name in schema.DERIVED_FIELDS:
-        value = float(derived[name].iloc[0])
-
-        if name == "no_mins":
-            text, sub = ("yes" if value else "no"), ""
-        elif name == schema.MATCHES_FIELD:
-            text, sub = f"{value:.1f}", f"{minutes:,.0f} min"
-        else:
-            text = f"{value * schema.MINUTES_PER_MATCH:.2f}"
-            sub = f"{value:.4f} / min"
-
-        items.append(
-            dbc.Col(
-                [
-                    html.Div(schema.DERIVED_LABELS[name], className="text-muted",
-                             style={"fontSize": "0.7rem"}),
-                    html.Div(text, className="fw-semibold", style={"fontSize": "0.85rem"}),
-                    html.Div(sub, className="text-muted",
-                             style={"fontSize": "0.62rem", "lineHeight": "1.1"}),
-                ],
-                width="auto", className="me-4 mb-2",
-            )
-        )
-
-    return html.Div(
-        [
-            html.Div("Derived by the model — not editable",
-                     className="text-muted text-uppercase mb-2",
-                     style={"fontSize": "0.68rem", "letterSpacing": "0.08em"}),
-            dbc.Row(items),
-            html.Div(
-                "Rates are shown per 90 minutes. The model reads them per "
-                "minute — that figure is under each one, and is what the "
-                "breakdown below names.",
-                className="text-muted mt-2",
-                style={"fontSize": "0.68rem"},
-            ),
-        ],
-        className="p-3 bg-light rounded border",
-    )
 
 
 def contributions(values: dict, top_n: int = 12) -> dict:
@@ -358,136 +278,15 @@ def contribution_steps(parts: dict) -> list[tuple[str, float, str]]:
     than re-summing it -- Plotly draws that bar from the running total, so
     a mismatch here would be visible instead of silent.
     """
-    steps: list[tuple[str, float, str]] = [("intercept", parts["intercept"], "absolute")]
+    steps: list[tuple[str, float, str]] = [("Model baseline", parts["intercept"], "absolute")]
     steps += [(charts.term_label(column), contribution, "relative")
               for column, _, _, contribution in parts["shown"]]
 
     if parts["n_rest"]:
-        steps.append((f"{parts['n_rest']} smaller", parts["rest"], "relative"))
+        steps.append((f"{parts['n_rest']} smaller terms", parts["rest"], "relative"))
 
-    steps.append(("predicted price", parts["total"], "total"))
+    steps.append(("Predicted price", parts["total"], "total"))
     return steps
-
-
-def contribution_table(
-    values: dict, top_n: int = 12, reference: tuple[str, float] | None = None
-) -> html.Div:
-    """The "why this price" panel: the waterfall, and the numbers behind it.
-
-    ``reference`` is the price the player already carries, drawn across the
-    waterfall as a dashed line. Which price that is belongs to the caller:
-    ``/manual`` and ``/player`` only have a start price, while ``/projected``
-    has both and lets the reader pick.
-    """
-    parts = contributions(values, top_n)
-    intercept = parts["intercept"]
-    shown = parts["shown"]
-    rest = parts["rest"]
-    terms_total = len(shown) + parts["n_rest"]
-
-    header = html.Thead(
-        html.Tr(
-            [
-                html.Th("Term"),
-                html.Th("Value", className="text-end"),
-                html.Th("Coefficient", className="text-end"),
-                html.Th("Contribution", className="text-end"),
-            ]
-        )
-    )
-
-    body_rows = [
-        html.Tr(
-            [
-                html.Td("intercept", className="text-muted fst-italic"),
-                html.Td("—", className="text-end text-muted"),
-                html.Td("—", className="text-end text-muted"),
-                html.Td(f"£{intercept:+.3f}m", className="text-end"),
-            ]
-        )
-    ]
-    for column, value, beta, contribution in shown:
-        tone = "text-success" if contribution > 0 else "text-danger"
-        body_rows.append(
-            html.Tr(
-                [
-                    html.Td(charts.term_label(column)),
-                    html.Td(_fmt(value), className="text-end"),
-                    html.Td(f"{beta:+.3e}" if abs(beta) < 0.001 else f"{beta:+.4f}",
-                            className="text-end text-muted"),
-                    html.Td(f"£{contribution:+.3f}m", className=f"text-end fw-semibold {tone}"),
-                ]
-            )
-        )
-    if parts["n_rest"]:
-        body_rows.append(
-            html.Tr(
-                [
-                    html.Td(f"{parts['n_rest']} smaller terms",
-                            className="text-muted fst-italic"),
-                    html.Td("—", className="text-end text-muted"),
-                    html.Td("—", className="text-end text-muted"),
-                    html.Td(f"£{rest:+.3f}m", className="text-end"),
-                ]
-            )
-        )
-
-    return html.Div(
-        [
-            html.Div("Why this price", className="fw-semibold mb-1"),
-            html.Small(
-                "The model is linear, so these contributions sum exactly to the "
-                f"point estimate. {terms_total} terms carry a non-zero weight; "
-                f"the {len(shown)} largest are drawn.",
-                className="text-muted d-block mb-2",
-            ),
-            dbc.Row(
-                [
-                    dbc.Col(
-                        dcc.Graph(
-                            figure=charts.contribution_waterfall(
-                                contribution_steps(parts), reference
-                            ),
-                            config={"displayModeBar": False, "responsive": True},
-                            style={"height": "400px"},
-                        ),
-                        lg=7, className="mb-3 mb-lg-0",
-                    ),
-                    dbc.Col(
-                        dbc.Table([header, html.Tbody(body_rows)],
-                                  bordered=False, hover=True, size="sm",
-                                  striped=True, className="mb-0 contribution-table"),
-                        lg=5,
-                    ),
-                ],
-                className="g-3 align-items-start",
-            ),
-        ]
-    )
-
-
-def range_warnings(values: dict, ranges: dict) -> list:
-    """One badge per field sitting outside the range the model was fitted on.
-
-    Not an error -- the model will happily return a number -- but an OLS
-    extrapolating past its training range is guessing, and the user should
-    know which field caused it.
-    """
-    warnings = []
-    for name, label, _, _ in schema.NUMERIC_FIELDS:
-        bounds = ranges.get(name)
-        value = _as_float(values.get(name))
-        if not bounds or value is None:
-            continue
-        if value < bounds["min"] or value > bounds["max"]:
-            warnings.append(
-                dbc.Badge(
-                    f"{label}: {_fmt(value)} is outside the fitted range "
-                    f"{_fmt(bounds['min'])}–{_fmt(bounds['max'])}",
-                    color="warning", text_color="dark", className="me-2 mb-1",
-                )
-            )
-    return warnings
 
 
 def _as_float(value) -> float:

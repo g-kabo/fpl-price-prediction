@@ -2,11 +2,13 @@
 
     python app/app.py        ->  http://127.0.0.1:8051
 
-Three ways to ask the same model the same question:
+Three pages:
 
-    /            prefill from a completed season, then edit
-    /manual      type a hypothetical season from scratch
-    /projected   live current-season form, projected to 38 gameweeks
+    /               Price Watch: live current-season form, projected to 38
+                    gameweeks and priced for next season (was /projected)
+    /lab            What if: a completed season, prefilled or blank, edited
+                    by hand (was /player and /manual)
+    /how-it-works   the method, and how accurate it has been
 
 Runs on 8051 so it can sit alongside the FPL dashboard on 8050 rather than
 fighting it for the port.
@@ -29,58 +31,74 @@ import model_store  # noqa: E402
 
 PORT = 8051
 
+FONTS = ("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800"
+         "&family=Barlow:wght@400;500;600;700&display=swap")
+
 app = dash.Dash(
     __name__,
     use_pages=True,
     pages_folder=str(APP_DIR / "pages"),
     assets_folder=str(APP_DIR / "assets"),
-    external_stylesheets=[dbc.themes.BOOTSTRAP, dbc.icons.BOOTSTRAP],
+    external_stylesheets=[dbc.themes.BOOTSTRAP, dbc.icons.BOOTSTRAP, FONTS],
     suppress_callback_exceptions=True,
     title="FPL Price Prediction",
 )
 
 
-def _navbar() -> dbc.Navbar:
-    """Top bar: brand, page links, and what the model behind them is.
-
-    ``dark=False`` is load-bearing. ``dbc.Navbar`` defaults to
-    ``dark=True``, which styles its links for a dark background -- on a
-    white bar that renders them white on white, i.e. invisible. (There is
-    no matching ``light`` prop in dbc 2.x; the absence of ``dark`` is it.)
-    """
-    meta = model_store.get_meta()
-    return dbc.Navbar(
-        dbc.Container(
+def _header() -> html.Header:
+    """Brand and page links on the aubergine bar."""
+    return html.Header(
+        html.Div(
             [
-                dbc.NavbarBrand(
-                    [
-                        html.I(className="bi bi-graph-up-arrow me-2"),
-                        "FPL Price Prediction",
-                    ],
-                    href="/", className="fw-bold",
+                html.A(
+                    [html.Span(html.I(className="bi bi-tag-fill"), className="brand-mark"),
+                     html.Span(["FPL ", html.Strong("Price Prediction")])],
+                    href="/", className="brand",
                 ),
                 dbc.Nav(
                     [
                         dbc.NavLink(page["name"], href=page["relative_path"],
-                                    active="exact", className="nav-pill")
+                                    active="exact", className="nav-tab")
                         for page in dash.page_registry.values()
                     ],
-                    navbar=True, pills=True, className="me-auto gap-1",
-                ),
-                html.Span(
-                    f"OLS · {meta['n_predictors']} predictors · "
-                    f"{meta['training_rows']:,} seasons · adj R² {meta['rsquared_adj']:.3f}",
-                    className="navbar-text small d-none d-lg-inline model-stamp",
+                    className="nav-tabs-row",
                 ),
             ],
-            fluid=True,
+            className="wrap header-inner",
         ),
-        color="white", dark=False,
-        className="border-bottom shadow-sm mb-0 py-2", sticky="top",
+        className="site-header",
     )
 
 
-app.layout = html.Div([_navbar(), dash.page_container])
+def _footer() -> html.Footer:
+    meta = model_store.get_meta()
+    return html.Footer(
+        html.Div(
+            [
+                html.P(
+                    f"Linear model · {meta['n_predictors']} predictors · trained on "
+                    f"{meta['training_rows']:,} player-seasons · explains "
+                    f"{meta['rsquared_adj']:.1%} of the variation in price (adjusted R²).",
+                ),
+                html.P(
+                    [
+                        "Data from the official FPL API and ",
+                        html.A("vaastav/Fantasy-Premier-League",
+                               href="https://github.com/vaastav/Fantasy-Premier-League",
+                               target="_blank", rel="noopener"),
+                        ". A fan project, not affiliated with the Premier League or "
+                        "Fantasy Premier League.",
+                    ],
+                ),
+            ],
+            className="wrap",
+        ),
+        className="site-footer",
+    )
+
+
+app.layout = html.Div([_header(), html.Main(dash.page_container), _footer()],
+                      className="app-shell")
 
 server = app.server
 

@@ -16,3 +16,12 @@ output/
 .idea/
 Thumbs.db
 desktop.ini
+
+# Claude Code: personal permissions
+.claude/settings.local.json
+
+# Impeccable: machine-local state and regenerable review captures
+.impeccable/config.local.json
+.impeccable/hook.cache.json
+.impeccable/questions/
+.impeccable/review/

@@ -24,16 +24,16 @@ import features  # noqa: E402
 #: they appear on the form. The names and their order are
 #: :data:`features.BASE_NUMERIC`; the presentation is ours.
 NUMERIC_FIELDS: list[tuple[str, str, float, bool]] = [
-    ("start_cost",        "Start price (£m)",     0.1,  False),
-    ("cost_change_start", "Price change (£m)",    0.1,  False),
+    ("start_cost",        "Start price",          0.1,  False),
+    ("cost_change_start", "Price change",         0.1,  False),
     ("minutes",           "Minutes",              1,    True),
     ("total_points",      "Total points",         1,    True),
     ("points_per_game",   "Points per game",      0.1,  False),
-    ("value_season",      "Value (pts per £m)",   0.1,  False),
+    ("value_season",      "Points per £m",        0.1,  False),
     ("goals_scored",      "Goals",                1,    True),
     ("assists",           "Assists",              1,    True),
     ("clean_sheets",      "Clean sheets",         1,    True),
-    ("bps",               "Bonus point system",   1,    True),
+    ("bps",               "BPS",                  1,    True),
     ("transfers_in",      "Transfers in",         1000, True),
     ("transfers_out",     "Transfers out",        1000, True),
 ]
@@ -41,12 +41,12 @@ NUMERIC_FIELDS: list[tuple[str, str, float, bool]] = [
 #: Hints for the traps that would otherwise fail silently -- a wrong unit
 #: still predicts a plausible-looking number, it is just the wrong one.
 FIELD_HELP: dict[str, str] = {
-    "start_cost": "In £m (5.5), not the API's tenths (55).",
-    "cost_change_start": "Season-to-date price movement, in £m.",
-    "value_season": "Total points ÷ current price.",
-    "transfers_in": "Cumulative for the whole season — runs to millions.",
-    "transfers_out": "Cumulative for the whole season — runs to millions.",
-    "bps": "Raw BPS total, not bonus points awarded.",
+    "start_cost": "In £m, e.g. 5.5.",
+    "cost_change_start": "How far his price has moved this season, in £m.",
+    "value_season": "Total points divided by price.",
+    "transfers_in": "Whole-season total; runs into millions.",
+    "transfers_out": "Whole-season total; runs into millions.",
+    "bps": "The raw BPS score, not bonus points awarded.",
 }
 
 NUMERIC_NAMES = [name for name, _, _, _ in NUMERIC_FIELDS]

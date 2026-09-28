@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "border-accent-on-rounded",
+        "value": "*",
+        "files": [
+          "app/assets/style.css"
+        ],
+        "createdAt": "2026-09-28T19:10:23.248Z",
+        "reason": "Claude triage: L153 is the nav tab's active underline (border-bottom 3px) with border-radius: 0 set on the same rule; not a rounded card"
+      }
+    ]
+  }
+}
