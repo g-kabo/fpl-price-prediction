@@ -58,29 +58,51 @@ def range_bar(lower: float, upper: float, pred: float,
     pad = max((high - low) * 0.12, 0.1)
     low, high = low - pad, high + pad
 
-    def at(value: float) -> str:
-        return f"{(value - low) / (high - low) * 100:.1f}%"
+    def pct(value: float) -> float:
+        return (value - low) / (high - low) * 100
 
+    # Every label sits at its own value on the one scale -- the range's ends
+    # under the band's ends, not at the edges of the bar, which the padding
+    # above places somewhere else entirely.
+    def label(text, value, row: str, extra: str = ""):
+        x = pct(value)
+        anchor = "start" if x < 10 else "end" if x > 90 else "mid"
+        return html.Span(text, className=f"rl rl-{row} rl-{anchor} {extra}".strip(),
+                         style={"left": f"{x:.1f}%"})
+
+    # Labels this close (in % of the bar) would overlap, so one moves to a
+    # second line above.
+    crowded = 30.0
+
+    above = [label(["Predicted ", html.Strong(theme.money(pred))], pred, "row1", "rl-pred")]
     marks = [
         html.Div(className="range-band",
-                 style={"left": at(lower), "width": f"calc({at(upper)} - {at(lower)})"}),
-        html.Div(className="range-pred", style={"left": at(pred)}),
+                 style={"left": f"{pct(lower):.1f}%",
+                        "width": f"{pct(upper) - pct(lower):.1f}%"}),
+        html.Div(className="range-pred", style={"left": f"{pct(pred):.1f}%"}),
     ]
     if reference is not None:
-        marks.insert(1, html.Div(
-            html.Span(f"{reference_label} {theme.money(reference)}", className="range-ref-label"),
-            className="range-ref", style={"left": at(reference)},
-        ))
+        row = "row2" if abs(pct(reference) - pct(pred)) < crowded else "row1"
+        above.append(label(f"{reference_label} {theme.money(reference)}", reference, row,
+                           "rl-ref"))
+        marks.append(html.Div(className=f"range-ref range-ref-{row}",
+                              style={"left": f"{pct(reference):.1f}%"}))
+
+    # The two ends of the range, or one combined label when the band is too
+    # narrow to hold them apart.
+    if pct(upper) - pct(lower) < 18:
+        below = [label(f"{theme.money(lower)} – {theme.money(upper)}",
+                       (lower + upper) / 2, "below")]
+    else:
+        below = [label(theme.money(lower), lower, "below"),
+                 label(theme.money(upper), upper, "below")]
 
     return html.Div(
         [
-            html.Div(marks, className="range-track"),
-            html.Div(
-                [html.Span(theme.money(lower)),
-                 html.Span("95% likely range", className="range-caption"),
-                 html.Span(theme.money(upper))],
-                className="range-ends",
-            ),
+            html.Div([*above, html.Div(marks, className="range-track"), *below],
+                     className="range-scale"),
+            html.Div([html.Span(className="range-swatch"), "95% likely range"],
+                     className="range-legend"),
         ],
         className="range",
     )

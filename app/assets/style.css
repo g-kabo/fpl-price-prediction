@@ -778,12 +778,23 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
 
 .answer-verdict { font-size: 1.08rem; font-weight: 500; margin: 14px 0 0; max-width: 60ch; }
 
-.range { margin-top: 30px; }
+.range { margin-top: 22px; }
+
+/* One scale, everything on it at its true value: labels above for the
+   prediction and today's price (a second line when they would collide),
+   the band's own ends below it. */
+.range-scale {
+  position: relative;
+  height: 96px;
+  margin: 0 4px;
+}
 
 .range-track {
-  position: relative;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 52px;
   height: 14px;
-  margin-top: 26px;
   background: var(--tint);
   border-radius: 999px;
 }
@@ -806,39 +817,57 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
   background: var(--aubergine);
   border: 4px solid var(--cyan);
   box-shadow: 0 2px 6px rgba(43, 0, 51, 0.35);
+  z-index: 2;
 }
 
+/* Today's tick rises from the track to its own label's line. */
 .range-ref {
   position: absolute;
-  top: -8px;
-  bottom: -8px;
+  bottom: -6px;
   width: 2px;
   margin-left: -1px;
   background: var(--ink);
 }
+.range-ref-row1 { top: -14px; }
+.range-ref-row2 { top: -6px; } /* stacked labels: a tall tick would cut the one below */
 
-.range-ref-label {
+.rl {
   position: absolute;
-  bottom: calc(100% + 4px);
-  left: 50%;
-  transform: translateX(-50%);
   white-space: nowrap;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--ink);
-}
-
-.range-ends {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 8px;
-  font-family: var(--font-fig);
-  font-size: 1.02rem;
-  font-weight: 600;
+  font-size: 0.85rem;
+  line-height: 1.2;
   color: var(--ink-soft);
   font-variant-numeric: tabular-nums;
 }
-.range-caption { font-family: var(--font); font-size: 0.85rem; font-weight: 500; }
+.rl-mid   { transform: translateX(-50%); }
+.rl-start { transform: translateX(-4px); }
+.rl-end   { transform: translateX(calc(-100% + 4px)); }
+.rl-row2  { top: 0; }
+.rl-row1  { top: 22px; }
+.rl-below {
+  top: 72px;
+  font-family: var(--font-fig);
+  font-size: 1.02rem;
+  font-weight: 600;
+}
+.rl-pred { color: var(--aubergine); font-weight: 600; }
+.rl-pred strong { font-family: var(--font-fig); font-size: 1.05rem; font-weight: 800; }
+.rl-ref { color: var(--ink); font-weight: 600; }
+
+.range-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+.range-swatch {
+  width: 22px;
+  height: 10px;
+  border-radius: 999px;
+  background: #cdb3d8;
+}
 
 .reality {
   display: flex;
@@ -1082,7 +1111,7 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
 }
 .sheet-answer-pin { position: sticky; top: 88px; }
 .sheet-answer .answer-head { margin-bottom: 4px; }
-.sheet-answer .range { margin-top: 30px; }
+.sheet-answer .range { margin-top: 20px; }
 .sheet-editor { border-left: 1px solid var(--line); padding-left: 40px; }
 .sheet-title-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .sheet-title { font-size: 1.6rem; font-weight: 800; text-transform: uppercase; color: var(--aubergine); margin: 0; }
