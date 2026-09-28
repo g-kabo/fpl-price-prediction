@@ -70,6 +70,12 @@ _COLUMN = {key: (column, numeric) for key, column, numeric in COLUMNS}
 
 DEFAULT_SORT = {"col": "move", "desc": True}
 
+#: The projections the settings offer, primary first. "As-is" (pricing the
+#: raw totals so far) is left out: part of a season priced as if it were a
+#: whole one is not a forecast anyone asked for.
+MODES = ["naive", "shrunk"]
+DEFAULT_MODE = "naive"
+
 REFERENCE_WORDS = {"price_now": "today's price", "start_cost": "his August price"}
 
 #: Columns the page keeps per player, in the browser-side store.
@@ -239,9 +245,9 @@ def _settings() -> html.Div:
                         html.Div("Projection", className="field-label"),
                         dcc.Dropdown(
                             id="board-mode",
-                            options=[{"label": label, "value": key}
-                                     for key, label in projection.MODES.items()],
-                            value="shrunk", clearable=False,
+                            options=[{"label": projection.MODES[key], "value": key}
+                                     for key in MODES],
+                            value=DEFAULT_MODE, clearable=False,
                         ),
                         html.Div(id="board-clamp", className="field-hint"),
                     ],
@@ -253,8 +259,9 @@ def _settings() -> html.Div:
                                    className="field-label"),
                         dbc.Input(id="board-k", type="number", min=0, max=38, step=1,
                                   value=projection.DEFAULT_K, className="field-input"),
-                        html.Div("The gameweek at which this season's form and last "
-                                 "season's count equally.", className="field-hint"),
+                        html.Div("Shrink mode only: the gameweek at which this season's "
+                                 "form and last season's count equally.",
+                                 className="field-hint"),
                     ],
                     className="field",
                 ),
@@ -300,6 +307,15 @@ def toggle_settings(_n_clicks, is_open):
     """Open or close the projection settings drawer under the header."""
     opening = not is_open
     return opening, "btn-on-dark is-open" if opening else "btn-on-dark"
+
+
+@callback(
+    Output("board-k", "disabled"),
+    Input("board-mode", "value"),
+)
+def k_applies(mode):
+    """k only means something when blending with last season."""
+    return mode != "shrunk"
 
 
 @callback(
@@ -378,12 +394,13 @@ def _status(season, projected: pd.DataFrame, mode: str, k: float, overridden: bo
     chips = [source, html.Span(gameweek[:1].upper() + gameweek[1:], className="chip")]
 
     games = float(projected["games_played"].mean())
-    if mode == "naive":
-        chips.append(html.Span("Naive projection: stats scaled up with no blending",
-                               className="chip chip-warn"))
-    elif mode == "asis":
-        chips.append(html.Span("No projection: priced on raw totals so far",
-                               className="chip chip-warn"))
+    if mode != "shrunk":
+        chips.append(html.Span(
+            "Form scaled to a full season",
+            className="chip",
+            title="Each player's totals so far are multiplied up to 38 gameweeks, "
+                  "using his own club's fixtures played.",
+        ))
     else:
         weight = projection.shrinkage_weight(games, k)
         chips.append(html.Span(
@@ -402,7 +419,7 @@ def _clamp_note(clamped: int, mode: str) -> str:
     base = (f"{clamped} player(s) projected past anything in the training data are held "
             "at its edge rather than extrapolated.")
     if mode == "naive":
-        return base + " Naive scaling is why there are so many."
+        return base + " Scaling a few gameweeks up to 38 pushes more players there."
     return base
 
 

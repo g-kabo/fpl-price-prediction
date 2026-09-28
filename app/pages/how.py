@@ -156,19 +156,24 @@ def layout() -> html.Div:
                     ui.section(
                         "Predicting from a season still being played",
                         html.P(
-                            "Price Watch has to turn a few gameweeks into a full season. "
-                            "Multiplying up is wrong early on: three good games scale into a "
-                            "record-breaking season. So each player's projection blends his form "
-                            "this season with his last one, trusting this season more with every "
-                            "gameweek. At six gameweeks the two count equally; by gameweek 30 it is "
-                            "83% this season.",
+                            "Price Watch has to turn a few gameweeks into a full season. By "
+                            "default it scales each player's totals so far up to 38 gameweeks. "
+                            "That is simple and uses only this season, but early on it is "
+                            "jumpy: three good games scale into a record-breaking season.",
                             className="prose",
                         ),
                         html.P(
-                            "Each player is scaled by his own club's fixtures, so a club that has "
-                            "a game in hand is not treated as a week behind. Players new to the "
-                            "league borrow a typical season for their position and price. Anything "
-                            "that still ends up beyond what the model has ever seen is held at the "
+                            "Projection settings offer a steadier alternative, which blends "
+                            "each player's form this season with his last one, trusting this "
+                            "season more with every gameweek. At six gameweeks the two count "
+                            "equally; by gameweek 30 it is 83% this season. Players new to the "
+                            "league then borrow a typical season for their position and price.",
+                            className="prose",
+                        ),
+                        html.P(
+                            "Either way, each player is scaled by his own club's fixtures, so a "
+                            "club with a game in hand is not treated as a week behind. Anything "
+                            "that ends up beyond what the model has ever seen is held at the "
                             "edge of its experience rather than extrapolated.",
                             className="prose",
                         ),
