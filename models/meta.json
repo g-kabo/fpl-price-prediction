@@ -3,25 +3,19 @@
   "predict_season": 2026,
   "train_through": 2024,
   "training_rows": 3812,
-  "n_predictors": 39,
+  "n_predictors": 33,
   "columns": [
     "start_cost",
-    "cost_change_start",
+    "final_cost",
     "total_points",
     "minutes",
-    "transfers_in",
-    "transfers_out",
     "goals_scored",
     "assists",
-    "bps",
-    "clean_sheets",
     "points_per_game",
     "value_season",
-    "goals_per_min",
-    "assists_per_min",
-    "bps_per_min",
-    "points_per_mins",
-    "cleansheets_per_min",
+    "selected_by_percent",
+    "start_cost_sq",
+    "final_cost_sq",
     "no_mins",
     "element_type_DEF",
     "element_type_MID",
@@ -65,18 +59,18 @@
     "West Ham",
     "Wolves"
   ],
-  "rsquared_adj": 0.9385275865166005,
-  "sigma": 0.30827883721562566,
+  "rsquared_adj": 0.9422852932091995,
+  "sigma": 0.2987079812955695,
   "ranges": {
     "start_cost": {
       "min": 3.9999999999999996,
       "median": 5.0,
       "max": 15.0
     },
-    "cost_change_start": {
-      "min": -1.0,
-      "median": -0.1,
-      "max": 1.6
+    "final_cost": {
+      "min": 3.6,
+      "median": 4.8,
+      "max": 14.9
     },
     "total_points": {
       "min": -1.0,
@@ -88,16 +82,6 @@
       "median": 1231.0,
       "max": 3420.0
     },
-    "transfers_in": {
-      "min": 0.0,
-      "median": 89660.5,
-      "max": 10811759.0
-    },
-    "transfers_out": {
-      "min": 0.0,
-      "median": 113948.0,
-      "max": 9878367.0
-    },
     "goals_scored": {
       "min": 0.0,
       "median": 0.0,
@@ -107,16 +91,6 @@
       "min": 0.0,
       "median": 1.0,
       "max": 23.0
-    },
-    "bps": {
-      "min": -3.0,
-      "median": 216.0,
-      "max": 1133.0
-    },
-    "clean_sheets": {
-      "min": 0.0,
-      "median": 3.0,
-      "max": 21.0
     },
     "points_per_game": {
       "min": 0.0,
@@ -128,30 +102,20 @@
       "median": 9.8,
       "max": 38.7
     },
-    "goals_per_min": {
+    "selected_by_percent": {
       "min": 0.0,
-      "median": 0.0,
-      "max": 0.030303030303030304
+      "median": 0.5,
+      "max": 78.4
     },
-    "assists_per_min": {
-      "min": 0.0,
-      "median": 0.00030864197530864197,
-      "max": 0.25
+    "start_cost_sq": {
+      "min": 15.999999999999996,
+      "median": 25.0,
+      "max": 225.0
     },
-    "bps_per_min": {
-      "min": -0.15384615384615385,
-      "median": 0.17671233805429976,
-      "max": 5.0
-    },
-    "points_per_mins": {
-      "min": 0.0,
-      "median": 0.03888888888888889,
-      "max": 1.0
-    },
-    "cleansheets_per_min": {
-      "min": 0.0,
-      "median": 0.0025222283399923724,
-      "max": 0.01639344262295082
+    "final_cost_sq": {
+      "min": 12.96,
+      "median": 23.04,
+      "max": 222.01000000000002
     },
     "no_mins": {
       "min": 0.0,
@@ -266,9 +230,18 @@
   },
   "source_mtimes": {
     "config.py": 1789849874.081195,
-    "clean.py": 1789173690.5519168,
-    "features.py": 1789173489.0368733,
-    "model.py": 1789175425.2568333,
+    "clean.py": 1790629613.9880683,
+    "features.py": 1790631922.4852161,
+    "model.py": 1790631922.4862132,
+    "data/gw_ownership_2017-18.csv": 1790629558.4227595,
+    "data/gw_ownership_2018-19.csv": 1790629559.5150304,
+    "data/gw_ownership_2019-20.csv": 1790629559.947881,
+    "data/gw_ownership_2020-21.csv": 1790629560.4508262,
+    "data/gw_ownership_2021-22.csv": 1790629561.002704,
+    "data/gw_ownership_2022-23.csv": 1790629561.6117294,
+    "data/gw_ownership_2023-24.csv": 1790629562.2956338,
+    "data/gw_ownership_2024-25.csv": 1790629562.9777591,
+    "data/gw_ownership_2025-26.csv": 1790629563.7398179,
     "data/master_team_list.csv": 1789173561.0408077,
     "data/players_raw_2017-18.csv": 1789173561.901663,
     "data/players_raw_2018-19.csv": 1789173562.1759582,

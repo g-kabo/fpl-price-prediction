@@ -59,12 +59,10 @@ approximate: the model is linear, so the contributions sum to the point
 estimate. The features the model *derives* from your inputs sit under "Model
 details" beneath it. The visual system is documented in `DESIGN.md`.
 
-The derived panel shows rates **per 90 minutes**, plus minutes themselves as
-90s played, because a match is the unit anyone thinks in: 0.82 goals per 90 is a
-striker having a good season, while the same number written as 0.0091 per minute
-is just small. The model reads the per-minute figure, so that is kept underneath
-each rate — the breakdown below names `goals per min`, and a panel showing only
-the readable version would leave the two impossible to reconcile.
+The derived panel shows the two squared prices the model works out from the
+start and end price, plus minutes as 90s played. The squares are shown because
+they are real terms in the breakdown below — usually among its largest — and a
+panel that hid them would leave those rows impossible to reconcile by hand.
 
 `train_and_save.py` fits once and caches to `models/`, because loading ten
 seasons takes ~17s against a 0.1s fit. The app refits automatically if that
@@ -92,8 +90,9 @@ survives the blend is clamped to the fitted range, and the page says how many
 players that affected. Switching to "naive" mode shows why it exists: 123
 players clamp instead of 19.
 
-`start_cost` and `cost_change_start` are never projected — they are facts about
-the current season, not forecasts. `points_per_game` and `value_season` are
+`start_cost`, `final_cost` and `selected_by_percent` are never projected — they
+are facts about the current season, not forecasts, and ownership is a share
+rather than a running total. `points_per_game` and `value_season` are
 ratios, recomputed from the projected totals rather than scaled.
 
 #### What *n* is, mid-gameweek
@@ -115,7 +114,7 @@ priced on that evening it moves 57 of them by more than £0.05, all in the
 over-projected direction, and halves the number clamped to the fitted range
 from 34 to 17.
 
-Three details that are easy to get wrong:
+Two details that are easy to get wrong:
 
 - **Counting finished gameweeks undercounts.** An event only flips `finished`
   once its bonus points are confirmed, hours after the last whistle and often
@@ -125,11 +124,6 @@ Three details that are easy to get wrong:
   worth its own `minutes / 90`, so a game at half time counts as half. A
   finished match counts as one whatever minutes it recorded, since an abandoned
   game still happened.
-- **Transfers accrue on the league's calendar, not one club's.** A player whose
-  team kicks off on Monday night has still been transferred in and out all
-  weekend, so `transfers_in` and `transfers_out` are divided by the twenty-club
-  average rather than by his own club's fixtures. Everything else in
-  `COUNTING_FIELDS` is per club.
 
 A player's denominator is his *club's* fixtures, never his own appearances: a
 defender benched four games running has still had four gameweeks of
@@ -195,8 +189,8 @@ scatter needed a genuinely current price.
 table. Filtering one and not the other is how a page ends up showing three marks
 above a six-hundred-row table and inviting the reader to reconcile them. It
 narrows what is displayed, never what is computed — the projection runs on the
-whole league first, because the priors, the league-average denominator behind
-the transfer fields and the clamping counts are all league-wide quantities.
+whole league first, because the priors and the clamping counts are league-wide
+quantities.
 Filtering to Arsenal and projecting Arsenal alone would quietly give Arsenal a
 different denominator; a test asserts no player's prediction moves when the
 filter changes. The banner above is left alone for the same reason: it describes
@@ -299,10 +293,11 @@ bars too narrow to label.
 
 | Step | File |
 |---|---|
-| Pull `players_raw.csv` per season from the `vaastav/Fantasy-Premier-League` repo | `fpl_data.py` |
+| Pull `players_raw.csv` per season from the `vaastav/Fantasy-Premier-League` repo, plus a slim per-gameweek ownership/price file (experiments only) | `fpl_data.py` |
 | Select 22 columns, recover `start_cost` from `now_cost - cost_change_start`, map positions, join team names, drop managers | `clean.py` |
 | Attach next season's starting price as the target, matched on the permanent player `code` | `clean.py` |
-| Per-minute rate features, 3%-frequency team lumping, dummy encoding | `features.py` |
+| Squared price terms, 3%-frequency team lumping, dummy encoding | `features.py` |
+| Score alternative feature sets on a rolling-origin temporal backtest | `feature_experiments.py` |
 | OLS fit with 10-fold CV, 95% prediction intervals, permutation importance | `model.py` |
 | Orchestration and CSV/JSON/PNG export | `run_pipeline.py` |
 | Score the predictions against the prices FPL actually set | `backtest.py` |
@@ -316,8 +311,8 @@ predicting 2026-27:
 
 | | RMSE | MAE | R² |
 |---|---|---|---|
-| Held-out test split (25%) | 0.2989 | 0.2245 | 0.9363 |
-| 10-fold cross-validation | 0.3102 (SE 0.0064) | | 0.9351 |
+| Held-out test split (25%) | 0.2876 | 0.2186 | 0.9410 |
+| 10-fold cross-validation | 0.2999 (SE 0.0063) | | 0.9392 |
 
 **Backtest against actual 2026-27 starting prices** — 468 returning players
 (148 of the 616 players in 2026-27 are promoted-club players, new signings or
@@ -325,23 +320,27 @@ debutants, and so have no prediction):
 
 | | Value |
 |---|---|
-| RMSE | 0.3871 |
-| MAE | 0.2848 |
-| Bias | −0.0595 (slightly under-predicts overall) |
-| Within £0.25m | 57.1% |
-| 95% interval coverage | 89.3% |
+| RMSE | 0.3528 |
+| MAE | 0.2618 |
+| Bias | −0.0563 (slightly under-predicts overall) |
+| Within £0.25m | 59.0% |
+| 95% interval coverage | 90.8% |
 | Carry-forward baseline RMSE | 0.5708 |
-| **Improvement over baseline** | **32.2%** |
+| **Improvement over baseline** | **38.2%** |
+
+The R's feature set scored 0.3871 on the same backtest; see
+[Feature selection](#feature-selection) for what changed.
 
 Two things worth knowing before trusting a number out of this:
 
-- **Forwards are the weak spot.** FWD backtest RMSE is 0.5765 against 0.33–0.37
-  for every other position, with a +0.168 bias and only 75% interval coverage —
-  the model systematically over-prices them. FPL priced Ekitiké and Gyökeres at
-  £7.5m when the model said £8.7m. Striker pricing appears to depend on transfer
-  activity the model cannot see.
-- **The intervals are a little narrow.** 89.3% actual coverage against a nominal
-  95% means the real uncertainty is modestly wider than quoted.
+- **Forwards are the weak spot.** FWD backtest RMSE is 0.4795 against 0.32–0.34
+  for every other position, with a +0.167 bias and 79% interval coverage — the
+  model still over-prices them, if less than it did. FPL priced Ekitiké and
+  Gyökeres at £7.5m when the model said £8.6–8.7m. Striker pricing appears to
+  depend on something the model cannot see.
+- **The intervals are a little narrow.** 90.8% actual coverage against a nominal
+  95% means the real uncertainty is modestly wider than quoted — and it grows
+  with price, which a single OLS error term cannot represent.
 
 ## Differences from the R
 
@@ -392,7 +391,8 @@ R's frame bug-for-bug over 40 random splits:
 0.362043 sits inside the first row's range, so the translation is faithful; it
 sits outside the third, so the corrections are doing real work.
 
-To re-run that configuration:
+To re-run that configuration (`--r-compat` also switches back to the R's feature
+set, `features.R_NUMERIC`, since today's default is not the R's):
 
 ```
 "..\FPL Python Dashboard\.venv\Scripts\python.exe" run_pipeline.py ^
@@ -410,7 +410,8 @@ Everything lands in `output/`:
 | `backtest_2026.csv` | Those predictions joined to actual 2026-27 prices, sorted by absolute error. |
 | `metrics.json`, `backtest_metrics_2026.json` | Every figure quoted above. |
 | `coefficients.csv` | Coefficient table with p-values and 95% confidence intervals — R's `tidy(conf.int = TRUE)`. |
-| `variable_importance.csv` | Permutation drop-out loss per variable — R's `DALEX::model_parts(B = 50)`. Ranked `bps`, `total_points`, `minutes`, `clean_sheets`, `goals_scored`, `start_cost`. |
+| `variable_importance.csv` | Permutation drop-out loss per variable — R's `DALEX::model_parts(B = 50)`. Ranked `final_cost_sq`, `start_cost`, `start_cost_sq`, `goals_scored`, `value_season`, `final_cost`. |
+| `feature_experiments.csv`, `feature_experiments_folds.csv` | Written by `feature_experiments.py`: every feature-set variant's random-CV and temporal RMSE, overall and per season. |
 | `plots/*.png` | The four ggplot figures from the R, plus the backtest scatter. |
 
 Note the R named its output files after the *input* season (`pred_price_2024.csv`
@@ -436,17 +437,60 @@ the `other` team level rather than erroring.
 ## Model specification
 
 ```
+next_cost ~ start_cost + final_cost + start_cost² + final_cost²
+          + total_points + minutes + goals_scored + assists
+          + points_per_game + value_season + selected_by_percent
+          + no_mins + element_type + team_name
+```
+
+Teams appearing in under 3% of training rows are pooled into `other`, which is
+also the dummy-encoding reference level; `GK` is the reference position. On the
+current training window that leaves 18 named teams and 33 predictors, adjusted
+R² 0.9423.
+
+### Feature selection
+
+The R's formula (below) was replaced in September 2026 after
+`feature_experiments.py` scored the alternatives. Random CV mixes seasons, so it
+cannot see a feature whose meaning drifts over time; the deciding test is a
+**rolling-origin temporal backtest** — fit on every season before *s*, predict
+the *s → s+1* transition, for 2020-21 through 2025-26.
+
+| Change | Temporal RMSE |
+|---|---|
+| R formula | 0.3288 |
+| `transfers_in`/`transfers_out` → `selected_by_percent` | 0.3154 |
+| drop the five per-minute rates | 0.3138 |
+| add `start_cost²` and `final_cost²` | 0.3057 |
+| drop `bps` and `clean_sheets` | **0.3054** |
+
+- **Transfers drift.** FPL's manager count roughly doubled between 2017-18 and
+  2025-26, so a raw transfer count means something different every season.
+  Ownership is a share and does not. Season-share and log transfers were tried
+  and did less well.
+- **Rates, `bps` and `clean_sheets` were redundant** with `total_points` and
+  `minutes`; removing each cost nothing out of sample.
+- **The squares let the price slope bend.** A cheap player carries about half
+  his price into next season (prices sit against a £4.0–4.5m floor), a premium
+  about 85% (FPL keeps stars expensive). A straight line splits the difference
+  and mis-prices both ends. Natural splines and per-price-tier adjustments were
+  tested and did no better.
+- **`final_cost` in place of `cost_change_start`** changes nothing numerically —
+  alongside `start_cost` the two carry the same information — it just reads more
+  naturally.
+- **Tried and rejected:** gameweek-derived start/min/max/final ownership (no
+  better than the end-of-season figure), in-season min/max price, previous-season
+  lags, the `cumul_weighted_*` history, ICT index, bonus.
+
+The R's original formula, still available as `features.R_NUMERIC`:
+
+```
 next_cost ~ start_cost + cost_change_start + element_type + total_points
           + minutes + transfers_in + transfers_out + goals_scored + assists
           + bps + clean_sheets + team_name + points_per_game + value_season
           + goals_per_min + assists_per_min + bps_per_min + points_per_mins
           + cleansheets_per_min + no_mins
 ```
-
-Teams appearing in under 3% of training rows are pooled into `other`, which is
-also the dummy-encoding reference level; `GK` is the reference position. On the
-current training window that leaves 18 named teams and 39 predictors, adjusted
-R² 0.9385.
 
 `statsmodels` is used rather than `scikit-learn` because the R's output includes
 prediction intervals and a coefficient table with p-values; neither exists in

@@ -1,10 +1,10 @@
 """The inputs a user supplies, defined once for all three pages.
 
-The model reads 20 columns but only 14 of them are anyone's to type: the
-five per-minute rates and ``no_mins`` are *derived* from minutes and the
-counting stats by :func:`features.add_rate_features`. Offering them as
-inputs would let the form state contradict itself -- 10 goals in 0 minutes
-with a goals-per-minute of 0.4 -- so they are shown read-only instead.
+Not every model input is anyone's to type: the two squared prices are
+*derived* from the start and end price, and ``no_mins`` from minutes, by
+:mod:`features`. Offering them as inputs would let the form state contradict
+itself -- a 5.0m player whose squared price is not 25 -- so they are shown
+read-only instead.
 
 Keeping the list here rather than in each page is what stops the three
 forms from drifting apart as fields are added.
@@ -21,32 +21,27 @@ import config  # noqa: E402
 import features  # noqa: E402
 
 #: ``(field, label, step, integer?)`` for every numeric input, in the order
-#: they appear on the form. The names and their order are
-#: :data:`features.BASE_NUMERIC`; the presentation is ours.
+#: they appear on the form. The names are the raw inputs behind
+#: :data:`features.DEFAULT_NUMERIC`; the presentation is ours.
 NUMERIC_FIELDS: list[tuple[str, str, float, bool]] = [
-    ("start_cost",        "Start price",          0.1,  False),
-    ("cost_change_start", "Price change",         0.1,  False),
-    ("minutes",           "Minutes",              1,    True),
-    ("total_points",      "Total points",         1,    True),
-    ("points_per_game",   "Points per game",      0.1,  False),
-    ("value_season",      "Points per £m",        0.1,  False),
-    ("goals_scored",      "Goals",                1,    True),
-    ("assists",           "Assists",              1,    True),
-    ("clean_sheets",      "Clean sheets",         1,    True),
-    ("bps",               "BPS",                  1,    True),
-    ("transfers_in",      "Transfers in",         1000, True),
-    ("transfers_out",     "Transfers out",        1000, True),
+    ("start_cost",          "Start price",          0.1,  False),
+    ("final_cost",          "End price",            0.1,  False),
+    ("minutes",             "Minutes",              1,    True),
+    ("total_points",        "Total points",         1,    True),
+    ("points_per_game",     "Points per game",      0.1,  False),
+    ("value_season",        "Points per £m",        0.1,  False),
+    ("goals_scored",        "Goals",                1,    True),
+    ("assists",             "Assists",              1,    True),
+    ("selected_by_percent", "Selected by",          0.1,  False),
 ]
 
 #: Hints for the traps that would otherwise fail silently -- a wrong unit
 #: still predicts a plausible-looking number, it is just the wrong one.
 FIELD_HELP: dict[str, str] = {
     "start_cost": "In £m, e.g. 5.5.",
-    "cost_change_start": "How far his price has moved this season, in £m.",
+    "final_cost": "His price at the end of the season (or today), in £m.",
     "value_season": "Total points divided by price.",
-    "transfers_in": "Whole-season total; runs into millions.",
-    "transfers_out": "Whole-season total; runs into millions.",
-    "bps": "The raw BPS score, not bonus points awarded.",
+    "selected_by_percent": "Share of FPL managers who own him, in %, e.g. 12.5.",
 }
 
 NUMERIC_NAMES = [name for name, _, _, _ in NUMERIC_FIELDS]
@@ -70,15 +65,15 @@ MINUTES_PER_MATCH = 90.0
 #: member of :data:`features.RATE_FEATURES` -- the model never sees it.
 MATCHES_FIELD = "minutes_per_90"
 
+#: The squared prices, which the model derives from the two price inputs.
+SQUARED_FIELDS = {"start_cost_sq": "start_cost", "final_cost_sq": "final_cost"}
+
 #: Derived and displayed, never entered.
-DERIVED_FIELDS = list(features.RATE_FEATURES) + [MATCHES_FIELD, "no_mins"]
+DERIVED_FIELDS = list(SQUARED_FIELDS) + [MATCHES_FIELD, "no_mins"]
 
 DERIVED_LABELS = {
-    "goals_per_min": "Goals / 90",
-    "assists_per_min": "Assists / 90",
-    "bps_per_min": "BPS / 90",
-    "points_per_mins": "Points / 90",
-    "cleansheets_per_min": "Clean sheets / 90",
+    "start_cost_sq": "Start price²",
+    "final_cost_sq": "End price²",
     MATCHES_FIELD: "90s played",
     "no_mins": "Never played",
 }

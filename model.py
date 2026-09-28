@@ -47,6 +47,9 @@ class PriceModel:
     """Fitted preprocessing + regression for next-season starting price."""
 
     lump_threshold: float = config.TEAM_LUMP_THRESHOLD
+    #: Numeric predictors; None means ``features.DEFAULT_NUMERIC``.
+    numeric: list[str] | None = None
+    use_team: bool = True
     lumper: features.TeamLumper | None = None
     columns: list[str] = field(default_factory=list)
     result: sm.regression.linear_model.RegressionResultsWrapper | None = None
@@ -56,7 +59,8 @@ class PriceModel:
 
     def fit(self, df: pd.DataFrame) -> "PriceModel":
         self.lumper = features.TeamLumper(self.lump_threshold).fit(df["team_name"])
-        X = features.build_design_matrix(df, self.lumper)
+        X = features.build_design_matrix(df, self.lumper, numeric=self.numeric,
+                                         use_team=self.use_team)
         y = df[TARGET].astype(float)
 
         # R's lm() drops incomplete cases via na.action = na.omit; a handful
@@ -71,7 +75,10 @@ class PriceModel:
     def _matrix(self, df: pd.DataFrame) -> pd.DataFrame:
         if self.result is None or self.lumper is None:
             raise RuntimeError("PriceModel.fit() must be called before predicting")
-        X = features.build_design_matrix(df, self.lumper, self.columns)
+        # getattr: artifacts pickled before these fields existed lack them.
+        X = features.build_design_matrix(df, self.lumper, self.columns,
+                                         numeric=getattr(self, "numeric", None),
+                                         use_team=getattr(self, "use_team", True))
         return sm.add_constant(X, has_constant="add")
 
     # --- prediction --------------------------------------------------------
@@ -186,7 +193,8 @@ class PriceModel:
         The most interpretable statement of variable impact available for a
         linear model, and the one to trust where it disagrees with
         :meth:`permutation_importance`: heavily collinear predictors (``bps``,
-        ``total_points`` and ``clean_sheets`` sit at r = 0.89-0.95 here) each
+        ``total_points`` and ``clean_sheets`` sat at r = 0.89-0.95 in the R's
+        formula) each
         look useful in isolation but are individually redundant, which only a
         refit reveals.
         """
@@ -218,7 +226,7 @@ class PriceModel:
         """|coefficient| x SD(predictor): each term's effect in GBPm per 1 SD.
 
         Raw OLS coefficients are not comparable across predictors measured on
-        different scales -- ``transfers_in`` runs to millions while
+        different scales -- ``minutes`` runs past 3,000 while
         ``points_per_game`` tops out near 8 -- so the raw table cannot be read
         as a ranking. Scaling by the predictor's own spread makes it one.
         """
@@ -253,7 +261,8 @@ def split_train_test(
 
 
 def cross_validate(
-    df: pd.DataFrame, folds: int = config.CV_FOLDS, seed: int = config.SEED
+    df: pd.DataFrame, folds: int = config.CV_FOLDS, seed: int = config.SEED,
+    **model_kwargs,
 ) -> dict:
     """``fit_resamples(vfold_cv(v = 10))``.
 
@@ -267,7 +276,7 @@ def cross_validate(
 
     for train_pos, test_pos in kfold.split(df):
         train, test = df.iloc[train_pos], df.iloc[test_pos]
-        preds = PriceModel().fit(train).predict(test)
+        preds = PriceModel(**model_kwargs).fit(train).predict(test)
         truth = test[TARGET].astype(float)
         keep = preds.notna() & truth.notna()
         fold_rmse.append(rmse(truth[keep], preds[keep]))

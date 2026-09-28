@@ -44,7 +44,8 @@ def parse_args() -> argparse.Namespace:
                    help="season whose starting prices are predicted (default: %(default)s)")
     p.add_argument("--refresh", action="store_true", help="re-download instead of using data/ cache")
     p.add_argument("--r-compat", action="store_true",
-                   help="reproduce the R's lead() target, which pairs non-consecutive seasons")
+                   help="reproduce the R: its lead() target, which pairs non-consecutive "
+                        "seasons, and its original feature set")
     p.add_argument("--tag", default="", help="suffix for output filenames")
     p.add_argument("--importance-repeats", type=int, default=50,
                    help="permutation repeats, DALEX B (default: %(default)s); 0 to skip")
@@ -78,10 +79,13 @@ def main() -> None:
           f"{config.season_label(train_df['season'].min())}-{config.season_label(train_df['season'].max())}"
           f"{'  [R-compatible target]' if args.r_compat else ''}")
 
+    # The R's published RMSE came from the R's formula, not today's default.
+    model_kwargs = {"numeric": features.R_NUMERIC} if args.r_compat else {}
+
     # --- evaluation on held-out data ---------------------------------------
 
     train_split, test_split = model.split_train_test(train_df)
-    holdout = model.PriceModel().fit(train_split)
+    holdout = model.PriceModel(**model_kwargs).fit(train_split)
     test_pred = holdout.predict(test_split)
     holdout_metrics = {
         "rmse": model.rmse(test_split[model.TARGET], test_pred),
@@ -93,13 +97,13 @@ def main() -> None:
     print(f"Holdout  RMSE {holdout_metrics['rmse']:.4f}  MAE {holdout_metrics['mae']:.4f}  "
           f"R2 {holdout_metrics['rsq']:.4f}")
 
-    cv_metrics = model.cross_validate(train_df)
+    cv_metrics = model.cross_validate(train_df, **model_kwargs)
     print(f"{cv_metrics['folds']}-fold CV  RMSE {cv_metrics['rmse_mean']:.4f} "
           f"(SE {cv_metrics['rmse_std_err']:.4f})  R2 {cv_metrics['rsq_mean']:.4f}")
 
     # --- final fit on every training row -----------------------------------
 
-    final = model.PriceModel().fit(train_df)
+    final = model.PriceModel(**model_kwargs).fit(train_df)
     print(f"Final fit: {len(final.columns)} predictors, "
           f"{len(final.lumper.keep_)} named teams + '{config.OTHER_TEAM}', "
           f"adj R2 {final.result.rsquared_adj:.4f}")

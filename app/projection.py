@@ -17,9 +17,7 @@ Three guards, applied in order:
    scaling everyone by 38/4 hands the twelve a 25% bonus they did not earn,
    and scaling by 38/5 docks the eight for fixtures they have not had yet.
    So each player is divided by *his own club's* fixtures played, carried
-   in a :class:`fpl_data.SeasonProgress`. Transfers in and out are the
-   exception: they tick over daily for every player whether or not his club
-   has kicked off, so they are divided by the league average instead.
+   in a :class:`fpl_data.SeasonProgress`.
 
 2. **Shrink toward a prior.** The naive projection is blended with what the
    player actually did last season, weighted by how much of this season has
@@ -49,21 +47,19 @@ import schema
 TOTAL_GAMEWEEKS = 38
 
 #: Counting stats that accumulate over a season and so scale with games
-#: played. Everything else in the form is a price, a rate or a ratio.
-COUNTING_FIELDS = [
-    "minutes", "total_points", "goals_scored", "assists",
-    "clean_sheets", "bps", "transfers_in", "transfers_out",
-]
+#: played. Everything else in the form is a price, a share or a ratio.
+COUNTING_FIELDS = ["minutes", "total_points", "goals_scored", "assists"]
 
-#: The two counting stats that accrue on the league's calendar rather than
-#: on one club's fixture list. A player whose team plays Monday night has
-#: still been transferred in and out all weekend, so dividing his transfers
-#: by his club's games would inflate them relative to everyone else's.
-LEAGUE_FIELDS = ["transfers_in", "transfers_out"]
+#: Counting stats that accrue on the league's calendar rather than on one
+#: club's fixture list, and so scale by the league-average games played.
+#: Empty since transfers in/out left the model; kept so a future
+#: league-calendar stat has somewhere to go.
+LEAGUE_FIELDS: list[str] = []
 
 #: Known facts about *this* season, not forecasts -- projecting them would
-#: be inventing information we already have.
-FIXED_FIELDS = ["start_cost", "cost_change_start"]
+#: be inventing information we already have. Ownership is a share, not a
+#: running total, so it needs no scaling either: today's figure stands.
+FIXED_FIELDS = ["start_cost", "final_cost", "selected_by_percent"]
 
 #: Recomputed from the projected totals rather than scaled.
 RATIO_FIELDS = ["points_per_game", "value_season"]

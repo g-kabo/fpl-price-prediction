@@ -89,7 +89,7 @@ def test_intervals_survived_serialisation(artifacts):
 
     width = interval["pred_upper"] - interval["pred_lower"]
     assert (width > 0).all(), "prediction intervals collapsed to zero width"
-    assert width.mean() == pytest.approx(1.216, abs=0.05)
+    assert width.mean() == pytest.approx(1.177, abs=0.05)
 
 
 def test_app_row_assembly_matches_cleaned_frame(artifacts):

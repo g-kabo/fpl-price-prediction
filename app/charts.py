@@ -65,7 +65,11 @@ _HOVER = dict(bgcolor=theme.AUBERGINE, bordercolor=theme.AUBERGINE,
 
 #: Design-matrix columns as a manager would say them.
 _TERM_LABELS = {
-    "start_cost": "Price this season",
+    "start_cost": "Start price this season",
+    "final_cost": "End price this season",
+    "start_cost_sq": "Start price, squared",
+    "final_cost_sq": "End price, squared",
+    "selected_by_percent": "Selected by %",
     "cost_change_start": "Price movement this season",
     "total_points": "Total points",
     "minutes": "Minutes",

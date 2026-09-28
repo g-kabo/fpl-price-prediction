@@ -27,6 +27,9 @@ RAW_COLS = [
     "bonus", "now_cost", "bps", "cost_change_start", "points_per_game",
     "selected_by_percent", "transfers_in", "transfers_out", "value_season",
     "web_name", "clean_sheets",
+    # Not used by the default model; candidates in feature_experiments.py.
+    # All four are present in every season from 2017-18 on.
+    "ict_index", "influence", "creativity", "threat",
 ]
 
 #: Columns the upstream CSVs sometimes deliver as strings.
@@ -34,6 +37,7 @@ NUMERIC_COLS = [
     "total_points", "minutes", "goals_scored", "assists", "bonus", "now_cost",
     "bps", "cost_change_start", "points_per_game", "selected_by_percent",
     "transfers_in", "transfers_out", "value_season", "clean_sheets",
+    "ict_index", "influence", "creativity", "threat",
 ]
 
 #: element_type 1-4 are playing positions; 5 (manager) is dropped, matching
@@ -41,7 +45,52 @@ NUMERIC_COLS = [
 POSITION_MAP = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
 
 
-def clean_season(raw: pd.DataFrame, season: int, master_teams: pd.DataFrame) -> pd.DataFrame:
+#: Ownership over the season, from the gameweek files. See ownership_summary().
+OWNERSHIP_COLS = [
+    "start_selected_by_percent", "final_selected_by_percent",
+    "min_selected_by_percent", "max_selected_by_percent",
+]
+
+#: Every FPL squad holds exactly 15 players, so the managers in a gameweek
+#: are the sum of every player's owner count over 15.
+SQUAD_SIZE = 15
+
+
+def ownership_summary(gameweeks: pd.DataFrame) -> pd.DataFrame:
+    """Start, final, min and max ``selected_by_percent`` per player id.
+
+    The gameweek files record ``selected`` as a raw owner count, which drifts
+    with the size of the game just as transfer counts do, so it is turned
+    into a percentage here. The denominator is the gameweek's manager count,
+    sum(selected) / 15. Its final-gameweek value tracks players_raw's own
+    end-of-season ``selected_by_percent`` at r >= 0.999 in every season
+    2017-18 to 2025-26, with a median relative gap of ~1% (the snapshot is
+    taken a little after the last deadline, so the two are not identical).
+
+    Blank gameweeks leave the players without a fixture out of the file, so
+    their sum undercounts (2017-18 GW31 comes to 2.3m managers against ~5.5m
+    either side). Manager counts only ever grow during a season -- entries
+    join, none leave -- so a running maximum repairs those weeks. Players
+    missing from a blank week simply have no observation for it.
+    """
+    managers = (gameweeks.groupby("gw")["selected"].sum() / SQUAD_SIZE).cummax()
+    gw = gameweeks.assign(pct=100 * gameweeks["selected"] / gameweeks["gw"].map(managers))
+    gw = gw.sort_values(["element", "gw"])
+    g = gw.groupby("element")["pct"]
+    return pd.DataFrame({
+        "start_selected_by_percent": g.first(),
+        "final_selected_by_percent": g.last(),
+        "min_selected_by_percent": g.min(),
+        "max_selected_by_percent": g.max(),
+    }).rename_axis("id").reset_index()
+
+
+def clean_season(
+    raw: pd.DataFrame,
+    season: int,
+    master_teams: pd.DataFrame,
+    gameweeks: pd.DataFrame | None = None,
+) -> pd.DataFrame:
     """Clean one season's ``players_raw.csv`` snapshot.
 
     Prices arrive in tenths of a million. ``now_cost`` is the price at the
@@ -71,14 +120,49 @@ def clean_season(raw: pd.DataFrame, season: int, master_teams: pd.DataFrame) -> 
         how="left",
     )
 
-    return df.drop_duplicates(subset=["code"], keep="first").reset_index(drop=True)
+    df = df.drop_duplicates(subset=["code"], keep="first").reset_index(drop=True)
+    df = _add_transfer_shares(df)
+    if gameweeks is not None:
+        df = _add_ownership(df, gameweeks)
+    return df
+
+
+def _add_ownership(df: pd.DataFrame, gameweeks: pd.DataFrame) -> pd.DataFrame:
+    """Merge :func:`ownership_summary` on, by season player id.
+
+    A player in the snapshot but absent from every gameweek (signed after
+    the last deadline, say) falls back to the snapshot's own ownership for
+    all four -- a flat line, which is what an unobserved season looks like.
+    """
+    df = df.merge(ownership_summary(gameweeks), on="id", how="left")
+    for col in OWNERSHIP_COLS:
+        df[col] = df[col].fillna(df["selected_by_percent"])
+    return df
+
+
+def _add_transfer_shares(df: pd.DataFrame) -> pd.DataFrame:
+    """Each player's share of the season's transfers, per mille.
+
+    Raw counts drift with the size of the game (FPL roughly doubled its
+    manager count between 2017-18 and 2025-26), so a share is the
+    season-comparable version. It has to be taken here, over the full
+    snapshot: anywhere downstream may only see a slice of the season.
+    """
+    total_in, total_out = df["transfers_in"].sum(), df["transfers_out"].sum()
+    df["transfers_in_share"] = 1000 * df["transfers_in"] / total_in
+    df["transfers_out_share"] = 1000 * df["transfers_out"] / total_out
+    df["net_transfers_share"] = df["transfers_in_share"] - df["transfers_out_share"]
+    return df
 
 
 def clean_all(
-    raw_by_season: dict[int, pd.DataFrame], master_teams: pd.DataFrame
+    raw_by_season: dict[int, pd.DataFrame],
+    master_teams: pd.DataFrame,
+    gameweeks_by_season: dict[int, pd.DataFrame] | None = None,
 ) -> dict[int, pd.DataFrame]:
+    gameweeks_by_season = gameweeks_by_season or {}
     return {
-        season: clean_season(raw, season, master_teams)
+        season: clean_season(raw, season, master_teams, gameweeks_by_season.get(season))
         for season, raw in raw_by_season.items()
     }
 

@@ -1,10 +1,10 @@
 """Shared form widgets, row assembly and result rendering.
 
-Every page builds the same 14 inputs and renders the same result card, so
+Every page builds the same inputs and renders the same result card, so
 all of that lives here. The one rule this module enforces is that the app
 never computes a feature itself: :func:`row_from_values` assembles a raw
 row and hands it to the fitted model, letting
-:func:`features.build_design_matrix` derive the rates, encode the dummies
+:func:`features.build_design_matrix` derive the squared prices, encode the dummies
 and order the columns exactly as it did at fit time. Re-implementing any of
 that here would let the app and the pipeline drift apart silently.
 """
@@ -45,12 +45,12 @@ def field_id(page: str, field: str) -> dict:
 
 
 #: The form in chunks a manager would recognise, rather than one flat grid
-#: of twelve boxes. Every numeric field appears exactly once.
+#: of boxes. Every numeric field appears exactly once.
 FIELD_GROUPS: list[tuple[str, list[str]]] = [
-    ("Price", ["start_cost", "cost_change_start", "value_season"]),
+    ("Price", ["start_cost", "final_cost", "value_season"]),
     ("Playing time", ["minutes", "total_points", "points_per_game"]),
-    ("Returns", ["goals_scored", "assists", "clean_sheets", "bps"]),
-    ("Popularity", ["transfers_in", "transfers_out"]),
+    ("Returns", ["goals_scored", "assists"]),
+    ("Popularity", ["selected_by_percent"]),
 ]
 
 
@@ -64,13 +64,12 @@ def dom_id(component_id: dict) -> str:
 
 
 #: How far one press of a stepper moves each figure: a unit someone would
-#: actually nudge by. A transfer at a time, or a minute at a time, would
-#: take a thousand presses to change anything.
+#: actually nudge by. A minute at a time would take ninety presses to
+#: add a match.
 STEPS: dict[str, float] = {
-    "start_cost": 0.1, "cost_change_start": 0.1, "value_season": 0.5,
+    "start_cost": 0.1, "final_cost": 0.1, "value_season": 0.5,
     "minutes": 90, "total_points": 5, "points_per_game": 0.1,
-    "goals_scored": 1, "assists": 1, "clean_sheets": 1, "bps": 25,
-    "transfers_in": 100_000, "transfers_out": 100_000,
+    "goals_scored": 1, "assists": 1, "selected_by_percent": 1.0,
 }
 
 
@@ -208,7 +207,7 @@ def values_from_args(args) -> dict:
 def row_from_values(values: dict) -> pd.DataFrame:
     """A one-row raw frame, ready for ``PriceModel.predict_*``.
 
-    Deliberately raw: no rates, no dummies, no column ordering. The model's
+    Deliberately raw: no squared prices, no dummies, no column ordering. The model's
     own pipeline does all of that.
     """
     row = {name: _as_float(values.get(name)) for name in schema.NUMERIC_NAMES}

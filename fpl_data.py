@@ -94,6 +94,47 @@ def load_master_teams(seasons: list[int], refresh: bool = False) -> pd.DataFrame
     return combined.drop_duplicates(subset=["season", "team"], keep="first")
 
 
+#: The only gameweek columns kept. ``merged_gw.csv`` runs to ~5 MB a season;
+#: these four are ~0.5 MB. ``value`` is unused so far but is what intra-season
+#: min/max *price* would be built from.
+GAMEWEEK_COLS = ["element", "gw", "selected", "value"]
+
+
+def load_gameweeks(season: int, refresh: bool = False) -> pd.DataFrame:
+    """Per-player, per-gameweek ownership and price for one season.
+
+    One row per player per gameweek (a double gameweek's two fixture rows
+    carry the same snapshot, so they are collapsed). ``element`` is the
+    season-specific player id, i.e. ``players_raw``'s ``id``, not ``code``.
+
+    The 2017-18 and 2018-19 files are latin-1, not UTF-8; the slim cache is
+    written back as UTF-8 so only the first download has to care.
+    """
+    folder = config.season_folder(season)
+    cache = config.DATA_DIR / f"gw_ownership_{folder}.csv"
+    if cache.exists() and not refresh:
+        return pd.read_csv(cache, encoding="utf-8")
+
+    url = f"{config.GITHUB_BASE}{folder}/gws/merged_gw.csv"
+    try:
+        gw = pd.read_csv(url, encoding="utf-8")
+    except UnicodeDecodeError:
+        gw = pd.read_csv(url, encoding="latin-1")
+    gw = gw.rename(columns={"GW": "gw"}) if "GW" in gw else gw.rename(columns={"round": "gw"})
+
+    slim = (gw[GAMEWEEK_COLS]
+            .drop_duplicates(subset=["element", "gw"])
+            .sort_values(["gw", "element"])
+            .reset_index(drop=True))
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    slim.to_csv(cache, index=False, encoding="utf-8")
+    return slim
+
+
+def load_all_gameweeks(seasons: list[int], refresh: bool = False) -> dict[int, pd.DataFrame]:
+    return {s: load_gameweeks(s, refresh) for s in seasons}
+
+
 def load_all_seasons(seasons: list[int], refresh: bool = False) -> dict[int, pd.DataFrame]:
     return {s: load_players_raw(s, refresh) for s in seasons}
 

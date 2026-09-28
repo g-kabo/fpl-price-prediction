@@ -15,7 +15,6 @@ from dash import html
 
 import config
 import model_store
-import schema
 import theme
 import ui
 
@@ -133,7 +132,7 @@ def layout() -> html.Div:
                                 _step("2. Weigh each ingredient",
                                       html.P(f"It settles on a fixed weight for each of "
                                              f"{_meta['n_predictors']} ingredients: this season's "
-                                             "price, points, minutes, goals, transfers, position, "
+                                             "price, points, minutes, goals, ownership, position, "
                                              "club and more.", className="prose")),
                                 _step("3. Add them up",
                                       html.P("A player's predicted price is just those weights "
@@ -189,9 +188,11 @@ def layout() -> html.Div:
                                         "give identical prices for every player."),
                                 html.Li("If the code or data change, the model retrains before it "
                                         "answers, so a stale model never serves a price."),
-                                html.Li(f"Rates are shown per 90 minutes for reading, and per "
-                                        f"minute in the model details, which is what the "
-                                        f"{len(schema.DERIVED_FIELDS) - 2} rate terms actually use."),
+                                html.Li("Price enters twice, as itself and squared, so budget "
+                                        "and premium players can be priced on different "
+                                        "slopes. FPL keeps stars expensive and props cheap "
+                                        "players against a floor, and a straight line cannot "
+                                        "do both."),
                             ],
                             className="prose checks",
                         ),

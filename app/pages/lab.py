@@ -188,8 +188,8 @@ def prefill(code, _blank, _reset):
     prevent_initial_call=True,
 )
 def step(_clicks, *current):
-    """A stepper press: move one figure by its unit, never below zero
-    unless the figure can genuinely be negative (a falling price)."""
+    """A stepper press: move one figure by its unit, never below zero --
+    no input on the form can genuinely be negative."""
     trigger = ctx.triggered_id
     if not isinstance(trigger, dict) or not ctx.triggered or not ctx.triggered[0]["value"]:
         return [no_update] * len(schema.NUMERIC_NAMES)
@@ -197,8 +197,7 @@ def step(_clicks, *current):
     field, direction = trigger["step"], trigger["dir"]
     index = schema.NUMERIC_NAMES.index(field)
     value = form._as_float(current[index]) + direction * form.STEPS.get(field, 1)
-    if field != "cost_change_start":
-        value = max(value, 0.0)
+    value = max(value, 0.0)
     integer = next(i for n, _, _, i in schema.NUMERIC_FIELDS if n == field)
     value = int(round(value)) if integer else round(value, 2)
 

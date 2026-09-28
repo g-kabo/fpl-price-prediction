@@ -227,14 +227,12 @@ def why_this_price(values: dict, reference: tuple[str, float] | None) -> html.Di
     )
 
 
-#: Coefficients in a unit someone could picture. Per transfer or per
-#: minute, most of these are too small to print without an exponent.
+#: Coefficients in a unit someone could picture. Per minute, most of these
+#: are too small to print without an exponent.
 _UNITS = {
-    "transfers_in": (100_000, "per 100k"),
-    "transfers_out": (100_000, "per 100k"),
     "minutes": (90, "per 90 min"),
-    "bps": (100, "per 100"),
     "total_points": (10, "per 10 pts"),
+    "selected_by_percent": (1, "per 1%"),
 }
 
 
@@ -286,13 +284,14 @@ def model_details(values: dict, row: pd.DataFrame) -> html.Details:
 
 
 def derived_rates(row: pd.DataFrame) -> html.Div:
-    """The per-90 rates the model works out from the season's totals.
+    """The figures the model works out from the inputs rather than reads.
 
-    Shown per 90 because a match is the unit anyone thinks in, with the
-    per-minute figure the model actually multiplies kept beneath, so the
-    two can be reconciled against the term table.
+    The squared prices are what let the model price budget and premium
+    players on different slopes; showing them makes their rows in the term
+    table below reconcilable by hand.
     """
-    derived = features.add_rate_features(row)
+    derived = features.add_engineered_features(features.add_rate_features(row),
+                                               list(schema.SQUARED_FIELDS))
     minutes = float(row["minutes"].iloc[0])
     derived[schema.MATCHES_FIELD] = minutes / schema.MINUTES_PER_MATCH
 
@@ -304,13 +303,14 @@ def derived_rates(row: pd.DataFrame) -> html.Div:
         elif name == schema.MATCHES_FIELD:
             text, sub = f"{value:.1f}", f"{minutes:,.0f} min"
         else:
-            text, sub = f"{value * schema.MINUTES_PER_MATCH:.2f}", f"{value:.4f} per min"
+            price = float(row[schema.SQUARED_FIELDS[name]].iloc[0])
+            text, sub = f"{value:.2f}", f"£{price:.1f}m × £{price:.1f}m"
         cells.append(html.Div([html.Div(schema.DERIVED_LABELS[name], className="rate-label"),
                                html.Div(text, className="rate-value"),
                                html.Div(sub, className="rate-sub")], className="rate"))
 
     return html.Div(
-        [html.Div("Worked out by the model from the totals", className="rates-title"),
+        [html.Div("Worked out by the model from your inputs", className="rates-title"),
          html.Div(cells, className="rates")],
         className="rates-block",
     )
