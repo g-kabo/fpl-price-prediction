@@ -1,7 +1,7 @@
 """What if: take a completed season, change it, and see the price move.
 
 The old player and manual pages, folded into one. Picking a player fills
-all fourteen fields from his real season; "Start from an average player"
+every field from his real season; "Start from an average player"
 seeds them at the training medians instead. Medians rather than zeros: an
 all-zero form describes a free player who never played, which is outside
 the fitted range and not what anyone means by "blank".
@@ -79,7 +79,7 @@ def _values_for(code) -> dict:
     if match.empty:
         return _medians()
     player = match.iloc[0]
-    values = {name: player[name] for name in schema.NUMERIC_NAMES}
+    values = schema.form_values(player)
     values[schema.POSITION_FIELD] = player[schema.POSITION_FIELD]
     values[schema.TEAM_FIELD] = (player[schema.TEAM_FIELD]
                                  if player[schema.TEAM_FIELD] in model_store.team_options()
@@ -182,9 +182,9 @@ def prefill(code, _blank, _reset):
 
 @callback(
     [Output(form.field_id(PAGE, name), "value", allow_duplicate=True)
-     for name in schema.NUMERIC_NAMES],
+     for name in schema.FORM_NAMES],
     Input({"page": PAGE, "step": ALL, "dir": ALL}, "n_clicks"),
-    [State(form.field_id(PAGE, name), "value") for name in schema.NUMERIC_NAMES],
+    [State(form.field_id(PAGE, name), "value") for name in schema.FORM_NAMES],
     prevent_initial_call=True,
 )
 def step(_clicks, *current):
@@ -192,16 +192,18 @@ def step(_clicks, *current):
     no input on the form can genuinely be negative."""
     trigger = ctx.triggered_id
     if not isinstance(trigger, dict) or not ctx.triggered or not ctx.triggered[0]["value"]:
-        return [no_update] * len(schema.NUMERIC_NAMES)
+        return [no_update] * len(schema.FORM_NAMES)
 
     field, direction = trigger["step"], trigger["dir"]
-    index = schema.NUMERIC_NAMES.index(field)
+    index = schema.FORM_NAMES.index(field)
     value = form._as_float(current[index]) + direction * form.STEPS.get(field, 1)
     value = max(value, 0.0)
-    integer = next(i for n, _, _, i in schema.NUMERIC_FIELDS if n == field)
+    if field == schema.APPEARANCES_FIELD:
+        value = min(value, schema.MAX_APPEARANCES)
+    integer = next(i for n, _, _, i in schema.FORM_FIELDS if n == field)
     value = int(round(value)) if integer else round(value, 2)
 
-    out = [no_update] * len(schema.NUMERIC_NAMES)
+    out = [no_update] * len(schema.FORM_NAMES)
     out[index] = value
     return out
 
@@ -216,9 +218,10 @@ def step(_clicks, *current):
     Input("lab-player", "value"),
 )
 def update(*args):
-    values = form.values_from_args(args[:-1])
+    # The form holds games played; the model wants FPL's two ratios.
+    values = schema.with_ratios(form.values_from_args(args[:-1]))
     code = args[-1]
-    interval, row = form.predict(values)
+    interval, _ = form.predict(values)
     predicted = float(interval["pred"].iloc[0])
     start = form._as_float(values.get("start_cost"))
 
@@ -237,8 +240,7 @@ def update(*args):
     tag = ui.answer_tag(interval, start, f"Predicted {config.season_label(PREDICT_SEASON)} price")
     body = ui.answer_body(interval, start, "his start price", "Start",
                           extra=_reality(code, values, predicted))
-    why = [ui.why_this_price(values, reference=("Start price", start)),
-           ui.model_details(values, row)]
+    why = [ui.why_this_price(values, reference=("Start price", start))]
     return who, tag, body, ui.out_of_range(values, _meta["ranges"]), why
 
 
@@ -249,7 +251,7 @@ def _reality(code, values: dict, predicted: float):
     unedited = _values_for(code)
     edited = any(
         form._as_float(values.get(name)) != form._as_float(unedited.get(name))
-        for name in schema.NUMERIC_NAMES
+        for name in schema.FORM_NAMES
     ) or any(values.get(f) != unedited.get(f)
              for f in (schema.POSITION_FIELD, schema.TEAM_FIELD))
 

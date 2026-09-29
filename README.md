@@ -38,17 +38,23 @@ time, with the inputs editable.
 
 ```
 "..\FPL Python Dashboard\.venv\Scripts\python.exe" train_and_save.py
+"..\FPL Python Dashboard\.venv\Scripts\python.exe" snapshot.py
 "..\FPL Python Dashboard\.venv\Scripts\python.exe" app\app.py
 ```
+
+`snapshot.py` saves today's table from the official FPL API to `data/live/`,
+which is what Price Watch reads. Online, a GitHub Action does this daily (see
+[Hosting](#hosting)); locally, rerun it whenever you want fresher prices, and an
+open page picks the new file up within the hour, or on reload.
 
 Then open <http://127.0.0.1:8051> (8051, so it can run alongside the dashboard
 on 8050). Three pages:
 
 | Page | Inputs | Predicts |
 |---|---|---|
-| `/` Price Watch | **live** 2026-27 form from the FPL API, projected to 38 gameweeks | 2027-28 start price |
+| `/` Price Watch | **current** 2026-27 form from the daily FPL API snapshot, projected to 38 gameweeks | 2027-28 start price |
 | `/lab` What if | any completed 2025-26 season, or the training medians, then editable | 2026-27 start price |
-| `/how-it-works` | none: the method, and the backtest's accuracy | |
+| `/how-it-works` | none: the fitted model written out as one equation | |
 
 The old `/projected`, `/player` and `/manual` routes redirect to the new ones.
 `/?player=<code>` opens that player's card directly.
@@ -56,13 +62,19 @@ The old `/projected`, `/player` and `/manual` routes redirect to the new ones.
 Every player view shows the 95% prediction interval, a plain-English reading
 of the price, and a per-term breakdown. That last one is exact rather than
 approximate: the model is linear, so the contributions sum to the point
-estimate. The features the model *derives* from your inputs sit under "Model
-details" beneath it. The visual system is documented in `DESIGN.md`.
+estimate. The visual system is documented in `DESIGN.md`.
 
-The derived panel shows the two squared prices the model works out from the
-start and end price, plus minutes as 90s played. The squares are shown because
-they are real terms in the breakdown below — usually among its largest — and a
-panel that hid them would leave those rows impossible to reconcile by hand.
+The What if form has no boxes for points per game or points per £m. The model
+reads both, but they are FPL's own arithmetic on other figures, so the What if form asks for games
+played instead and works them out: points ÷ games, and points ÷ end price, each
+rounded to one decimal as FPL does (`schema.with_ratios`). Typed in directly,
+they could contradict the rest of the form; doubling a player's points would
+leave his points per game unchanged. A real season's games played is recovered
+from FPL's published points per game (`schema.infer_appearances`), which
+reproduces it exactly for 840 of the 841 players in 2025-26, so an unedited
+season still predicts exactly what `run_pipeline.py` does. Dropping points per
+£m from the model instead would cost little (temporal RMSE +£0.0011m, worse in 4
+of 6 folds), but dropping both ratios is worse in every fold.
 
 `train_and_save.py` fits once and caches to `models/`, because loading ten
 seasons takes ~17s against a 0.1s fit. The app refits automatically if that
@@ -73,27 +85,21 @@ players identically.
 
 ### Projecting a part-played season
 
-`/projected` has to turn *n* gameweeks into 38, and the obvious way is wrong
-early on: after three games, multiplying by 38/3 gives a 354-point season
-against a training maximum of 344, and OLS does not extrapolate gracefully. So
-the naive projection is blended with the player's previous season, weighted by
-evidence:
-
-```
-w = gw / (gw + k)        # k = 6 by default, adjustable in the UI
-```
-
-At gameweek 3 that is one third this season, two thirds last; by gameweek 30 it
-is 83% this season. Players with no previous season — roughly a quarter of any
-squad — fall back to the median of their position and price bracket. Whatever
-survives the blend is clamped to the fitted range, and the page says how many
-players that affected. Switching to "naive" mode shows why it exists: 123
-players clamp instead of 19.
+Price Watch has to turn *n* gameweeks into 38. It uses current-season form
+only: each player's totals are multiplied by 38/*n*, with no blend toward last
+season. Early on that can overshoot. After three games, 38/3 can give a
+354-point season against a training maximum of 344, and OLS does not
+extrapolate gracefully. So projected values are clamped to the fitted range. Clubs that have not kicked
+off yet project to zero.
 
 `start_cost`, `final_cost` and `selected_by_percent` are never projected — they
 are facts about the current season, not forecasts, and ownership is a share
 rather than a running total. `points_per_game` and `value_season` are
-ratios, recomputed from the projected totals rather than scaled.
+ratios, recomputed from the projected totals rather than scaled. Points per
+game is divided by projected appearances, recovered from FPL's published figure
+and projected like the other totals, not by minutes ÷ 90, which would credit a
+substitute with several times his real rate. Points and appearances scale
+together, so the projected rate is the one FPL shows today.
 
 #### What *n* is, mid-gameweek
 
@@ -128,20 +134,15 @@ Two details that are easy to get wrong:
 A player's denominator is his *club's* fixtures, never his own appearances: a
 defender benched four games running has still had four gameweeks of
 opportunity, and counting only his appearances would project those zero minutes
-as though the season had not started. The shrinkage weight uses the same
-per-club figure, so a club a match ahead also leans slightly further toward
-current form.
+as though the season had not started.
 
 The table shows each player's denominator in a `GWs` column, and the banner
 names the split ("257 of 667 players are at clubs that have not played it yet").
-The gameweek box is an override, not the source of truth — leave it blank for
-the live per-club figures, or type a number to force one on the whole league
-and ask what everyone would be worth on that much evidence.
 
 #### Price history
 
-Selecting a player also draws a small clustered column chart under the derived
-panel: start and finishing price for every season he has one, then the forecast.
+Selecting a player also draws a small clustered column chart on the
+player card: start and finishing price for every season he has one, then the forecast.
 
 Clustered rather than stacked — a start and a finishing price are two readings
 of the same thing, not two parts of it, and stacking them would draw a £12m
@@ -189,8 +190,8 @@ scatter needed a genuinely current price.
 table. Filtering one and not the other is how a page ends up showing three marks
 above a six-hundred-row table and inviting the reader to reconcile them. It
 narrows what is displayed, never what is computed — the projection runs on the
-whole league first, because the priors and the clamping counts are league-wide
-quantities.
+whole league first, because the league-average denominator is a league-wide
+quantity.
 Filtering to Arsenal and projecting Arsenal alone would quietly give Arsenal a
 different denominator; a test asserts no player's prediction moves when the
 filter changes. The banner above is left alone for the same reason: it describes
@@ -234,10 +235,13 @@ Two smaller things that were wrong the first time and are worth not repeating:
   edge exactly on the line, which strikes it through. It takes a `yshift` to sit
   clear.
 
-The page reads the official API directly (`fpl_data.load_live_season`), not the
-GitHub mirror the pipeline uses, because the mirror's current-season file can be
-weeks behind. If the API is unreachable it falls back to the cached CSV and says
-so; if only the fixture list is unreachable, `fpl_data.infer_progress` recovers
+The page reads a daily snapshot of the official API (`snapshot.py`, via
+`fpl_data.load_live_season`), not the GitHub mirror the pipeline uses, because
+the mirror's current-season file can be weeks behind. Prices change once a day,
+so a daily read loses nothing, and it means the web server never has to reach
+the API itself. With no snapshot it falls back to the cached CSV and says so, and
+a snapshot more than 36 hours old is flagged in the status strip. If only the
+fixture list is unreachable when the snapshot is taken, `fpl_data.infer_progress` recovers
 games played per club from each squad's busiest player's minutes, which on the
 data above reproduces the fixture-derived counts exactly.
 
@@ -289,6 +293,26 @@ chart. On `/projected` the whole breakdown moved to its own full-width row —
 nesting a fifteen-bar waterfall inside seven twelfths of seven twelfths left the
 bars too narrow to label.
 
+## Hosting
+
+The app is set up to run on [Render](https://render.com)'s free tier, deployed
+from GitHub:
+
+- **`render.yaml`** defines the web service. In the Render dashboard choose
+  New > Blueprint and pick this repository. Each deploy installs
+  `requirements.txt`, refits the model with `train_and_save.py --force`
+  (about 20 seconds, and it sidesteps any mismatch between library versions and a
+  committed model file), then serves the app with gunicorn.
+- **`.github/workflows/snapshot.yml`** runs `snapshot.py` at 03:00 UTC every day,
+  after FPL's overnight price changes, and commits `data/live/`. Render redeploys
+  on that commit. A failed run turns red in the Actions tab and GitHub emails
+  you; the site keeps showing the previous snapshot, with its date. The Actions
+  tab's "Run workflow" button takes a snapshot on demand.
+- **`.python-version`** pins Python for both.
+
+On the free tier the app sleeps after 15 minutes without visitors, and the first
+visit after that takes 30 to 60 seconds to wake it.
+
 ## What it does
 
 | Step | File |
@@ -299,6 +323,7 @@ bars too narrow to label.
 | Squared price terms, 3%-frequency team lumping, dummy encoding | `features.py` |
 | Score alternative feature sets on a rolling-origin temporal backtest | `feature_experiments.py` |
 | OLS fit with 10-fold CV, 95% prediction intervals, permutation importance | `model.py` |
+| Price curve, moves and errors by price band, tiers by position, grouped drivers | `price_analysis.py` |
 | Orchestration and CSV/JSON/PNG export | `run_pipeline.py` |
 | Score the predictions against the prices FPL actually set | `backtest.py` |
 | Fit once and cache the model for serving | `train_and_save.py` |
@@ -411,7 +436,8 @@ Everything lands in `output/`:
 | `metrics.json`, `backtest_metrics_2026.json` | Every figure quoted above. |
 | `coefficients.csv` | Coefficient table with p-values and 95% confidence intervals — R's `tidy(conf.int = TRUE)`. |
 | `variable_importance.csv` | Permutation drop-out loss per variable — R's `DALEX::model_parts(B = 50)`. Ranked `final_cost_sq`, `start_cost`, `start_cost_sq`, `goals_scored`, `value_season`, `final_cost`. |
-| `feature_experiments.csv`, `feature_experiments_folds.csv` | Written by `feature_experiments.py`: every feature-set variant's random-CV and temporal RMSE, overall and per season. |
+| `feature_experiments.csv`, `feature_experiments_folds.csv` | Written by `feature_experiments.py`: every feature-set variant's random-CV and temporal RMSE, overall and per season. `ladder_step` marks the five rows of the table under [Feature selection](#feature-selection). |
+| `price_analysis.json` | Written by `price_analysis.py` (and by `run_pipeline.py`): see [Where on the price scale it works](#where-on-the-price-scale-it-works). |
 | `plots/*.png` | The four ggplot figures from the R, plus the backtest scatter. |
 
 Note the R named its output files after the *input* season (`pred_price_2024.csv`
@@ -482,6 +508,9 @@ the *s → s+1* transition, for 2020-21 through 2025-26.
   better than the end-of-season figure), in-season min/max price, previous-season
   lags, the `cumul_weighted_*` history, ICT index, bonus.
 
+The table is `feature_experiments.py`'s `LADDER`, written to
+`output/feature_experiments.csv`.
+
 The R's original formula, still available as `features.R_NUMERIC`:
 
 ```
@@ -491,6 +520,38 @@ next_cost ~ start_cost + cost_change_start + element_type + total_points
           + goals_per_min + assists_per_min + bps_per_min + points_per_mins
           + cleansheets_per_min + no_mins
 ```
+
+### Where on the price scale it works
+
+`price_analysis.py` (also run by `run_pipeline.py`) asks the default model
+where it does well and where it does not, using the same rolling-origin folds
+as the feature selection: one out-of-sample prediction per row, 2020-21 to
+2025-26 (2,974 player-seasons). Everything lands in
+`output/price_analysis.json`.
+
+- **The price curve.** How much of £1 of this season's price survives into
+  next season's, holding the season fixed:
+  `b_start + b_final + 2 (b_start_sq + b_final_sq) p`. It rises from £0.53 at
+  £4m to £0.85 at £15m; without the squares it is a flat £0.58.
+- **Moves by band.** 71% of £4.0–4.5m players hold their price; from £6m up
+  most fall, typically by £0.5m, and £10m+ players fall no further on average
+  than £8–9.5m ones (−£0.39m against −£0.40m).
+- **Errors by band, with and without the squares.** The squares lower RMSE
+  in all six price bands, most at £7m+. Without them the model over-prices
+  £7.0–7.5m players by £0.19m and *under*-prices £10m+ players by £0.16m.
+  Either way RMSE more than doubles from the floor (£0.24m) to £10m+ (£0.63m).
+- **Tiers by position**, cut by `config.PRICE_TIERS` (Budget / Low-Mid /
+  High-Mid / Premium, from the author's R tiering) on `start_cost`. Budget
+  tiers are well covered in every position; expensive outfield tiers are not:
+  95% intervals hold only 71% of High-Mid forwards and 75% of Premium
+  midfielders. Premium GK, MID and FWD tiers have under 30 rows each.
+- **Grouped drivers.** Each input group refitted away in turn. Dropping all
+  four price terms raises RMSE by only £0.10m, because `value_season` is
+  points ÷ price and lets the model rebuild price; drop it too and RMSE is
+  £0.524m, level with carrying the price forward (£0.530m). Position is a
+  distant second (+£0.015m); `total_points` adds nothing once the rest are in.
+  This replaces permutation importance on the page: the four price terms
+  partly cancel, so shuffling one alone exaggerates it.
 
 `statsmodels` is used rather than `scikit-learn` because the R's output includes
 prediction intervals and a coefficient table with p-values; neither exists in

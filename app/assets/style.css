@@ -914,14 +914,6 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
 }
 .details[open] > summary::before { transform: rotate(45deg); }
 
-.rates-block { margin: 12px 0 18px; }
-.rates-title { font-weight: 600; margin-bottom: 8px; }
-.rates { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
-.rate { padding: 8px 10px; background: var(--paper); border-radius: 8px; }
-.rate-label { font-size: 0.82rem; color: var(--ink-soft); }
-.rate-value { font-family: var(--font-fig); font-weight: 700; font-size: 1.25rem; }
-.rate-sub { font-size: 0.78rem; color: var(--ink-soft); }
-
 .terms {
   width: 100%;
   border-collapse: collapse;
@@ -1071,6 +1063,13 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
 .pos-picker .form-check-input:focus-visible + .form-check-label { box-shadow: var(--focus); }
 .pos-picker .form-check-input:checked + .form-check-label { background: var(--aubergine); border-color: var(--aubergine); color: var(--on-dark); }
 
+/* Position is four fixed buttons, wider than the stat grid's 196px column,
+   so the role row sizes it to its content and gives the rest to Club,
+   wrapping Club underneath when the two no longer fit side by side. */
+.role-fields { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px 16px; }
+.role-fields > .field { flex: 0 0 auto; }
+.role-fields > .field-wide { flex: 1 1 240px; }
+
 /* ---------- stat strip ------------------------------------------------ */
 
 .strip { display: flex; gap: 22px; margin-top: 12px; flex-wrap: wrap; }
@@ -1131,17 +1130,49 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
   border-radius: var(--radius);
 }
 .prose strong { color: var(--aubergine); }
-.lead-figures strong { font-family: var(--font-fig); font-size: 1.3rem; }
-
-.steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; margin-bottom: 20px; }
 .step-title { font-size: 1.3rem; font-weight: 700; text-transform: uppercase; color: var(--aubergine); margin: 0 0 6px; }
-.step .prose { font-size: 1rem; }
+.inside .fine { max-width: 110ch; margin-bottom: 14px; }
+.inside .details { max-width: 980px; margin-top: 12px; }
+.inside .details .terms { margin-top: 10px; }
 
-.accuracy { max-width: 760px; background: var(--surface); border-radius: var(--radius); margin-bottom: 18px; }
-.accuracy td, .accuracy th { padding: 10px 14px; }
+/* The fitted equation: runs of terms that wrap as whole terms, never mid-term. */
+.equation {
+  max-width: 980px;
+  margin: 6px 0 18px;
+  padding: 16px 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-family: var(--font-fig);
+  font-size: 1.2rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.9;
+  color: var(--ink);
+}
+.equation var { font-style: italic; font-family: var(--font); font-size: 1rem; color: var(--aubergine-3); }
+.eq-term { display: inline-block; white-space: nowrap; margin-right: 0.25em; }
+.eq-lhs { display: block; }
+.equation sub { font-size: 0.7em; }
+.mono { font-family: var(--font-fig); font-size: 0.95rem; letter-spacing: 0.01em; }
 
-.checks { padding-left: 1.2rem; }
-.checks li { margin-bottom: 6px; }
+.adj-row { display: grid; grid-template-columns: 1fr 3fr; gap: 28px; max-width: 980px; margin-top: 8px; }
+.adj-grid { display: grid; grid-template-columns: 1fr; gap: 6px; }
+.adj-clubs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.adj {
+  display: flex; justify-content: space-between; gap: 10px;
+  padding: 6px 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 0.92rem;
+}
+.adj-value { font-family: var(--font-fig); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 1100px) {
+  .adj-row { grid-template-columns: 1fr; }
+  .adj-clubs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 
 /* ---------- footer ------------------------------------------------------ */
 

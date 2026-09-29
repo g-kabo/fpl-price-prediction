@@ -1,0 +1,44 @@
+# Once a day, save the official FPL API's current-season table to data/live/
+# and commit it. The hosted app reads that file, and redeploys on the commit.
+name: Daily FPL snapshot
+
+on:
+  schedule:
+    # FPL prices change at about 01:30 UK time. 03:00 UTC is after that all
+    # year round, with room for GitHub starting scheduled runs late.
+    - cron: "0 3 * * *"
+  workflow_dispatch: # the "Run workflow" button, for a manual refresh
+
+permissions:
+  contents: write
+
+concurrency:
+  group: snapshot
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+
+      # snapshot.py only needs these two, so skip the full requirements.
+      - run: pip install pandas==3.0.3 requests==2.34.2
+
+      - run: python snapshot.py
+
+      - name: Commit the snapshot
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add data/live
+          if git diff --cached --quiet; then
+            echo "Snapshot unchanged."
+            exit 0
+          fi
+          git commit -m "Daily FPL snapshot $(date -u +%Y-%m-%d)"
+          git push

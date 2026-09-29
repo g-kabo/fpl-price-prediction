@@ -100,6 +100,7 @@ def test_app_row_assembly_matches_cleaned_frame(artifacts):
     what ``build_design_matrix`` reads, the two diverge here first.
     """
     import form  # imported late: needs app/ on the path
+    import schema
 
     fitted, scores = artifacts
     sample = scores.nlargest(25, "total_points")
@@ -107,8 +108,11 @@ def test_app_row_assembly_matches_cleaned_frame(artifacts):
     from_frame = fitted.predict(sample).to_numpy()
 
     for position, (_, player) in enumerate(sample.iterrows()):
-        values = {name: player[name] for name in form.ALL_FIELDS}
-        interval, _ = form.predict(values)
+        # As the What if page does it: games played in, FPL's ratios derived.
+        values = schema.form_values(player)
+        values[schema.POSITION_FIELD] = player[schema.POSITION_FIELD]
+        values[schema.TEAM_FIELD] = player[schema.TEAM_FIELD]
+        interval, _ = form.predict(schema.with_ratios(values))
         assert float(interval["pred"].iloc[0]) == pytest.approx(
             from_frame[position], abs=1e-6
         ), f"{player['web_name']} scored differently through the form"

@@ -27,7 +27,8 @@ import train_and_save  # noqa: E402
 def _ensure_fresh() -> None:
     if train_and_save.is_stale():
         print("Model artifacts are stale -- refitting (this takes ~20s)...")
-        train_and_save.main()
+        # Empty argv: under gunicorn, sys.argv holds the server's own flags.
+        train_and_save.main([])
 
 
 @lru_cache(maxsize=1)

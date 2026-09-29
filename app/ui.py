@@ -12,7 +12,6 @@ import pandas as pd
 from dash import dcc, html
 
 import charts
-import features
 import form
 import schema
 import theme
@@ -224,95 +223,6 @@ def why_this_price(values: dict, reference: tuple[str, float] | None) -> html.Di
             ),
         ],
         className="why",
-    )
-
-
-#: Coefficients in a unit someone could picture. Per minute, most of these
-#: are too small to print without an exponent.
-_UNITS = {
-    "minutes": (90, "per 90 min"),
-    "total_points": (10, "per 10 pts"),
-    "selected_by_percent": (1, "per 1%"),
-}
-
-
-def _effect(column: str, beta: float) -> str:
-    if column in features.RATE_FEATURES:
-        # A per-minute rate times beta equals the per-90 rate times beta/90.
-        return f"{theme.money(beta / schema.MINUTES_PER_MATCH, signed=True, places=3)} per 1.0 /90"
-    scale, unit = _UNITS.get(column, (1, "each"))
-    return f"{theme.money(beta * scale, signed=True, places=3)} {unit}"
-
-
-def model_details(values: dict, row: pd.DataFrame) -> html.Details:
-    """Everything a sceptic needs, folded away until asked for."""
-    parts = form.contributions(values, top_n=40)
-
-    rows = [html.Tr([html.Td("Model baseline"), html.Td(""), html.Td(""),
-                     html.Td(theme.money(parts["intercept"], places=3), className="num")])]
-    for column, value, beta, contribution in parts["shown"]:
-        rows.append(html.Tr([
-            html.Td(charts.term_label(column)),
-            html.Td(form._fmt(value), className="num"),
-            html.Td(_effect(column, beta), className="num muted"),
-            html.Td(theme.money(contribution, signed=True, places=3),
-                    className=f"num tone-{'rise' if contribution > 0 else 'fall'}"),
-        ]))
-    if parts["n_rest"]:
-        rows.append(html.Tr([html.Td(f"{parts['n_rest']} negligible terms"), html.Td(""),
-                             html.Td(""),
-                             html.Td(theme.money(parts["rest"], signed=True, places=3),
-                                     className="num")]))
-    rows.append(html.Tr([html.Td("Predicted price"), html.Td(""), html.Td(""),
-                         html.Td(theme.money(parts["total"], places=3), className="num")],
-                        className="total-row"))
-
-    return html.Details(
-        [
-            html.Summary("Model details: every term, in the model's own units"),
-            derived_rates(row),
-            html.Table(
-                [html.Thead(html.Tr([html.Th("Term"), html.Th("Value", className="num"),
-                                     html.Th("Effect", className="num"),
-                                     html.Th("Adds", className="num")])),
-                 html.Tbody(rows)],
-                className="terms",
-            ),
-        ],
-        className="details",
-    )
-
-
-def derived_rates(row: pd.DataFrame) -> html.Div:
-    """The figures the model works out from the inputs rather than reads.
-
-    The squared prices are what let the model price budget and premium
-    players on different slopes; showing them makes their rows in the term
-    table below reconcilable by hand.
-    """
-    derived = features.add_engineered_features(features.add_rate_features(row),
-                                               list(schema.SQUARED_FIELDS))
-    minutes = float(row["minutes"].iloc[0])
-    derived[schema.MATCHES_FIELD] = minutes / schema.MINUTES_PER_MATCH
-
-    cells = []
-    for name in schema.DERIVED_FIELDS:
-        value = float(derived[name].iloc[0])
-        if name == "no_mins":
-            text, sub = ("Yes" if value else "No"), ""
-        elif name == schema.MATCHES_FIELD:
-            text, sub = f"{value:.1f}", f"{minutes:,.0f} min"
-        else:
-            price = float(row[schema.SQUARED_FIELDS[name]].iloc[0])
-            text, sub = f"{value:.2f}", f"£{price:.1f}m × £{price:.1f}m"
-        cells.append(html.Div([html.Div(schema.DERIVED_LABELS[name], className="rate-label"),
-                               html.Div(text, className="rate-value"),
-                               html.Div(sub, className="rate-sub")], className="rate"))
-
-    return html.Div(
-        [html.Div("Worked out by the model from your inputs", className="rates-title"),
-         html.Div(cells, className="rates")],
-        className="rates-block",
     )
 
 

@@ -1,21 +1,18 @@
 """Price Watch: who the model thinks FPL should reprice next season.
 
-The landing page. Reads the live FPL API rather than the cached CSV, extends
-each player's part-season to 38 gameweeks (see :mod:`projection` for why
-that is not a simple multiplication), and prices the season after next.
+The landing page. Reads the daily snapshot of the official FPL API (see
+:mod:`live`) rather than the mirror's cached CSV, extends
+each player's part-season to 38 gameweeks from his current-season form alone
+(see :mod:`projection`), and prices the season after next.
 
 Each player is divided by his own club's fixtures played rather than by a
 league-wide gameweek number, because mid-gameweek those differ: half the
 division can be a match ahead of the other half for most of a weekend.
 
-Early in the campaign this page is closer to a prior than a forecast, and
-says so in the status strip.
-
 The filters scope the transfer list *and* the market map together, and
 narrow what is displayed, never what is computed: the projection always
-runs on the whole league first, because the priors, the league-average
-denominator behind the transfer fields and the clamping counts are all
-league-wide quantities.
+runs on the whole league first, because the league-average denominator is a
+league-wide quantity.
 """
 
 from __future__ import annotations
@@ -43,7 +40,6 @@ dash.register_page(__name__, path="/", name="Price Watch", order=0,
                    redirect_from=["/projected"])
 
 _meta = model_store.get_meta()
-_previous = model_store.get_scores()
 _history = model_store.get_price_history()
 
 SEASON = _meta["predict_season"]
@@ -53,6 +49,10 @@ TARGET = SEASON + 1
 FORMATION = [("GK", 1), ("DEF", 4), ("MID", 4), ("FWD", 2)]
 
 PAGE_SIZE = 20
+
+#: How often an open page checks for a new daily snapshot. Hourly is plenty
+#: for data that changes once a day.
+POLL_MS = 60 * 60 * 1000
 
 #: The transfer list's columns: ``(key, frame column, numeric?)``. Every
 #: header sorts by its own column; a numeric one starts biggest-first, the
@@ -69,12 +69,6 @@ COLUMNS = [
 _COLUMN = {key: (column, numeric) for key, column, numeric in COLUMNS}
 
 DEFAULT_SORT = {"col": "move", "desc": True}
-
-#: The projections the settings offer, primary first. "As-is" (pricing the
-#: raw totals so far) is left out: part of a season priced as if it were a
-#: whole one is not a forecast anyone asked for.
-MODES = ["naive", "shrunk"]
-DEFAULT_MODE = "naive"
 
 REFERENCE_WORDS = {"price_now": "today's price", "start_cost": "his August price"}
 
@@ -102,7 +96,7 @@ def layout(player=None, **_query) -> html.Div:
                                                    className="h1-season")]),
                                 html.P(
                                     f"Who the model thinks FPL should reprice for "
-                                    f"{config.season_label(TARGET)}, from live "
+                                    f"{config.season_label(TARGET)}, from current "
                                     f"{config.season_label(SEASON)} form projected to a "
                                     "full 38-gameweek season.",
                                     className="lede",
@@ -114,8 +108,6 @@ def layout(player=None, **_query) -> html.Div:
                                 html.Div(id="board-status", className="chips"),
                                 html.Div(
                                     [
-                                        ui.dbc_button("Refresh", "board-refresh",
-                                                      icon="bi-arrow-clockwise", kind="on-dark"),
                                         ui.dbc_button("Projection settings", "board-settings-toggle",
                                                       icon="bi-sliders", kind="on-dark"),
                                     ],
@@ -200,6 +192,8 @@ def layout(player=None, **_query) -> html.Div:
                           placement="end", is_open=False, scrollable=True,
                           className="player-card", title=""),
             dcc.Store(id="board-token"),
+            # Picks up a new daily snapshot in a tab left open overnight.
+            dcc.Interval(id="board-poll", interval=POLL_MS),
             dcc.Store(id="board-data"),
             dcc.Store(id="board-selected"),
             dcc.Store(id="board-sort", data=DEFAULT_SORT),
@@ -226,42 +220,6 @@ def _settings() -> html.Div:
                         html.Div("Today's price is what a manager holding him pays now. "
                                  "August is like-for-like, since the forecast is itself a "
                                  "start price.", className="field-hint"),
-                    ],
-                    className="field",
-                ),
-                html.Div(
-                    [
-                        html.Label("Gameweeks played", htmlFor="board-gw", className="field-label"),
-                        dbc.Input(id="board-gw", type="number", min=0.5, max=38, step=0.5,
-                                  value=None, placeholder="Auto, per club",
-                                  className="field-input"),
-                        html.Div("Blank counts each club's own fixtures. A number forces "
-                                 "one figure on the whole league.", className="field-hint"),
-                    ],
-                    className="field",
-                ),
-                html.Div(
-                    [
-                        html.Div("Projection", className="field-label"),
-                        dcc.Dropdown(
-                            id="board-mode",
-                            options=[{"label": projection.MODES[key], "value": key}
-                                     for key in MODES],
-                            value=DEFAULT_MODE, clearable=False,
-                        ),
-                        html.Div(id="board-clamp", className="field-hint"),
-                    ],
-                    className="field",
-                ),
-                html.Div(
-                    [
-                        html.Label("Trust in this season (k)", htmlFor="board-k",
-                                   className="field-label"),
-                        dbc.Input(id="board-k", type="number", min=0, max=38, step=1,
-                                  value=projection.DEFAULT_K, className="field-input"),
-                        html.Div("Shrink mode only: the gameweek at which this season's "
-                                 "form and last season's count equally.",
-                                 className="field-hint"),
                     ],
                     className="field",
                 ),
@@ -310,62 +268,46 @@ def toggle_settings(_n_clicks, is_open):
 
 
 @callback(
-    Output("board-k", "disabled"),
-    Input("board-mode", "value"),
-)
-def k_applies(mode):
-    """k only means something when blending with last season."""
-    return mode != "shrunk"
-
-
-@callback(
     Output("board-token", "data"),
     Output("board-clubs", "options"),
-    Input("board-refresh", "n_clicks"),
+    Input("board-poll", "n_intervals"),
+    State("board-token", "data"),
 )
-def fetch(n_clicks):
-    """Pull the live table, or fall back to the cached snapshot.
+def fetch(_n, current):
+    """Load the daily snapshot, or fall back to the mirror's cached CSV.
 
     The frame itself stays in :mod:`live`'s cache; the store carries only a
     token that changes when the data does, which is enough to retrigger the
-    projection.
+    projection -- and, left unchanged, keeps an hourly poll from recomputing
+    the whole league for nothing.
     """
-    season = live.get_live_season(force_refresh=bool(n_clicks))
+    season = live.get_live_season()
+    if season.token == current:
+        return no_update, no_update
     clubs = sorted(season.players["team_name"].dropna().unique())
-    return season.fetched_at, clubs
+    return season.token, clubs
 
 
 @callback(
     Output("board-data", "data"),
     Output("board-status", "children"),
-    Output("board-clamp", "children"),
     Input("board-token", "data"),
-    Input("board-gw", "value"),
-    Input("board-mode", "value"),
-    Input("board-k", "value"),
 )
-def compute(token, override, mode, k):
+def compute(token):
     """Price every current player on a projected full season.
 
-    ``override`` forces one games-played figure on the whole league. Left
-    blank -- the normal case -- each club is divided by its own fixtures
-    played, so a Sunday kickoff is not scaled as though it were a week
-    behind the Saturday games.
+    Each club is divided by its own fixtures played, so a Sunday kickoff is
+    not scaled as though it were a week behind the Saturday games.
     """
     if token is None:
-        return no_update, no_update, no_update
+        return no_update, no_update
 
     season = live.get_live_season()
     current = season.players
-    k = float(k if k is not None else projection.DEFAULT_K)
-
-    if override:
-        games, league = float(override), float(override)
-    else:
-        games, league = season.player_games, season.progress.league_games
+    games, league = season.player_games, season.progress.league_games
 
     projected = projection.project_frame(
-        current, _previous, games, _meta["ranges"], mode, k, league_games=league
+        current, games, _meta["ranges"], league_games=league
     )
     projected["pred"] = model_store.get_model().predict(
         projected[schema.MODEL_INPUT_COLUMNS]).round(3)
@@ -378,49 +320,40 @@ def compute(token, override, mode, k):
         projected[column] = projected["code"].map(lookup[source])
     projected["element_type"] = projected["element_type"].astype(str)
 
-    clamped = int((projected["n_clamped"] > 0).sum())
     records = projected[[c for c in _KEEP if c in projected.columns]].to_dict("records")
-    return records, _status(season, projected, mode, k, bool(override)), _clamp_note(clamped, mode)
+    return records, _status(season)
 
 
-def _status(season, projected: pd.DataFrame, mode: str, k: float, overridden: bool) -> list:
-    """How live the data is, and how much of the projection is last season."""
-    source = (html.Span([html.I(className="bi bi-broadcast"), "Live"], className="chip chip-live")
-              if season.is_live else
-              html.Span([html.I(className="bi bi-cloud-slash"), "Offline: cached snapshot"],
-                        className="chip chip-warn"))
+def _status(season) -> list:
+    """How fresh the data is, and how the season was projected."""
+    if not season.is_live:
+        source = html.Span([html.I(className="bi bi-cloud-slash"), "Offline: cached snapshot"],
+                           className="chip chip-warn",
+                           title=f"No daily FPL snapshot could be read ({season.error}), so "
+                                 "this is the GitHub mirror's copy, which can be weeks old.")
+    elif season.is_stale:
+        source = html.Span([html.I(className="bi bi-exclamation-triangle"),
+                            f"Prices as of {season.as_of_label}"],
+                           className="chip chip-warn",
+                           title="The daily snapshot has not updated for over a day, so "
+                                 "recent price changes are missing.")
+    else:
+        source = html.Span([html.I(className="bi bi-broadcast"),
+                            f"Prices as of {season.as_of_label}"],
+                           className="chip chip-live",
+                           title="Read from the official FPL API once a day, after the "
+                                 "overnight price changes.")
 
     gameweek = season.gameweek_label
     chips = [source, html.Span(gameweek[:1].upper() + gameweek[1:], className="chip")]
 
-    games = float(projected["games_played"].mean())
-    if mode != "shrunk":
-        chips.append(html.Span(
-            "Form scaled to a full season",
-            className="chip",
-            title="Each player's totals so far are multiplied up to 38 gameweeks, "
-                  "using his own club's fixtures played.",
-        ))
-    else:
-        weight = projection.shrinkage_weight(games, k)
-        chips.append(html.Span(
-            f"Form: {weight:.0%} this season, {1 - weight:.0%} last",
-            className="chip",
-            title="Early on, a few games say little, so each projection leans on the "
-                  "player's previous season and shifts toward current form as the "
-                  "season runs.",
-        ))
-    if overridden:
-        chips.append(html.Span(f"Gameweeks forced to {games:g}", className="chip chip-warn"))
+    chips.append(html.Span(
+        "Form scaled to a full season",
+        className="chip",
+        title="Each player's totals so far are multiplied up to 38 gameweeks, "
+              "using his own club's fixtures played.",
+    ))
     return chips
-
-
-def _clamp_note(clamped: int, mode: str) -> str:
-    base = (f"{clamped} player(s) projected past anything in the training data are held "
-            "at its edge rather than extrapolated.")
-    if mode == "naive":
-        return base + " Scaling a few gameweeks up to 38 pushes more players there."
-    return base
 
 
 # ---------------------------------------------------------------- views
@@ -703,7 +636,7 @@ def card(selected, xref, data, deeplink, is_open):
     values = {name: record.get(name) for name in schema.NUMERIC_NAMES}
     values[schema.POSITION_FIELD] = record.get(schema.POSITION_FIELD)
     values[schema.TEAM_FIELD] = record.get(schema.TEAM_FIELD)
-    interval, row = form.predict(values)
+    interval, _ = form.predict(values)
 
     xref = xref if xref in charts.X_FIELDS else charts.DEFAULT_X
     reference = float(record.get(xref))
@@ -734,5 +667,4 @@ def card(selected, xref, data, deeplink, is_open):
         ui.price_history(_player_seasons(record), TARGET, float(interval["pred"].iloc[0]),
                          f"The {config.season_label(SEASON)} season is still running, so its "
                          "end price is today's."),
-        ui.model_details(values, row),
     ], True, None

@@ -1,0 +1,14 @@
+# Render Blueprint: New > Blueprint in the Render dashboard, pick this repo.
+services:
+  - type: web
+    name: fpl-price-prediction
+    runtime: python
+    plan: free
+    # Refit the model on every deploy. A fresh checkout gives every source
+    # file a new timestamp, so the app would otherwise decide the committed
+    # model is stale and refit on its first request instead. Python comes
+    # from .python-version.
+    buildCommand: pip install -r requirements.txt && python train_and_save.py --force
+    startCommand: gunicorn --chdir app app:server --bind 0.0.0.0:$PORT --workers 1 --timeout 120
+    # Redeploys on every push, including the daily snapshot commit.
+    autoDeploy: true

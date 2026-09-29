@@ -115,13 +115,13 @@ def price_history(cleaned: dict[int, pd.DataFrame]) -> pd.DataFrame:
     return history.sort_values(["code", "season"]).reset_index(drop=True)
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--force", action="store_true",
                         help="rebuild even when the artifacts look current")
     parser.add_argument("--refresh", action="store_true",
                         help="re-download the season data instead of using data/")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     if not (args.force or args.refresh) and not is_stale():
         print(f"Artifacts are current -> {MODEL_DIR.name}/  (--force to rebuild)")

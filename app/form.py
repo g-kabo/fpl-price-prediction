@@ -7,6 +7,10 @@ row and hands it to the fitted model, letting
 :func:`features.build_design_matrix` derive the squared prices, encode the dummies
 and order the columns exactly as it did at fit time. Re-implementing any of
 that here would let the app and the pipeline drift apart silently.
+
+The form's *fields* are :data:`schema.FORM_FIELDS`, not the model's inputs:
+it asks for games played and leaves points per game and points per £m to
+:func:`schema.with_ratios`, which the page applies before predicting.
 """
 
 from __future__ import annotations
@@ -47,8 +51,8 @@ def field_id(page: str, field: str) -> dict:
 #: The form in chunks a manager would recognise, rather than one flat grid
 #: of boxes. Every numeric field appears exactly once.
 FIELD_GROUPS: list[tuple[str, list[str]]] = [
-    ("Price", ["start_cost", "final_cost", "value_season"]),
-    ("Playing time", ["minutes", "total_points", "points_per_game"]),
+    ("Price", ["start_cost", "final_cost"]),
+    ("Playing time", ["minutes", "appearances", "total_points"]),
     ("Returns", ["goals_scored", "assists"]),
     ("Popularity", ["selected_by_percent"]),
 ]
@@ -67,8 +71,8 @@ def dom_id(component_id: dict) -> str:
 #: actually nudge by. A minute at a time would take ninety presses to
 #: add a match.
 STEPS: dict[str, float] = {
-    "start_cost": 0.1, "final_cost": 0.1, "value_season": 0.5,
-    "minutes": 90, "total_points": 5, "points_per_game": 0.1,
+    "start_cost": 0.1, "final_cost": 0.1,
+    "minutes": 90, "appearances": 1, "total_points": 5,
     "goals_scored": 1, "assists": 1, "selected_by_percent": 1.0,
 }
 
@@ -110,7 +114,7 @@ def _field(page: str, name: str, label: str, step: float, values: dict, ranges: 
 
 def build_fields(page: str, values: dict, ranges: dict) -> list:
     """The editable season, grouped, plus position and club."""
-    spec = {name: (label, step) for name, label, step, _ in schema.NUMERIC_FIELDS}
+    spec = {name: (label, step) for name, label, step, _ in schema.FORM_FIELDS}
 
     groups = [
         html.Fieldset(
@@ -154,7 +158,7 @@ def build_fields(page: str, values: dict, ranges: dict) -> list:
                         className="field field-wide",
                     ),
                 ],
-                className="group-fields",
+                className="group-fields role-fields",
             ),
         ],
         className="group",
@@ -182,7 +186,7 @@ def team_dropdown_options() -> list[dict]:
 #: explicitly rather than matching on ALL keeps the callback signature
 #: aligned with the field names -- pattern matching returns values in id
 #: order, which is not the order they were declared in.
-ALL_FIELDS = schema.NUMERIC_NAMES + [schema.POSITION_FIELD, schema.TEAM_FIELD]
+ALL_FIELDS = schema.FORM_NAMES + [schema.POSITION_FIELD, schema.TEAM_FIELD]
 
 
 def input_states(page: str, prop: str = "value") -> list:

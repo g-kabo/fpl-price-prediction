@@ -1,15 +1,12 @@
 """Turning a part-played season into a full-season row the model can read.
 
-The model was fitted on completed seasons, so scoring a player on three
-gameweeks of data means answering "what will this look like over 38?" The
-obvious answer -- multiply by ``38 / games_played`` -- is wrong early
-in the season, and not slightly wrong. A player on 28 points after three
-games extrapolates to 354, against a training maximum of 344 and a 2025-26
-best of 239. OLS does not degrade gracefully outside the range it was fitted
-on, so those rows come back with prices that are not merely high but
-meaningless.
+The model was fitted on completed seasons, so a player three gameweeks in
+has to be turned into "what will this look like over 38?" This page answers
+with the player's own current-season form only: each total is multiplied by
+``38 / games_played``. No blend with last season -- the projection is what
+this season says, and nothing else.
 
-Three guards, applied in order:
+Two guards:
 
 1. **Divide by the right number of games.** Mid-gameweek there is no single
    answer to "how many games have been played". On a Saturday evening in
@@ -19,20 +16,21 @@ Three guards, applied in order:
    So each player is divided by *his own club's* fixtures played, carried
    in a :class:`fpl_data.SeasonProgress`.
 
-2. **Shrink toward a prior.** The naive projection is blended with what the
-   player actually did last season, weighted by how much of this season has
-   been played: ``w = gw / (gw + k)``. At gameweek 3 with the default k=6
-   that is one third this season, two thirds last -- which is roughly the
-   right confidence to have in three games. By gameweek 30 it is 83% this
-   season and the prior has faded out of the way.
-
-3. **Clamp to the fitted range.** Whatever survives the blend is held
-   inside the training min/max, so the model is never asked to extrapolate
-   even when a player genuinely is having a record-breaking season.
+2. **Clamp to the fitted range.** Early on, scaling a hot start by 38/3 can
+   produce a season no player has ever had, and OLS does not degrade
+   gracefully outside the range it was fitted on. Projected values are held
+   inside the training min/max, and the page says how many players that
+   touched.
 
 Ratios (``points_per_game``, ``value_season``) are never scaled -- they are
 recomputed from the projected totals, since a per-game rate is already
-season-length independent and multiplying one by 38 is meaningless.
+season-length independent and multiplying one by 38 is meaningless. Points
+per game is divided by projected *appearances*, recovered from FPL's own
+figure and projected like any other total, not by minutes / 90: a substitute
+playing twenty minutes a week has far more appearances than 90s, and
+dividing by 90s would credit him with several times his real points per
+game. Points and appearances scale together, so the projected rate is
+exactly the one FPL publishes today.
 """
 
 from __future__ import annotations
@@ -64,82 +62,22 @@ FIXED_FIELDS = ["start_cost", "final_cost", "selected_by_percent"]
 #: Recomputed from the projected totals rather than scaled.
 RATIO_FIELDS = ["points_per_game", "value_season"]
 
-MODES = {
-    "shrunk": "Shrink toward last season",
-    "naive": "Naive × full season",
-    "asis": "As-is (no projection)",
-}
 
-DEFAULT_K = 6.0
-
-
-def shrinkage_weight(games_played: float, k: float = DEFAULT_K) -> float:
-    """How much to trust this season over last, in [0, 1].
-
-    ``gw / (gw + k)`` is the standard shrinkage form: zero games means zero
-    weight on this season, and the weight approaches 1 as evidence
-    accumulates. ``k`` is the number of gameweeks at which the two sources
-    are trusted equally.
-
-    Games are fractional, not integer, because a club can be 60 minutes
-    into its fifth fixture. Rounding that to 5 would credit a full match
-    that is still being played.
-    """
-    games = max(0.0, float(games_played))
-    return games / (games + k) if (games + k) else 0.0
-
-
-def build_priors(previous: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Last season's totals per player, plus a fallback for newcomers.
-
-    Returns ``(by_code, by_group)``. Roughly a quarter of any season's
-    players have no previous-season row -- promoted clubs, new signings from
-    abroad, academy graduates -- so they fall back to the median player of
-    their position and price bracket, which is a far better guess than
-    either zero or their own three games.
-    """
-    by_code = previous.set_index("code")[COUNTING_FIELDS].astype(float)
-
-    grouped = previous.copy()
-    grouped["price_tier"] = _price_tier(grouped["start_cost"])
-    by_group = (
-        grouped.groupby(["element_type", "price_tier"], observed=True)[COUNTING_FIELDS]
-        .median()
-        .astype(float)
-    )
-    return by_code, by_group
-
-
-def _price_tier(start_cost: pd.Series) -> pd.Series:
-    """Coarse price brackets, used only to match newcomers to a prior."""
-    return pd.cut(
-        start_cost.astype(float),
-        bins=[0, 4.5, 5.5, 7.0, 9.0, 100.0],
-        labels=["budget", "cheap", "mid", "premium", "elite"],
-    )
-
-
-def _prior_row(player: pd.Series, by_code: pd.DataFrame, by_group: pd.DataFrame) -> pd.Series:
-    """The prior for one player: their own last season, or their group's."""
-    code = player.get("code")
-    if code in by_code.index:
-        return by_code.loc[code]
-
-    key = (player.get("element_type"), _price_tier(pd.Series([player["start_cost"]])).iloc[0])
-    if key in by_group.index:
-        return by_group.loc[key]
-
-    return pd.Series(by_group.median(), index=COUNTING_FIELDS)
+def with_appearances(frame: pd.DataFrame) -> pd.DataFrame:
+    """``frame`` plus each player's appearances, recovered from FPL's ppg."""
+    frame = frame.copy()
+    frame[schema.APPEARANCES_FIELD] = [
+        schema.infer_appearances(points, ppg, minutes)
+        for points, ppg, minutes in zip(
+            frame["total_points"], frame["points_per_game"], frame["minutes"])
+    ]
+    return frame
 
 
 def project_row(
     player: pd.Series,
     games_played: float,
-    by_code: pd.DataFrame,
-    by_group: pd.DataFrame,
     ranges: dict,
-    mode: str = "shrunk",
-    k: float = DEFAULT_K,
     league_games: float | None = None,
 ) -> tuple[dict, list[str]]:
     """Project one part-season player to a full season.
@@ -156,40 +94,38 @@ def project_row(
     games = max(0.0, float(games_played))
     league = games if league_games is None else max(0.0, float(league_games))
 
-    # A club that has not kicked off has no rate to extrapolate. Its
-    # players' totals are all zero, and zero times anything is still zero,
-    # so the prior carries them -- which is exactly what a weight of
-    # ``0 / (0 + k)`` delivers.
+    # A club that has not kicked off has no rate to extrapolate: its
+    # players' totals are all zero, and stay zero.
     scale = TOTAL_GAMEWEEKS / games if games else 0.0
     league_scale = TOTAL_GAMEWEEKS / league if league else 0.0
-    weight = shrinkage_weight(games, k) if mode == "shrunk" else 1.0
 
     values: dict[str, float] = {}
 
     for field in schema.NUMERIC_NAMES:
         current = float(player.get(field, 0.0) or 0.0)
 
-        if field in FIXED_FIELDS or mode == "asis":
+        if field in FIXED_FIELDS:
             values[field] = current
             continue
         if field in RATIO_FIELDS:
             continue  # recomputed below, once the totals are known
 
-        extrapolated = current * (league_scale if field in LEAGUE_FIELDS else scale)
-        if mode == "shrunk":
-            prior = float(_prior_row(player, by_code, by_group).get(field, 0.0))
-            values[field] = weight * extrapolated + (1 - weight) * prior
-        else:
-            values[field] = extrapolated
+        values[field] = current * (league_scale if field in LEAGUE_FIELDS else scale)
 
-    # Ratios follow from the projected totals. Appearances are derived from
-    # the projected minutes, not counted off the real season, so the rate
-    # stays consistent with the totals it is divided into.
-    appearances = max(1.0, values["minutes"] / 90.0)
-    values["points_per_game"] = values["total_points"] / appearances
+    # Appearances are projected like the other totals, then held between
+    # the games already played and one per gameweek.
+    appearances_now = player.get(schema.APPEARANCES_FIELD)
+    if appearances_now is None or pd.isna(appearances_now):
+        appearances_now = schema.infer_appearances(
+            player.get("total_points"), player.get("points_per_game"), player.get("minutes"))
+    appearances_now = float(appearances_now)
+    appearances = min(float(schema.MAX_APPEARANCES), max(appearances_now * scale, appearances_now))
 
+    # Ratios follow from the projected totals, rounded as FPL publishes them.
+    values["points_per_game"] = (round(values["total_points"] / appearances, 1)
+                                 if appearances > 0 else 0.0)
     final_cost = float(player.get("final_cost") or player.get("start_cost") or 1.0)
-    values["value_season"] = values["total_points"] / max(final_cost, 0.1)
+    values["value_season"] = round(values["total_points"] / max(final_cost, 0.1), 1)
 
     clamped = _clamp(values, ranges)
 
@@ -239,11 +175,8 @@ def resolve_games(current: pd.DataFrame, games_played) -> np.ndarray:
 
 def project_frame(
     current: pd.DataFrame,
-    previous: pd.DataFrame,
     games_played,
     ranges: dict,
-    mode: str = "shrunk",
-    k: float = DEFAULT_K,
     league_games: float | None = None,
 ) -> pd.DataFrame:
     """Project every current player, for the page's table.
@@ -253,7 +186,7 @@ def project_frame(
     figure each player was actually divided by, so the page can show it
     rather than leave the reader to assume everyone shared a denominator.
     """
-    by_code, by_group = build_priors(previous)
+    current = with_appearances(current)
 
     games = resolve_games(current, games_played)
     league = float(np.mean(games)) if league_games is None else float(league_games)
@@ -261,7 +194,7 @@ def project_frame(
     rows, clamp_counts = [], []
     for position, (_, player) in enumerate(current.iterrows()):
         values, clamped = project_row(
-            player, games[position], by_code, by_group, ranges, mode, k, league
+            player, games[position], ranges, league
         )
         values["code"] = player["code"]
         values["web_name"] = player["web_name"]

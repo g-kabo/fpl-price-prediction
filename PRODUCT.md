@@ -32,8 +32,8 @@ gave it, and comes away impressed by the work behind it.
 A transparent, backtested model rather than a black-box number. It is linear,
 so every prediction decomposes exactly into per-term contributions, and each
 comes with a 95% prediction interval. Live current-season form is projected to
-38 gameweeks with per-club fixture counts and shrinkage toward last season,
-rather than naive scaling.
+38 gameweeks from current-season form alone, scaled by each club's own
+fixtures played and clamped to the range the model was fitted on.
 
 ## Operating Context
 

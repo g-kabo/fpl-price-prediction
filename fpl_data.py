@@ -149,17 +149,25 @@ FPL_FIXTURES_API = "https://fantasy.premierleague.com/api/fixtures/"
 
 TOTAL_GAMEWEEKS = 38
 
+#: The API turns away some requests that announce themselves as a script,
+#: so identify as an ordinary browser asking for JSON.
+FPL_HEADERS = {
+    "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                   "(KHTML, like Gecko) Chrome/126.0 Safari/537.36"),
+    "Accept": "application/json",
+}
+
 
 def load_live_bootstrap(timeout: int = 20) -> dict:
     """One ``bootstrap-static`` payload: elements, teams and events."""
-    response = requests.get(FPL_API, timeout=timeout)
+    response = requests.get(FPL_API, headers=FPL_HEADERS, timeout=timeout)
     response.raise_for_status()
     return response.json()
 
 
 def load_live_fixtures(timeout: int = 20) -> pd.DataFrame:
     """All 380 fixtures, each flagged ``started`` and ``finished``."""
-    response = requests.get(FPL_FIXTURES_API, timeout=timeout)
+    response = requests.get(FPL_FIXTURES_API, headers=FPL_HEADERS, timeout=timeout)
     response.raise_for_status()
     return pd.DataFrame(response.json())
 
