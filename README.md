@@ -47,6 +47,25 @@ which is what Price Watch reads. Online, a GitHub Action does this daily (see
 [Hosting](#hosting)); locally, rerun it whenever you want fresher prices, and an
 open page picks the new file up within the hour, or on reload.
 
+### Daily history
+
+The same Action then runs `record_predictions.py`, which writes one file per
+day to `data/history/<season>/<date>.csv`: one row per player with that day's
+FPL figures (prices, points, ownership, transfers, availability and news,
+expected stats, FPL's price-change pressure), Price Watch's full-season
+projection, and the predicted start price for next season with its 95%
+interval (`pred_next_start`, `pred_next_lower`, `pred_next_upper`). That is
+what Price Watch showed that day, kept after `data/live/` is overwritten.
+
+```python
+import record_predictions
+history = record_predictions.load_history()   # every day, stacked
+history.pivot(index="date", columns="web_name", values="price")
+```
+
+`python record_predictions.py --backfill` also records every earlier snapshot
+in git history. It needs the full history, so run it locally, not in the Action.
+
 Then open <http://127.0.0.1:8051> (8051, so it can run alongside the dashboard
 on 8050). Three pages:
 

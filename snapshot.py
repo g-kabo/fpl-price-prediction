@@ -10,13 +10,14 @@ given day sees the same numbers, and the host never needs to reach
 
 Three files, all small enough to commit daily:
 
-    players.csv     bootstrap-static's elements, trimmed to clean.RAW_COLS
+    players.csv     bootstrap-static's elements: clean.RAW_COLS plus EXTRA_COLS
     teams.csv       team id -> name, in the master_teams schema
     progress.json   when it was fetched, and fixtures played per club
 
 The players are stored *raw*, before :func:`clean.clean_season`, so the
 cleaning stays in one place and a change to it applies to the snapshot
-without refetching.
+without refetching. The model reads only ``clean.RAW_COLS``; the extra
+columns are there for the daily history ``record_predictions.py`` keeps.
 
 ``data/live/`` is a subfolder on purpose: ``train_and_save.is_stale`` watches
 ``data/*.csv``, and a daily snapshot must not look like new training data.
@@ -28,6 +29,7 @@ import json
 import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pandas as pd
 
@@ -39,6 +41,29 @@ SNAPSHOT_DIR = config.DATA_DIR / "live"
 PLAYERS_PATH = SNAPSHOT_DIR / "players.csv"
 TEAMS_PATH = SNAPSHOT_DIR / "teams.csv"
 PROGRESS_PATH = SNAPSHOT_DIR / "progress.json"
+
+#: Fields the model does not read but the daily history keeps: availability,
+#: FPL's own form and expected stats, set pieces, and its price-change
+#: pressure. Any the API stops sending are skipped rather than failing the run.
+EXTRA_COLS = [
+    "status", "news", "news_added",
+    "chance_of_playing_this_round", "chance_of_playing_next_round",
+    "form", "value_form", "ep_this", "ep_next", "event_points",
+    "starts", "saves", "goals_conceded", "own_goals",
+    "penalties_saved", "penalties_missed", "yellow_cards", "red_cards",
+    "expected_goals", "expected_assists", "expected_goal_involvements",
+    "expected_goals_conceded", "defensive_contribution", "tackles",
+    "recoveries", "clearances_blocks_interceptions",
+    "penalties_order", "direct_freekicks_order", "corners_and_indirect_freekicks_order",
+    "dreamteam_count", "in_dreamteam", "selected_rank",
+    "cost_change_event", "transfers_in_event", "transfers_out_event",
+    "price_change_percent", "price_change_hourly_rate",
+    "price_change_calibrating", "price_change_locked_until",
+]
+
+#: ``price_change_projections`` is a list per player, one entry per step
+#: ahead (FPL does not document the step's length), flattened to columns.
+PROJECTION_STEPS = 3
 
 
 @dataclass
@@ -57,7 +82,9 @@ def save(season: int = config.PREDICT_SEASON) -> datetime:
     fetched_at = datetime.now(timezone.utc).replace(microsecond=0)
 
     SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
-    players[clean.RAW_COLS].sort_values("id").to_csv(
+    extras = [col for col in EXTRA_COLS if col in players.columns]
+    _with_projections(players)[clean.RAW_COLS + extras + _projection_cols()].sort_values(
+        "id").to_csv(
         PLAYERS_PATH, index=False, encoding="utf-8")
     teams.to_csv(TEAMS_PATH, index=False, encoding="utf-8")
     PROGRESS_PATH.write_text(
@@ -80,17 +107,41 @@ def save(season: int = config.PREDICT_SEASON) -> datetime:
     return fetched_at
 
 
-def load(season: int = config.PREDICT_SEASON) -> Snapshot | None:
+def _projection_cols() -> list[str]:
+    return [f"price_change_proj{step}_{part}"
+            for step in range(PROJECTION_STEPS) for part in ("percent", "likelihood")]
+
+
+def _with_projections(players: pd.DataFrame) -> pd.DataFrame:
+    """``players`` with ``price_change_projections`` spread over columns."""
+    players = players.copy()
+    projections = players.get("price_change_projections",
+                              pd.Series([None] * len(players), index=players.index))
+    for step in range(PROJECTION_STEPS):
+        entries = [p[step] if isinstance(p, list) and len(p) > step else {}
+                   for p in projections]
+        players[f"price_change_proj{step}_percent"] = pd.to_numeric(
+            [e.get("projected_percent") for e in entries], errors="coerce")
+        players[f"price_change_proj{step}_likelihood"] = pd.to_numeric(
+            [e.get("likelihood") for e in entries], errors="coerce")
+    return players
+
+
+def load(season: int = config.PREDICT_SEASON, directory: Path = SNAPSHOT_DIR) -> Snapshot | None:
     """The saved snapshot, or None if there is none for ``season``.
 
     A snapshot left over from last season is treated as missing rather than
     served: after ``config.PREDICT_SEASON`` is bumped, its players are the
-    wrong year's.
+    wrong year's. ``directory`` is for reading an old snapshot restored from
+    git history; the app always reads ``data/live/``.
     """
-    if not (PLAYERS_PATH.exists() and TEAMS_PATH.exists() and PROGRESS_PATH.exists()):
+    players_path = directory / PLAYERS_PATH.name
+    teams_path = directory / TEAMS_PATH.name
+    progress_path = directory / PROGRESS_PATH.name
+    if not (players_path.exists() and teams_path.exists() and progress_path.exists()):
         return None
 
-    meta = json.loads(PROGRESS_PATH.read_text(encoding="utf-8"))
+    meta = json.loads(progress_path.read_text(encoding="utf-8"))
     if meta.get("season") != season:
         return None
 
@@ -105,8 +156,8 @@ def load(season: int = config.PREDICT_SEASON) -> Snapshot | None:
         is_exact=bool(meta.get("is_exact", True)),
     )
     return Snapshot(
-        players=pd.read_csv(PLAYERS_PATH, encoding="utf-8"),
-        teams=pd.read_csv(TEAMS_PATH, encoding="utf-8"),
+        players=pd.read_csv(players_path, encoding="utf-8"),
+        teams=pd.read_csv(teams_path, encoding="utf-8"),
         progress=progress,
         fetched_at=datetime.fromisoformat(meta["fetched_at"]),
     )

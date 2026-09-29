@@ -105,7 +105,7 @@ _cache: LiveSeason | None = None
 _cache_mtime: float = -1.0
 
 
-def _from_snapshot(snap: snapshot.Snapshot) -> LiveSeason:
+def from_snapshot(snap: snapshot.Snapshot) -> LiveSeason:
     players = clean.clean_season(snap.players, config.PREDICT_SEASON, snap.teams)
     return LiveSeason(
         players=players,
@@ -147,7 +147,7 @@ def get_live_season() -> LiveSeason:
 
     try:
         snap = snapshot.load()
-        _cache = _from_snapshot(snap) if snap else _from_cache_file("no snapshot yet")
+        _cache = from_snapshot(snap) if snap else _from_cache_file("no snapshot yet")
     except Exception as exc:  # unreadable file, or cleaning it failed
         _cache = _from_cache_file(type(exc).__name__)
     _cache_mtime = stamp
