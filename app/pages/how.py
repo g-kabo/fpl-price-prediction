@@ -1,18 +1,17 @@
-"""How it works: the method in plain words, and how right it has been.
+"""How it works: the served model, written out.
 
-Every figure on this page is read from the pipeline's own outputs --
-``models/meta.json`` and ``output/backtest_metrics_<season>.json`` -- so it
-cannot drift from the model it describes. If the backtest file is missing,
-its section is left out rather than filled with a remembered number.
+The app's version of §11 of ``explore/model_report.py``. Every weight is read
+from the served model itself (``model_store.get_model()``), so the equation
+on this page is the one pricing players.
 """
 
 from __future__ import annotations
 
-import json
-
 import dash
+import numpy as np
 from dash import html
 
+import charts
 import config
 import model_store
 import theme
@@ -21,98 +20,124 @@ import ui
 dash.register_page(__name__, path="/how-it-works", name="How it works", order=2,
                    title="How it works · FPL Price Prediction")
 
-_meta = model_store.get_meta()
+_SUB = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
+
+#: Numeric terms in the equation, by the name a reader sees in the formula.
+_VAR_NAMES = {
+    "start_cost": "start", "final_cost": "end",
+    "start_cost_sq": "start²", "final_cost_sq": "end²",
+    "total_points": "points", "minutes": "minutes", "goals_scored": "goals",
+    "assists": "assists", "points_per_game": "ppg", "value_season": "value",
+    "selected_by_percent": "selected", "no_mins": "never_played",
+}
 
 
-def _backtest() -> dict | None:
-    path = config.OUTPUT_DIR / f"backtest_metrics_{_meta['predict_season']}.json"
-    if not path.exists():
-        return None
-    return json.loads(path.read_text(encoding="utf-8"))
+def _p(*children, cls: str = "prose") -> html.P:
+    return html.P(list(children), className=cls)
 
 
-def _step(title: str, *body) -> html.Div:
-    return html.Div([html.H3(title, className="step-title"), *body], className="step")
+def _coef(value: float) -> str:
+    """Four significant figures, never in scientific notation."""
+    return np.format_float_positional(abs(value), precision=4, unique=False,
+                                      fractional=False, trim="-")
 
 
-def _accuracy(bt: dict) -> html.Section:
-    overall = bt["overall"]
-    rows = [
-        html.Tr([
-            html.Td(ui.position_pill(position)),
-            html.Td(str(stats["n"]), className="num"),
-            html.Td(theme.money(stats["mae"], places=2), className="num"),
-            html.Td(f"{stats['within_0_25m']:.0%}", className="num"),
-            html.Td(f"{stats['interval_coverage']:.0%}", className="num"),
-        ])
-        for position, stats in bt["by_position"].items()
+def _equations(params, numeric: list[str]) -> list:
+    lhs = html.Span([html.Var("next start price"), " ="], className="eq-lhs")
+    symbolic, filled = [html.Span("β₀", className="eq-term")], [
+        html.Span(_coef(params["const"]), className="eq-term")]
+    for i, column in enumerate(numeric, start=1):
+        name = html.Var(_VAR_NAMES.get(column, column))
+        symbolic.append(html.Span([" + ", f"β{str(i).translate(_SUB)}", " · ", name],
+                                  className="eq-term"))
+        filled.append(html.Span([" − " if params[column] < 0 else " + ",
+                                 _coef(params[column]), " · ", name], className="eq-term"))
+    symbolic.append(html.Span([" + β", html.Sub("position"), " + β", html.Sub("club")],
+                              className="eq-term"))
+    filled.append(html.Span([" + ", html.Var("position adjustment"), " + ",
+                             html.Var("club adjustment")], className="eq-term"))
+    return [
+        html.H3("In symbols", className="step-title"),
+        _p("One weight (β) per input, plus a position and a club adjustment.", cls="fine"),
+        html.Div([lhs, *symbolic], className="equation"),
+        html.H3("With its fitted weights", className="step-title"),
+        _p("Rounded to four significant figures; the app computes with the full ones.",
+           cls="fine"),
+        html.Div([lhs, *filled], className="equation"),
     ]
-    rows.append(html.Tr([
-        html.Td("All positions"),
-        html.Td(str(overall["n"]), className="num"),
-        html.Td(theme.money(overall["mae"], places=2), className="num"),
-        html.Td(f"{overall['within_0_25m']:.0%}", className="num"),
-        html.Td(f"{overall['interval_coverage']:.0%}", className="num"),
-    ], className="total-row"))
 
-    weakest = max(bt["by_position"].items(), key=lambda kv: kv[1]["rmse"])
-    return ui.section(
-        "How right has it been?",
-        html.P(
-            [
-                f"The model was trained only on seasons up to {config.season_label(_meta['train_through'])}, "
-                f"then asked to price the {bt['matched_players']} players who carried over "
-                f"into {bt['predict_season']} without ever seeing the prices FPL gave "
-                "them. Then its answers were checked against FPL's.",
-            ],
-            className="prose",
-        ),
-        html.P(
-            [
-                "Its typical miss was ", html.Strong(theme.money(overall["mae"], places=2)),
-                " a player. ", html.Strong(f"{overall['within_0_25m']:.0%}"),
-                " of its prices landed within £0.25m of FPL's, ",
-                html.Strong(f"{overall['interval_coverage']:.0%}"),
-                " fell inside the 95% likely range, and its errors were ",
-                html.Strong(f"{bt['improvement_over_naive']:.0%} smaller"),
-                " than simply assuming every price stays put.",
-            ],
-            className="prose lead-figures",
-        ),
-        html.Table(
-            [html.Thead(html.Tr([html.Th("Position"), html.Th("Players", className="num"),
-                                 html.Th("Typical miss", className="num"),
-                                 html.Th("Within £0.25m", className="num"),
-                                 html.Th("Inside range", className="num")])),
-             html.Tbody(rows)],
-            className="terms accuracy",
-        ),
-        html.P(
-            [
-                html.Strong("Where it struggles. "),
-                f"{weakest[0]}s are the weak spot: the likely range caught only "
-                f"{weakest[1]['interval_coverage']:.0%} of them, short of the 95% it promises, "
-                "and the model tends to overprice them. The best guess is transfer activity "
-                "the season's stats cannot see. Across all positions the range covers "
-                f"{overall['interval_coverage']:.0%}, a little under 95%, so read it as "
-                "slightly optimistic.",
-            ],
-            className="prose note",
-        ),
-        class_name="how-block",
+
+def _adjustments(fitted, params) -> html.Div:
+    positions = [("GK", 0.0)] + [(c.split("_")[-1], params[c]) for c in fitted.columns
+                                 if c.startswith("element_type_")]
+    clubs = sorted(((c[len("team_name_"):].replace("_", " "), params[c]) for c in fitted.columns
+                    if c.startswith("team_name_")), key=lambda kv: -kv[1])
+    clubs.append(("Every other club", 0.0))
+
+    def chip(label, value, reference):
+        return html.Div([html.Span(label, className="adj-label"),
+                         html.Span("0 (reference)" if reference else
+                                   theme.money(value, signed=True, places=3),
+                                   className="adj-value")], className="adj")
+
+    return html.Div(
+        [
+            html.Div([html.H3("Position adjustment", className="step-title"),
+                      html.Div([chip(p, v, p == "GK") for p, v in positions],
+                               className="adj-grid")]),
+            html.Div([html.H3("Club adjustment", className="step-title"),
+                      html.Div([chip(c, v, c == "Every other club") for c, v in clubs],
+                               className="adj-grid adj-clubs")]),
+        ],
+        className="adj-row",
     )
 
 
+def _reading(params, numeric: list[str]) -> html.Div:
+    """How to read the fitted weights, in a manager's units."""
+    bend = params["start_cost_sq"] + params["final_cost_sq"]
+    linear = params["start_cost"] + params["final_cost"]
+    negative = [_VAR_NAMES.get(c, c) for c in numeric if params[c] < 0]
+    items = [
+        html.Li(f"Each goal adds {theme.money(params['goals_scored'], signed=True, places=3)} "
+                f"and each assist {theme.money(params['assists'], signed=True, places=3)} to "
+                "next season's price; each 1% of ownership adds "
+                f"{theme.money(params['selected_by_percent'], signed=True, places=3)}."),
+        html.Li(f"Minutes carry {theme.money(params['minutes'] * 90, signed=True, places=4)} "
+                "per 90 played: with points, goals and ppg held fixed, more minutes means "
+                "those returns came less efficiently."),
+        html.Li(f"start² and end² together add {bend:+.4f} × price². That is the bend: a £1 "
+                f"price difference carries about £{linear + 2 * bend * 4:.2f} at £4m and "
+                f"£{linear + 2 * bend * 12:.2f} at £12m, because FPL props cheap players "
+                "against a floor and keeps its stars expensive."),
+    ]
+    if negative:
+        items.append(html.Li(f"Negative weights ({', '.join(negative)}) look odd alone "
+                             "because the inputs overlap heavily; their combined effect is "
+                             "what the model means. The breakdown on every player card shows "
+                             "those combined effects for one player."))
+    return html.Div([html.Strong("Read the weights in FPL units, and read the four price "
+                                 "terms together."), html.Ul(items)], className="prose note")
+
+
 def layout() -> html.Div:
-    bt = _backtest()
+    meta = model_store.get_meta()
+    fitted = model_store.get_model()
+    params = fitted.result.params
+    numeric = [c for c in fitted.columns if not c.startswith(("element_type_", "team_name_"))]
+    legend = [html.Tr([html.Td(html.Var(_VAR_NAMES.get(c, c))),
+                       html.Td(c, className="muted mono"), html.Td(charts.term_label(c))])
+              for c in numeric]
     return html.Div(
         [
             html.Section(
                 html.Div(
                     [
                         html.H1("How it works"),
-                        html.P("A transparent model, not a black box: every price on this site "
-                               "can be taken apart into the pieces that made it.",
+                        html.P(f"The model is fitted on {meta['training_rows']:,} player-seasons "
+                               f"({config.season_label(config.FIRST_SEASON)} to "
+                               f"{config.season_label(meta['train_through'])}). Every price in "
+                               "the app is this one line of arithmetic.",
                                className="lede"),
                     ],
                     className="wrap",
@@ -122,84 +147,30 @@ def layout() -> html.Div:
             html.Div(
                 [
                     ui.section(
-                        "The idea",
-                        html.Div(
-                            [
-                                _step("1. Learn from history",
-                                      html.P(f"The model studied {_meta['training_rows']:,} "
-                                             "player-seasons: how each one played, and the price "
-                                             "FPL gave him the following August.", className="prose")),
-                                _step("2. Weigh each ingredient",
-                                      html.P(f"It settles on a fixed weight for each of "
-                                             f"{_meta['n_predictors']} ingredients: this season's "
-                                             "price, points, minutes, goals, ownership, position, "
-                                             "club and more.", className="prose")),
-                                _step("3. Add them up",
-                                      html.P("A player's predicted price is just those weights "
-                                             "times his numbers, summed. That is why every player "
-                                             "card can show exactly where its price comes from.",
-                                             className="prose")),
-                            ],
-                            className="steps",
+                        "The model, written out",
+                        *_equations(params, numeric),
+                        _p("Prices in £m, minutes in minutes, selected in percent; "
+                           "never_played is 1 for a player with no minutes, else 0.",
+                           cls="fine"),
+                        _adjustments(fitted, params),
+                        _p("What each adjustment adds to the price, against goalkeepers and "
+                           f"against every other club. Clubs under "
+                           f"{config.TEAM_LUMP_THRESHOLD:.0%} of training rows, and promoted "
+                           "clubs the model has never seen, share the reference level.",
+                           cls="fine"),
+                        html.Details(
+                            [html.Summary("What each name in the equation means"),
+                             html.Table([html.Thead(html.Tr([html.Th("In the equation"),
+                                                             html.Th("Column"),
+                                                             html.Th("Meaning")])),
+                                         html.Tbody(legend)], className="terms")],
+                            className="details",
                         ),
-                        html.P(
-                            [html.Strong("The biggest ingredient is the price he already has. "),
-                             "FPL rarely moves a player far between seasons, so most of any "
-                             "prediction is this season's price, with performance nudging it up "
-                             "or down. The interesting part is the nudge."],
-                            className="prose note",
-                        ),
-                        class_name="how-block",
-                    ),
-                    _accuracy(bt) if bt else None,
-                    ui.section(
-                        "Predicting from a season still being played",
-                        html.P(
-                            "Price Watch has to turn a few gameweeks into a full season. By "
-                            "default it scales each player's totals so far up to 38 gameweeks. "
-                            "That is simple and uses only this season, but early on it is "
-                            "jumpy: three good games scale into a record-breaking season.",
-                            className="prose",
-                        ),
-                        html.P(
-                            "Projection settings offer a steadier alternative, which blends "
-                            "each player's form this season with his last one, trusting this "
-                            "season more with every gameweek. At six gameweeks the two count "
-                            "equally; by gameweek 30 it is 83% this season. Players new to the "
-                            "league then borrow a typical season for their position and price.",
-                            className="prose",
-                        ),
-                        html.P(
-                            "Either way, each player is scaled by his own club's fixtures, so a "
-                            "club with a game in hand is not treated as a week behind. Anything "
-                            "that ends up beyond what the model has ever seen is held at the "
-                            "edge of its experience rather than extrapolated.",
-                            className="prose",
-                        ),
-                        class_name="how-block",
-                    ),
-                    ui.section(
-                        "Checked, not assumed",
-                        html.Ul(
-                            [
-                                html.Li("Every breakdown adds up exactly to its price. The model "
-                                        "is linear, so nothing is approximated."),
-                                html.Li("This site and the batch pipeline behind it are tested to "
-                                        "give identical prices for every player."),
-                                html.Li("If the code or data change, the model retrains before it "
-                                        "answers, so a stale model never serves a price."),
-                                html.Li("Price enters twice, as itself and squared, so budget "
-                                        "and premium players can be priced on different "
-                                        "slopes. FPL keeps stars expensive and props cheap "
-                                        "players against a floor, and a straight line cannot "
-                                        "do both."),
-                            ],
-                            className="prose checks",
-                        ),
+                        _reading(params, numeric),
                         class_name="how-block",
                     ),
                 ],
-                className="wrap how",
+                className="wrap how inside",
             ),
         ],
     )

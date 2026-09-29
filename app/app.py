@@ -8,7 +8,7 @@ Three pages:
                     gameweeks and priced for next season (was /projected)
     /lab            What if: a completed season, prefilled or blank, edited
                     by hand (was /player and /manual)
-    /how-it-works   the method, and how accurate it has been
+    /how-it-works   the fitted model written out as one equation
 
 Runs on 8051 so it can sit alongside the FPL dashboard on 8050 rather than
 fighting it for the port.

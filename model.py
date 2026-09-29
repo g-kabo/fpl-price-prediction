@@ -50,6 +50,7 @@ class PriceModel:
     #: Numeric predictors; None means ``features.DEFAULT_NUMERIC``.
     numeric: list[str] | None = None
     use_team: bool = True
+    use_position: bool = True
     lumper: features.TeamLumper | None = None
     columns: list[str] = field(default_factory=list)
     result: sm.regression.linear_model.RegressionResultsWrapper | None = None
@@ -60,7 +61,8 @@ class PriceModel:
     def fit(self, df: pd.DataFrame) -> "PriceModel":
         self.lumper = features.TeamLumper(self.lump_threshold).fit(df["team_name"])
         X = features.build_design_matrix(df, self.lumper, numeric=self.numeric,
-                                         use_team=self.use_team)
+                                         use_team=self.use_team,
+                                         use_position=self.use_position)
         y = df[TARGET].astype(float)
 
         # R's lm() drops incomplete cases via na.action = na.omit; a handful
@@ -78,7 +80,8 @@ class PriceModel:
         # getattr: artifacts pickled before these fields existed lack them.
         X = features.build_design_matrix(df, self.lumper, self.columns,
                                          numeric=getattr(self, "numeric", None),
-                                         use_team=getattr(self, "use_team", True))
+                                         use_team=getattr(self, "use_team", True),
+                                         use_position=getattr(self, "use_position", True))
         return sm.add_constant(X, has_constant="add")
 
     # --- prediction --------------------------------------------------------

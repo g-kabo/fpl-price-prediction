@@ -8,7 +8,8 @@ Reproduce the R's published configuration and RMSE:
         --predict-season 2024 --r-compat --tag r_compat
 
 Everything lands in ``output/``: the per-player predictions CSV, a
-``metrics_*.json`` with every number quoted in the README, and the figures.
+``metrics_*.json`` with every number quoted in the README, the price-curve
+and tier analysis (``price_analysis.json``), and the figures.
 """
 
 from __future__ import annotations
@@ -24,6 +25,7 @@ import features
 import fpl_data
 import model
 import plots
+import price_analysis
 
 #: Columns of the exported predictions, matching the R's pred_price_*.csv
 #: shape (R used a leading dot on .pred; pandas-friendly names here).
@@ -50,6 +52,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--importance-repeats", type=int, default=50,
                    help="permutation repeats, DALEX B (default: %(default)s); 0 to skip")
     p.add_argument("--no-plots", action="store_true")
+    p.add_argument("--no-analysis", action="store_true",
+                   help="skip price_analysis.py's price-curve and tier analysis")
     return p.parse_args()
 
 
@@ -142,6 +146,17 @@ def main() -> None:
         importance = final.permutation_importance(train_df, n_repeats=args.importance_repeats)
         importance.to_csv(config.OUTPUT_DIR / f"variable_importance{tag}.csv", index=False, encoding="utf-8")
         print(importance.head(6).to_string(index=False))
+
+    # --- price curve, bands and tiers ----------------------------------------
+
+    # Describes the default model, so it is skipped when --r-compat swaps in
+    # the R's formula.
+    if not (args.no_analysis or args.r_compat):
+        print("Price-curve and tier analysis (temporal folds)...")
+        analysis = price_analysis.analyse(price_analysis.all_transitions(cleaned),
+                                          args.train_through)
+        price_analysis.summarise(analysis)
+        price_analysis.write(analysis, tag)
 
     # --- figures ------------------------------------------------------------
 

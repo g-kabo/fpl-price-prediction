@@ -201,6 +201,7 @@ def build_design_matrix(
     columns: list[str] | None = None,
     numeric: list[str] | None = None,
     use_team: bool = True,
+    use_position: bool = True,
 ) -> pd.DataFrame:
     """Assemble the numeric matrix the OLS fit consumes.
 
@@ -209,15 +210,17 @@ def build_design_matrix(
     of zeros rather than shifting every coefficient along by one.
 
     ``numeric`` picks the numeric predictors (default :data:`DEFAULT_NUMERIC`)
-    and ``use_team=False`` leaves out the team dummies; both exist for
-    feature-selection experiments and leave the default model untouched.
+    and ``use_team=False``/``use_position=False`` leave out the team or
+    position dummies; all three exist for feature-selection experiments and
+    leave the default model untouched.
     """
     numeric = DEFAULT_NUMERIC if numeric is None else numeric
     df = add_engineered_features(add_rate_features(df), numeric)
 
     parts = [df[numeric].astype(float)]
     parts.append(df[["no_mins"]].astype(float))
-    parts.append(_dummies(df["element_type"].astype(object), config.POSITIONS, "element_type"))
+    if use_position:
+        parts.append(_dummies(df["element_type"].astype(object), config.POSITIONS, "element_type"))
     if use_team:
         parts.append(_dummies(lumper.transform(df["team_name"]), lumper.levels, "team_name"))
 

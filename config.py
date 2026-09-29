@@ -111,6 +111,18 @@ POSITION_SYMBOLS = {
     "FWD": "circle",
 }
 
+#: Price tiers within each position, as the lower bound (in £m, inclusive)
+#: of each tier after the first. Taken from the tiering in the author's R
+#: work, and applied to ``start_cost`` -- the price a season opened at -- so
+#: a player's tier does not shift with his in-season price moves.
+TIER_NAMES = ["Budget", "Low-Mid", "High-Mid", "Premium"]
+PRICE_TIERS = {
+    "GK": (4.5, 5.0, 5.5),
+    "DEF": (4.5, 5.0, 6.0),
+    "MID": (5.0, 7.5, 9.5),
+    "FWD": (6.0, 7.5, 9.5),
+}
+
 #: Level that lumped/unseen teams collapse into, and the team reference
 #: level (R: step_relevel(team_name, ref_level = "other")).
 OTHER_TEAM = "other"

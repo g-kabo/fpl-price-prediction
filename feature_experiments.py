@@ -72,10 +72,24 @@ LEAN = without(*TRANSFERS, *RATES)
 START, FINAL, MIN, MAX = (f"{k}_selected_by_percent" for k in ("start", "final", "min", "max"))
 OWNERSHIP = [START, FINAL, MIN, MAX]
 
-#: name -> PriceModel keyword arguments.
+#: The route from the R's formula to today's default, one change per step --
+#: the README's Feature selection table, and the ladder the app's "Inside
+#: the model" page draws. Each step keeps every change above it.
+LADDER: dict[str, dict] = {
+    "R formula": {"numeric": D},
+    "transfers -> selected_by_percent": {"numeric": without(*TRANSFERS) + ["selected_by_percent"]},
+    "drop the per-minute rates": {"numeric": LEAN + ["selected_by_percent"]},
+    "add start_cost^2 and final_cost^2": {
+        "numeric": LEAN + ["selected_by_percent", "start_cost_sq", "final_cost_sq"]},
+    "drop bps and clean_sheets": {},
+}
+
+#: name -> PriceModel keyword arguments. The ladder comes first, so the
+#: baseline every delta is measured from is the R formula.
 VARIANTS: dict[str, dict] = {
-    "baseline (R formula)": {"numeric": D},
-    "current default": {},
+    **LADDER,
+    "default without the squared prices": {
+        "numeric": [c for c in features.DEFAULT_NUMERIC if not c.endswith("_sq")]},
     "lean (no transfers, no rates)": {"numeric": LEAN},
 
     # --- one ownership number -----------------------------------------------
@@ -188,6 +202,9 @@ def run(frame: pd.DataFrame, variants: dict[str, dict]) -> tuple[pd.DataFrame, p
         print(f"  {name:<55} temporal {summary[-1]['temporal_rmse']:.4f}")
 
     out = pd.DataFrame(summary)
+    ladder = list(LADDER)
+    out["ladder_step"] = [ladder.index(v) if v in ladder else pd.NA for v in out["variant"]]
+    out["ladder_step"] = out["ladder_step"].astype("Int64")
     base = out.iloc[0]
     for col in ("random_cv_rmse", "temporal_rmse", "rmse_2026"):
         out[f"{col}_delta"] = out[col] - base[col]
