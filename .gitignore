@@ -25,3 +25,6 @@ desktop.ini
 .impeccable/hook.cache.json
 .impeccable/questions/
 .impeccable/review/
+
+# Local notes for Claude Code
+CLAUDE.md
