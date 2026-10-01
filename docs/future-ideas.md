@@ -34,7 +34,7 @@ While an idea is being built on a branch, name the branch in its Status, e.g.
 |---|---|---|---|---|---|
 | 8 | **Prediction trend per player.** Sparkline in the drawer built from `data/history/` ("predicted £7.9m → £8.6m over 3 weeks"). | Medium | High | High | in progress (branch `price-history`: built and pushed, merging after the next gameweek so the trend has data to show) |
 | 9 | **"Movers this week" section.** Biggest changes in predicted price since the last snapshot(s). Same history data as #8. | Medium | High | High | in progress (branch `price-history`: built and pushed, merging after the next gameweek so the trend has data to show) |
-| 10 | **Send a current player to What if.** A "tweak this projection" button in the Price Watch drawer; What if currently only loads 2025-26 seasons. | Medium | High | Medium | idea |
+| 10 | **Send a current player to What if.** A "tweak this projection" button in the Price Watch drawer; What if currently only loads 2025-26 seasons. | Medium | High | Medium | done |
 | 11 | **Compare two players side by side** (prediction, interval, top drivers). | Medium | Medium | Medium | idea |
 | 12 | **My team import** by FPL team ID, showing the squad's predicted next-season value. Most engaging, but the appeal is curiosity and pre-season planning more than weekly decisions. | Medium | Medium | High | idea |
 | 13 | **Club summary**: average predicted change by club. | Low–Med | Low | Low | idea |
@@ -45,9 +45,10 @@ While an idea is being built on a branch, name the branch in its Status, e.g.
 | 22 | **Price-tier moves.** Players forecast to move up or down one of the user's tiers next season (e.g. "£5.5m → premium mid"). | Low–Med | Medium | Medium | idea |
 | 24 | **FPL's own price-change pressure.** The snapshot saves `price_change_proj*` likelihoods that are never shown; a "likely to rise soon" badge. Caveat: one snapshot a day, taken after the night's changes, so it is a day old by evening. | Medium | High | Medium | idea |
 | 25 | **Filters in the URL.** Search, position, club and sort in the address, so a view can be bookmarked or shared. Builds on the existing `?player=` deep link. | Low–Med | Medium | Medium | idea |
-| 26 | **Earlier seasons in What if.** Data goes back to 2017-18 but What if only loads 2025-26. Picking an old season and seeing the model against what FPL actually charged builds credibility, per player rather than as accuracy tables. | Medium | Medium | Medium | idea |
+| 26 | **Earlier seasons in What if.** Data goes back to 2017-18 but What if only loads 2025-26. Picking an old season and seeing the model against what FPL actually charged builds credibility, per player rather than as accuracy tables. | Medium | Medium | Medium | done |
 | 28 | **Player search in the nav bar**, opening any player's card from any page. | Low–Med | Medium | Low | idea |
 | 29 | **RSS feed of forecast movers** ("after GW6: biggest forecast moves"). Only worth it once #9 is merged. | Low–Med | Low | Low | idea |
+| 30 | **What moved the forecast.** Split the *change* in a player's forecast between two days into its causes, e.g. "£8.20m on 29 Sep → +£0.31m goals → +£0.08m points per game → −£0.04m price → £8.55m". Exact, because the model is linear. Group the terms into Price (start, end and both squared terms combined, since they offset each other), Performance (points, minutes, goals, assists, points per game, points per £m) and Popularity (selected by %); position and club never change within a season. Show it as a small waterfall under the forecast trend (only when the forecast moved ≥ £0.05m), and as a one-word driver tag on each forecast mover. Every input is already in `data/history/`, so nothing new needs recording. Guard: recompute each day with today's model and drop the breakdown if it misses the stored `pred_next_start` by more than £0.01m. Builds on #8 and #9. | Low–Med | Med–High | Medium | idea |
 
 ## Bigger or longer-term
 
@@ -65,6 +66,34 @@ While an idea is being built on a branch, name the branch in its Status, e.g.
 4. #18, #17 and #20: overnight changes is cheap with data already recorded; the
    phone layout is the biggest real-world gap; the luck check is the most
    distinctive idea and leaves the model alone.
+
+## Branch or straight to main?
+
+Every push to `main` redeploys the live site, so a branch is for protecting it.
+**Make a branch** when any of these apply:
+
+1. It will take more than one sitting (nothing half-finished goes live overnight).
+2. You want to choose when it goes live (like `price-history`, waiting for a gameweek).
+3. It touches the model, the pipeline or the daily snapshot workflow, where a
+   mistake changes every forecast or breaks the bot's daily commit.
+4. It's an experiment you might throw away.
+
+Otherwise, if it's small and can be finished and checked locally in one go, or
+it's docs only, commit straight to `main` after a `git pull`.
+
+| Where | Ideas | Why |
+|---|---|---|
+| **Straight to `main`** | 1, 2, 3, 4, 5, 6, 13, 18, 21, 22, 23, 27, 28 | Small, self-contained additions to an existing page or card, using data already in the snapshot. |
+| **Straight to `main`** | 7 | A scheduled workflow only runs from the default branch, so a branch can't test it. Check it with a manual run from the Actions tab after pushing. |
+| **Straight to `main`, once #9 is merged** | 29 | Small, but has nothing to report until forecast movers are live. |
+| **Branch** | 8, 9 | On `price-history`, held back until a gameweek gives the trend something to show. |
+| **Branch** | 10, 11, 26 | Multi-sitting work on What if or a new view. |
+| **Branch** | 12 | New page plus calls to the FPL API from the server, which hosting providers aren't always allowed to make (see `app/live.py`). Needs proving on Render before it ships. |
+| **Branch** | 14, 20, 24 | Experiments: #14 changes every interval (and shows as a step in forecast trends), #20 needs care to word fairly, #24 needs the `price_change_proj*` fields understood first. |
+| **Branch** | 15, 16 | New page, or new image-rendering dependencies; #15 also can't be finished before August 2027. |
+| **Branch** | 17, 25 | Touch every filter or every page's layout, and need checking at several widths or across callbacks. |
+| **Branch** | 19 | State shared across the list and movers; best built after `price-history` is merged. |
+| **Branch** | 30 | Builds on #8 and #9: branch from `price-history`, or from `main` after it's merged. |
 
 ## Out of scope (already decided)
 
