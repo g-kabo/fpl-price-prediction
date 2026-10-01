@@ -27,8 +27,8 @@ visits, sharing). Each is Low / Medium / High.
 
 | # | Idea | Effort | Usefulness | Impact | Status |
 |---|---|---|---|---|---|
-| 8 | **Prediction trend per player.** Sparkline in the drawer built from `data/history/` ("predicted £7.9m → £8.6m over 3 weeks"). | Medium | High | High | idea |
-| 9 | **"Movers this week" section.** Biggest changes in predicted price since the last snapshot(s). Same history data as #8. | Medium | High | High | idea |
+| 8 | **Prediction trend per player.** Sparkline in the drawer built from `data/history/` ("predicted £7.9m → £8.6m over 3 weeks"). | Medium | High | High | done |
+| 9 | **"Movers this week" section.** Biggest changes in predicted price since the last snapshot(s). Same history data as #8. | Medium | High | High | done |
 | 10 | **Send a current player to What if.** A "tweak this projection" button in the Price Watch drawer; What if currently only loads 2025-26 seasons. | Medium | High | Medium | idea |
 | 11 | **Compare two players side by side** (prediction, interval, top drivers). | Medium | Medium | Medium | idea |
 | 12 | **My team import** by FPL team ID, showing the squad's predicted next-season value. Most engaging, but the appeal is curiosity and pre-season planning more than weekly decisions. | Medium | Medium | High | idea |

@@ -41,6 +41,19 @@ def delta_chip(delta: float, size: str = "md") -> html.Span:
                      className=f"delta delta-{way} delta-{size}")
 
 
+def change_chip(change: float, size: str = "sm") -> html.Span:
+    """A change in a forecast, to the penny of a £m: +£0.04m.
+
+    Not :func:`delta_chip`, whose £0.1m threshold is about whether a price
+    is moving at all. Day to day a forecast shifts by hundredths, and a
+    forecast movers list of "Holds" would say nothing.
+    """
+    way = "hold" if round(change, 2) == 0 else "rise" if change > 0 else "fall"
+    return html.Span([html.I(className=f"bi {_ICONS[way]}"),
+                      theme.money(change, signed=True, places=2)],
+                     className=f"delta delta-{way} delta-{size}")
+
+
 # ---------------------------------------------------------------- the answer
 
 
@@ -260,6 +273,55 @@ def price_history(seasons: pd.DataFrame, forecast_season: int, predicted: float,
             html.P(note, className="fine"),
         ],
         className="history",
+    )
+
+
+def _day(day) -> str:
+    return f"{day.day} {day:%b}"
+
+
+def forecast_trend(days: pd.DataFrame, target_season: int) -> html.Div:
+    """The player's forecast as it stood each morning, and how far it has come.
+
+    ``days`` is one row per recorded day, today last; see
+    :func:`charts.forecast_trend` for its columns.
+    """
+    title = html.H3("Forecast trend", className="section-title")
+    if len(days) < 2:
+        return html.Div(
+            [title, html.P("The forecast is recorded every morning; its trend appears "
+                           "from the second day.", className="fine")],
+            className="trend",
+        )
+
+    first, last = days.iloc[0], days.iloc[-1]
+    moved = float(last["pred"]) - float(first["pred"])
+    price_moved = float(last["price"]) - float(first["price"])
+    if round(moved, 2) == 0:
+        lede = [f"The forecast has held at {theme.money(float(last['pred']), places=2)} "
+                f"since {_day(first['date'])}."]
+    else:
+        lede = [f"The forecast is {'up' if moved > 0 else 'down'} ",
+                html.Strong(theme.money(abs(moved), places=2)),
+                f" since {_day(first['date'])}, from "
+                f"{theme.money(float(first['pred']), places=2)} to "
+                f"{theme.money(float(last['pred']), places=2)}."]
+    if round(price_moved, 1) != 0:
+        lede.append(f" His price has {'risen' if price_moved > 0 else 'fallen'} "
+                    f"{theme.money(abs(price_moved))} over the same days.")
+
+    return html.Div(
+        [
+            title,
+            html.P(lede, className="why-lede"),
+            dcc.Graph(figure=charts.forecast_trend(days, target_season),
+                      config={"displayModeBar": False, "responsive": True},
+                      className="trend-chart"),
+            html.P("Each point is what Price Watch predicted that morning. Forecasts move "
+                   "most after a gameweek, as points and minutes come in, and a little with "
+                   "each price change.", className="fine"),
+        ],
+        className="trend",
     )
 
 
