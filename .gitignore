@@ -28,3 +28,6 @@ desktop.ini
 
 # Local notes for Claude Code
 CLAUDE.md
+
+# Playwright MCP browser screenshots and logs
+.playwright-mcp/
