@@ -662,7 +662,13 @@ def card(selected, xref, data, deeplink, is_open):
             ]),
         ),
         ui.answer(interval, reference, words, short,
-                  f"Predicted {config.season_label(TARGET)} price", extra=projected_note),
+                  f"Predicted {config.season_label(TARGET)} price",
+                  extra=html.Div([
+                      projected_note,
+                      dcc.Link([html.I(className="bi bi-sliders"), "Tweak this season in What if"],
+                               href=f"/lab?season={SEASON}&player={int(record['code'])}",
+                               className="btn-ghost card-link"),
+                  ])),
         ui.why_this_price(values, reference=(short, reference)),
         ui.price_history(_player_seasons(record), TARGET, float(interval["pred"].iloc[0]),
                          f"The {config.season_label(SEASON)} season is still running, so its "

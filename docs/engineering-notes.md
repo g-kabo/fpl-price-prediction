@@ -39,6 +39,37 @@ players in 2025-26, so an unedited season still predicts exactly what
 little (temporal RMSE +£0.0011m, worse in 4 of 6 folds), but dropping both ratios
 is worse in every fold.
 
+### What if: any season, including the projected one
+
+What if loads every completed season since 2017-18, plus the season in progress
+as Price Watch projects it. Price Watch's player card links to the projected
+season (`/lab?season=<year>&player=<code>`).
+
+- **Completed seasons come from `models/seasons.csv`**, which `train_and_save.py`
+  writes with `next_cost`, the start price FPL set the following season. "What FPL
+  actually did" used to read `output/backtest_<season>.csv`, which is gitignored,
+  so the line never appeared on the hosted app. For 2025-26 the two sources agree
+  on all 468 returning players.
+- **Only the scoring season is a fair test.** Seasons up to `TRAIN_THROUGH` were
+  training data, so a close call there proves little, and the page says so
+  beside the comparison.
+- **The projected season is priced as Price Watch prices it.** Price Watch holds
+  every projected input inside the training range (`projection.clamp`). What if
+  derives the ratios from the totals, and unclamped, a projected 327 points on a
+  £4.6m price gives a points per £m of 69 against a training maximum of 38.7. That
+  was worth up to £0.72m. So for the projected season only, What if clamps too, and
+  lists what it held. Completed seasons keep the warn-don't-clamp behaviour.
+- **Games played is carried over fractionally** (e.g. 7.6) from the projection, so
+  points per game comes out as Price Watch's. What remains is rounding: Price
+  Watch works its ratios out from unrounded totals, and the form holds whole
+  points. On 1 Oct 2026, 90% of players matched to the penny and none was more
+  than £0.02m apart; the page says which applies.
+- **Side finding: the most expensive players' end price is clamped.** Haaland's
+  £15.6m is above the training maximum of £14.9m, so Price Watch prices him as a
+  £14.9m player, while his points per £m uses the real £15.6m. It's a consequence
+  of clamping to the training range, not of What if, and it affects only players
+  priced above anyone in training.
+
 ### Model caching
 
 `train_and_save.py` fits once and caches to `models/`, because loading ten

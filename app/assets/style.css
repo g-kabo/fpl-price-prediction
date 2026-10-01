@@ -248,6 +248,7 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
   background: var(--surface);
 }
 .btn-ghost:hover { background: var(--tint); border-color: var(--aubergine-3); }
+.card-link { margin-top: 12px; text-decoration: none; }
 
 /* ---------- settings drawer --------------------------------------------- */
 
@@ -781,11 +782,11 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
 .range { margin-top: 22px; }
 
 /* One scale, everything on it at its true value: labels above for the
-   prediction and today's price (a second line when they would collide),
-   the band's own ends below it. */
+   prediction and the prices it is read against, the band's own ends and
+   FPL's actual price below. Each label takes the nearest line it fits on,
+   so ui.range_bar sets the heights and tops inline. */
 .range-scale {
   position: relative;
-  height: 96px;
   margin: 0 4px;
 }
 
@@ -793,7 +794,6 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
   position: absolute;
   left: 0;
   right: 0;
-  top: 52px;
   height: 14px;
   background: var(--tint);
   border-radius: 999px;
@@ -820,7 +820,7 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
   z-index: 2;
 }
 
-/* Today's tick rises from the track to its own label's line. */
+/* A price's tick rises from the track to its own label's line. */
 .range-ref {
   position: absolute;
   bottom: -6px;
@@ -828,8 +828,30 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
   margin-left: -1px;
   background: var(--ink);
 }
-.range-ref-row1 { top: -14px; }
-.range-ref-row2 { top: -6px; } /* stacked labels: a tall tick would cut the one below */
+
+/* FPL's actual price: an outcome, not an input, so a mark of its own. */
+.range-actual-tick {
+  position: absolute;
+  top: 50%;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--ink);
+}
+.range-actual,
+.range-actual-key {
+  width: 12px;
+  height: 12px;
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  transform: rotate(45deg);
+}
+.range-actual {
+  position: absolute;
+  top: 50%;
+  margin: -6px 0 0 -6px;
+  z-index: 3;
+}
+.range-actual-key { display: inline-block; width: 10px; height: 10px; margin-left: 14px; }
 
 .rl {
   position: absolute;
@@ -842,10 +864,7 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
 .rl-mid   { transform: translateX(-50%); }
 .rl-start { transform: translateX(-4px); }
 .rl-end   { transform: translateX(calc(-100% + 4px)); }
-.rl-row2  { top: 0; }
-.rl-row1  { top: 22px; }
 .rl-below {
-  top: 72px;
   font-family: var(--font-fig);
   font-size: 1.02rem;
   font-weight: 600;
@@ -853,6 +872,41 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
 .rl-pred { color: var(--aubergine); font-weight: 600; }
 .rl-pred strong { font-family: var(--font-fig); font-size: 1.05rem; font-weight: 800; }
 .rl-ref { color: var(--ink); font-weight: 600; }
+.rl-below.rl-actual { font-family: var(--font); font-size: 0.85rem; color: var(--ink); }
+.rl-actual strong { font-family: var(--font-fig); font-size: 1.05rem; font-weight: 800; }
+
+/* The prices a prediction is read against, as small cards under the bar. */
+.price-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
+.price-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  background: var(--tint);
+  border-radius: 8px;
+}
+.price-card-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.price-card-label .range-actual-key { margin-left: 2px; }
+.price-card-value {
+  font-family: var(--font-fig);
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--ink);
+}
+.price-card-actual { background: var(--surface); box-shadow: inset 0 0 0 1px var(--line-strong); }
 
 .range-legend {
   display: flex;
@@ -952,6 +1006,8 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
 .lab-pick-row { display: flex; gap: 12px; align-items: center; margin-top: 20px; flex-wrap: wrap; }
 .lab-picker-wrap { width: min(460px, 100%); }
 .lab-picker { color: var(--ink); }
+.lab-season-wrap { width: 190px; }
+.lab-season { color: var(--ink); }
 
 .groups { display: flex; flex-direction: column; gap: 22px; margin-top: 16px; }
 

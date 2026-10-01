@@ -127,19 +127,25 @@ def project_row(
     final_cost = float(player.get("final_cost") or player.get("start_cost") or 1.0)
     values["value_season"] = round(values["total_points"] / max(final_cost, 0.1), 1)
 
-    clamped = _clamp(values, ranges)
+    clamped = clamp(values, ranges)
 
     for name, _, _, integer in schema.NUMERIC_FIELDS:
         values[name] = int(round(values[name])) if integer else round(values[name], 2)
 
+    # Kept so What if can load the projection with the same denominator.
+    values[schema.APPEARANCES_FIELD] = round(appearances, 2)
     values[schema.POSITION_FIELD] = player.get(schema.POSITION_FIELD)
     values[schema.TEAM_FIELD] = player.get(schema.TEAM_FIELD)
 
     return values, clamped
 
 
-def _clamp(values: dict, ranges: dict) -> list[str]:
-    """Hold every projected value inside the fitted range, in place."""
+def clamp(values: dict, ranges: dict) -> list[str]:
+    """Hold every projected value inside the fitted range, in place.
+
+    Also applied by What if to the season in progress, so a projected season
+    edited there is priced the way Price Watch prices it.
+    """
     clamped = []
     for field in schema.NUMERIC_NAMES:
         bounds = ranges.get(field)

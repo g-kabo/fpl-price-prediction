@@ -44,15 +44,47 @@ def delta_chip(delta: float, size: str = "md") -> html.Span:
 # ---------------------------------------------------------------- the answer
 
 
-def range_bar(lower: float, upper: float, pred: float,
-              reference: float | None, reference_label: str) -> html.Div:
-    """The likely range drawn, with the prediction and today's price on it.
+#: Range bar geometry, in px: one line of labels, the track's height, and the
+#: gap between the track and the first line of labels under it.
+_ROW = 22
+_TRACK = 14
+_BELOW_GAP = 6
 
-    The span is padded so a reference price just outside the range still
-    lands on the bar rather than being pinned to its end, where it would
-    read as sitting on the boundary.
+#: Labels closer than this (in % of the bar) would overlap, so the later
+#: one moves to another line.
+_CROWDED = 30.0
+
+
+def _rows(positions: list[float]) -> list[int]:
+    """A line for each label, in order: the nearest line it fits on."""
+    placed: list[list[float]] = []
+    rows = []
+    for x in positions:
+        row = next((i for i, line in enumerate(placed)
+                    if all(abs(x - other) >= _CROWDED for other in line)), len(placed))
+        if row == len(placed):
+            placed.append([])
+        placed[row].append(x)
+        rows.append(row)
+    return rows
+
+
+def range_bar(lower: float, upper: float, pred: float,
+              reference: float | None, reference_label: str,
+              actual: float | None = None) -> html.Div:
+    """The likely range drawn, with the prediction and the prices around it.
+
+    Above the track: the prediction and, optionally, the reference price
+    (start or today). Below it: the range's two ends and, optionally,
+    ``actual``, the price FPL really set. That one is an outcome rather than
+    an input, so it gets its own mark (a diamond) and its own side.
+
+    The span is padded so a price just outside the range still lands on the
+    bar rather than being pinned to its end, where it would read as sitting
+    on the boundary. Labels take the nearest line they fit on, so a crowded
+    bar grows taller instead of overprinting.
     """
-    points = [lower, upper, pred] + ([reference] if reference is not None else [])
+    points = [lower, upper, pred] + [v for v in (reference, actual) if v is not None]
     low, high = min(points), max(points)
     pad = max((high - low) * 0.12, 0.1)
     low, high = low - pad, high + pad
@@ -60,48 +92,73 @@ def range_bar(lower: float, upper: float, pred: float,
     def pct(value: float) -> float:
         return (value - low) / (high - low) * 100
 
-    # Every label sits at its own value on the one scale -- the range's ends
-    # under the band's ends, not at the edges of the bar, which the padding
-    # above places somewhere else entirely.
-    def label(text, value, row: str, extra: str = ""):
+    # Above the track, the prediction first so it always takes the line
+    # nearest the track, then the prices it is read against.
+    above = [(["Predicted ", html.Strong(theme.money(pred))], pred, "rl-pred", None)]
+    if reference is not None:
+        above.append((f"{reference_label} {theme.money(reference)}", reference, "rl-ref",
+                      "range-ref"))
+    above_rows = _rows([pct(value) for _, value, _, _ in above])
+    n_above = max(above_rows) + 1
+    track_top = 30 + (n_above - 1) * _ROW
+
+    # Below: the range's ends, or one combined label when the band is too
+    # narrow to hold them apart; then FPL's actual price.
+    if pct(upper) - pct(lower) < 18:
+        below = [(f"{theme.money(lower)} – {theme.money(upper)}", (lower + upper) / 2, "", None)]
+    else:
+        below = [(theme.money(lower), lower, "", None), (theme.money(upper), upper, "", None)]
+    if actual is not None:
+        below.append((["FPL set ", html.Strong(theme.money(actual))], actual, "rl-actual",
+                      "range-actual-tick"))
+    below_rows = _rows([pct(value) for _, value, _, _ in below])
+    n_below = max(below_rows) + 1
+
+    # Every label sits at its own value on the one scale -- the range's
+    # ends under the band's ends, not at the edges of the bar, which the
+    # padding above places somewhere else entirely.
+    def label(text, value, top: float, extra: str, below_track: bool = False):
         x = pct(value)
         anchor = "start" if x < 10 else "end" if x > 90 else "mid"
-        return html.Span(text, className=f"rl rl-{row} rl-{anchor} {extra}".strip(),
-                         style={"left": f"{x:.1f}%"})
+        kind = "rl-below" if below_track else "rl-above"
+        return html.Span(text, className=f"rl {kind} rl-{anchor} {extra}".strip(),
+                         style={"left": f"{x:.1f}%", "top": f"{top}px"})
 
-    # Labels this close (in % of the bar) would overlap, so one moves to a
-    # second line above.
-    crowded = 30.0
-
-    above = [label(["Predicted ", html.Strong(theme.money(pred))], pred, "row1", "rl-pred")]
-    marks = [
+    labels, marks = [], [
         html.Div(className="range-band",
                  style={"left": f"{pct(lower):.1f}%",
                         "width": f"{pct(upper) - pct(lower):.1f}%"}),
         html.Div(className="range-pred", style={"left": f"{pct(pred):.1f}%"}),
     ]
-    if reference is not None:
-        row = "row2" if abs(pct(reference) - pct(pred)) < crowded else "row1"
-        above.append(label(f"{reference_label} {theme.money(reference)}", reference, row,
-                           "rl-ref"))
-        marks.append(html.Div(className=f"range-ref range-ref-{row}",
-                              style={"left": f"{pct(reference):.1f}%"}))
+    for (text, value, extra, tick), row in zip(above, above_rows):
+        # The nearest line clears the track by 30px, room for a tick to
+        # reach up to the label without running through it.
+        labels.append(label(text, value, track_top - 30 - row * _ROW, extra))
+        if tick:
+            # A tick rises from the track to its own label's line; one whose
+            # label sits higher stops short, so it never cuts a label below.
+            rise = 14 if row == 0 else 6
+            marks.append(html.Div(className=tick, style={"left": f"{pct(value):.1f}%",
+                                                         "top": f"-{rise}px"}))
+    first_below = track_top + _TRACK + _BELOW_GAP
+    for (text, value, extra, tick), row in zip(below, below_rows):
+        labels.append(label(text, value, first_below + row * _ROW, extra, below_track=True))
+        if tick:
+            marks.append(html.Div(className=tick, style={"left": f"{pct(value):.1f}%",
+                                                         "bottom": f"-{6 if row == 0 else 2}px"}))
+            marks.append(html.Div(className="range-actual",
+                                  style={"left": f"{pct(value):.1f}%"}))
 
-    # The two ends of the range, or one combined label when the band is too
-    # narrow to hold them apart.
-    if pct(upper) - pct(lower) < 18:
-        below = [label(f"{theme.money(lower)} – {theme.money(upper)}",
-                       (lower + upper) / 2, "below")]
-    else:
-        below = [label(theme.money(lower), lower, "below"),
-                 label(theme.money(upper), upper, "below")]
-
+    legend = [html.Span(className="range-swatch"), "95% likely range"]
+    if actual is not None:
+        legend += [html.Span(className="range-actual-key"), "FPL's actual price"]
     return html.Div(
         [
-            html.Div([*above, html.Div(marks, className="range-track"), *below],
-                     className="range-scale"),
-            html.Div([html.Span(className="range-swatch"), "95% likely range"],
-                     className="range-legend"),
+            html.Div([*labels, html.Div(marks, className="range-track",
+                                        style={"top": f"{track_top}px"})],
+                     className="range-scale",
+                     style={"height": f"{first_below + n_below * _ROW}px"}),
+            html.Div(legend, className="range-legend"),
         ],
         className="range",
     )
@@ -148,16 +205,43 @@ def answer_tag(interval: pd.DataFrame, reference: float | None, target_label: st
 
 
 def answer_body(interval: pd.DataFrame, reference: float | None, against: str,
-                marker: str, extra=None) -> html.Div:
-    """The likely range, drawn, and the verdict in one sentence."""
+                marker: str, extra=None, actual: float | None = None,
+                reference_on_bar: bool = True, cards=None) -> html.Div:
+    """The likely range, drawn, and the verdict in one sentence.
+
+    ``actual`` adds the price FPL really set to the bar; see
+    :func:`range_bar`. ``reference_on_bar=False`` keeps the reference for
+    the verdict but off the bar, for a page that shows it in ``cards``
+    (see :func:`price_cards`) instead.
+    """
     pred, lower, upper = _interval(interval)
     delta = pred - reference if reference is not None else 0.0
     return html.Div(
-        [range_bar(lower, upper, pred, reference, marker),
+        [range_bar(lower, upper, pred, reference if reference_on_bar else None, marker,
+                   actual=actual),
+         cards,
          html.P(verdict(delta, lower, upper, reference, against), className="answer-verdict"),
          extra],
         className="answer-body",
     )
+
+
+def price_cards(items: list[tuple[str, float, str]]) -> html.Div:
+    """The prices a prediction is read against, as a row of small cards.
+
+    ``items`` are ``(label, price, kind)``; kind ``"actual"`` carries the
+    range bar's diamond, so FPL's real price reads as the same thing in
+    both places.
+    """
+    cards = []
+    for label, price, kind in items:
+        key = [html.Span(className="range-actual-key")] if kind == "actual" else []
+        cards.append(html.Div(
+            [html.Span([*key, label], className="price-card-label"),
+             html.Span(theme.money(price), className="price-card-value")],
+            className=f"price-card price-card-{kind}",
+        ))
+    return html.Div(cards, className="price-cards")
 
 
 def answer(interval: pd.DataFrame, reference: float | None, against: str,
