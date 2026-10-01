@@ -40,6 +40,10 @@ SCORES_PATH = MODEL_DIR / f"score_{config.SCORE_SEASON}.csv"
 #: already loaded and cleaned at this point. Reading them again in the app
 #: would cost the ~17s this script exists to avoid.
 PRICES_PATH = MODEL_DIR / "price_history.csv"
+#: Every completed season What if can load, with the start price FPL then
+#: set for the next one. Saved here rather than read from ``output/``,
+#: which is not committed, so the hosted app has the real prices too.
+SEASONS_PATH = MODEL_DIR / "seasons.csv"
 META_PATH = MODEL_DIR / "meta.json"
 
 #: Changing any of these changes what the model predicts, so the saved
@@ -66,7 +70,8 @@ def source_mtimes() -> dict[str, float]:
 def is_stale() -> bool:
     """True if the artifacts are missing or older than their inputs."""
     if not (MODEL_PATH.exists() and SCORES_PATH.exists()
-            and PRICES_PATH.exists() and META_PATH.exists()):
+            and PRICES_PATH.exists() and SEASONS_PATH.exists()
+            and META_PATH.exists()):
         return True
     try:
         saved = json.loads(META_PATH.read_text(encoding="utf-8"))["source_mtimes"]
@@ -98,6 +103,23 @@ def _training_ranges(train_df: pd.DataFrame, fitted: model.PriceModel) -> dict:
         }
         for column in X.columns
     }
+
+
+def completed_seasons(cleaned: dict[int, pd.DataFrame]) -> pd.DataFrame:
+    """Every completed season, each row with the price FPL set next.
+
+    ``next_cost`` is the player's start price in the *following* season,
+    blank when he did not return. Seasons up to ``SCORE_SEASON``: anything
+    later is still being played.
+    """
+    seasons = pd.concat([df for season, df in cleaned.items()
+                         if season <= config.SCORE_SEASON], ignore_index=True)
+    starts = pd.concat([df[["code", "season", "start_cost"]] for df in cleaned.values()],
+                       ignore_index=True)
+    starts = starts.assign(season=starts["season"] - 1).rename(
+        columns={"start_cost": "next_cost"})
+    seasons = seasons.merge(starts, on=["code", "season"], how="left")
+    return seasons.sort_values(["season", "code"]).reset_index(drop=True)
 
 
 def price_history(cleaned: dict[int, pd.DataFrame]) -> pd.DataFrame:
@@ -148,6 +170,7 @@ def main(argv: list[str] | None = None) -> None:
     score_df.to_csv(SCORES_PATH, index=False, encoding="utf-8")
 
     price_history(cleaned).to_csv(PRICES_PATH, index=False, encoding="utf-8")
+    completed_seasons(cleaned).to_csv(SEASONS_PATH, index=False, encoding="utf-8")
 
     meta = {
         "score_season": config.SCORE_SEASON,
@@ -164,7 +187,7 @@ def main(argv: list[str] | None = None) -> None:
     }
     META_PATH.write_text(json.dumps(meta, indent=2), encoding="utf-8")
 
-    for path in (MODEL_PATH, SCORES_PATH, PRICES_PATH, META_PATH):
+    for path in (MODEL_PATH, SCORES_PATH, PRICES_PATH, SEASONS_PATH, META_PATH):
         print(f"  wrote {path.relative_to(config.PROJECT_DIR)} "
               f"({path.stat().st_size / 1024:.0f} KB)")
 

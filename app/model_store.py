@@ -53,6 +53,17 @@ def get_scores() -> pd.DataFrame:
 
 
 @lru_cache(maxsize=1)
+def get_seasons() -> pd.DataFrame:
+    """Every completed season, with the price FPL set for the next one.
+
+    What if's season picker reads this; ``next_cost`` is blank for a
+    player who did not return.
+    """
+    _ensure_fresh()
+    return pd.read_csv(train_and_save.SEASONS_PATH, encoding="utf-8")
+
+
+@lru_cache(maxsize=1)
 def get_price_history() -> pd.DataFrame:
     """Start and finishing price per player per season, keyed by ``code``.
 
