@@ -115,6 +115,14 @@ python snapshot.py              # save today's prices from the FPL API
 python app/app.py               # open http://127.0.0.1:8051
 ```
 
+**Run the static site** (the GitHub Pages version in `web/`)
+
+```bash
+python export_static.py --parity   # write web/data/*.json and the parity fixtures
+node web/tests/parity.mjs          # the JavaScript model matches Python
+python -m http.server 8052 -d web  # open http://localhost:8052
+```
+
 **Run the batch pipeline and backtest**
 
 ```bash
@@ -141,6 +149,7 @@ runs work offline. Pass `--refresh` to download it again.
 | `train_and_save.py` | Fit once and cache the model to `models/` for the app |
 | `snapshot.py` / `record_predictions.py` | Daily API snapshot and prediction history |
 | `app/` | The Dash web app |
+| `web/` / `export_static.py` | The static site (plain HTML and JavaScript) and the export that feeds it |
 | `explore/` | Builds the full model report (`output/model_report.html`) |
 | `tests/` | App vs pipeline parity tests |
 
@@ -148,10 +157,14 @@ runs work offline. Pass `--refresh` to download it again.
 
 - **[Render](https://render.com)** hosts the app from `render.yaml`. Each deploy
   installs the requirements, refits the model and serves it with gunicorn.
+- **[GitHub Pages](https://pages.github.com)** serves the static site in `web/`,
+  which has no server to wake up. `.github/workflows/pages.yml` refits the model,
+  exports it and the day's projection to JSON, checks the JavaScript model against
+  Python, and publishes. Settings > Pages > Source must be "GitHub Actions".
 - **GitHub Actions** (`.github/workflows/snapshot.yml`) runs at 03:00 UTC daily.
-  It snapshots the FPL API, records that day's predictions, and commits both.
-  That commit triggers a Render redeploy. If a run fails, the site keeps showing
-  the last good snapshot, marked with its date.
+  It snapshots the FPL API, records that day's predictions, commits both, then
+  rebuilds the Pages site. That commit also triggers a Render redeploy. If a run
+  fails, the site keeps showing the last good snapshot, marked with its date.
 
 ## Rolling forward a season
 

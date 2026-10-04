@@ -1,6 +1,6 @@
 # Once a day, save the official FPL API's current-season table to data/live/,
-# record that day's predictions to data/history/, and commit both. The hosted
-# app reads data/live/, and redeploys on the commit.
+# record that day's predictions to data/history/, and commit both. Then
+# rebuild the static site from them (pages.yml) so it shows today's prices.
 name: Daily FPL snapshot
 
 on:
@@ -57,3 +57,16 @@ jobs:
         run: |
           echo "record_predictions.py failed; the snapshot was still committed."
           exit 1
+
+  # The commit above was pushed with this workflow's token, which does not
+  # start other workflows, so publish the site from here. `!cancelled()`
+  # rather than success: a failed prediction record still committed the
+  # snapshot, and the site should show it.
+  deploy:
+    needs: snapshot
+    if: ${{ !cancelled() }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pages.yml

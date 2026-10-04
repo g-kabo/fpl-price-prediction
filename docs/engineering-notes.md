@@ -262,6 +262,34 @@ so bump config before a new season's first snapshot.
 
 ---
 
+## The static site
+
+`web/` is the app again as plain HTML and JavaScript, so GitHub Pages can serve
+it with no server and no cold start (Render's free tier sleeps after 15 minutes).
+
+- **Python still does the fitting and the projection.** `export_static.py` writes
+  `model.json` (weights, covariance, residual variance, ranges, form definitions),
+  `board.json` (every player, projected and priced), `seasons.json` and
+  `history.json`. They are built in CI and gitignored, not committed.
+- **The browser re-does the one line of arithmetic** (`web/js/model.js`), because
+  What if needs it on every keystroke. The prediction interval is the OLS
+  new-observation one: `pred ± t * sqrt(scale + x'Cx)`, with `C` the covariance
+  of the weights. `web/tests/parity.mjs` checks 400-odd cases, including a
+  never-played player, an unseen club and values past the training range, against
+  Python to 1e-9, and CI refuses to publish if they differ.
+- **Python's `round` is half-to-even, JavaScript's is not.** FPL's ratios hit exact
+  ties (45 points in 20 games is 2.25), so all rounding goes through `fixed()` in
+  `web/js/format.js`, which breaks exact ties to even as Python does.
+- **Plotly's waterfall trace is not in the light bundle.** The "Why this price"
+  chart is drawn as floating bars (`base`) instead, to keep the page small.
+- **Search fold fix.** The Dash version dropped "ß" before replacing it, so "gross"
+  never found Groß; the port replaces it first.
+- **Dropped:** the "same answer as the batch pipeline" line on What if. It needed
+  `output/`, which is not committed, so it never showed on a hosted copy anyway.
+- **GitHub Pages needs a public repo on the free plan.**
+
+---
+
 ## Daily history
 
 After each snapshot, the GitHub Action runs `record_predictions.py`, which writes
