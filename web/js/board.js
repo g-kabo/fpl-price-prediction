@@ -14,6 +14,8 @@
 import { loadJson, loadModel, showError } from "./data.js";
 import { dayMonth, esc, fixed, fmt, fold, seasonLabel } from "./format.js";
 import { DEFAULT_X, X_FIELDS, drawForecastTrend, drawPriceHistory, drawPriceScatter } from "./charts.js";
+import { initNavSearch } from "./nav.js";
+import { boardValues, recordedOn, snapshotDay, trendDays } from "./records.js";
 import { direction, money } from "./theme.js";
 import * as ui from "./ui.js";
 
@@ -157,9 +159,7 @@ function renderPitch() {
 // ---------------------------------------------------------------- forecast movers
 
 /** Today's date as the snapshot has it, "2026-10-08". */
-function today() {
-  return board.fetched_at ? board.fetched_at.slice(0, 10) : null;
-}
+const today = () => snapshotDay(board);
 
 /** Index into forecasts.dates of the day to measure a change from: the
  *  latest day at least `days` before today, or the first day when there is
@@ -174,18 +174,6 @@ function baselineDay(days) {
     for (let i = dates.length - 1; i >= 0; i--) if (dates[i] <= limit) return i;
   }
   return 0;
-}
-
-/** A player's recorded [price, pred, lower, upper] on day `day`, or null.
- *  forecasts.json keeps change points only, so this is the last one at or
- *  before that day; a bare [day] marks him missing from it. */
-function recordedOn(points, day) {
-  let found = null;
-  for (const point of points || []) {
-    if (point[0] > day) break;
-    found = point.length > 1 ? point.slice(1) : null;
-  }
-  return found;
 }
 
 function mover(p) {
@@ -327,31 +315,8 @@ function playerSeasons(record) {
   return [...past, [SEASON, record.start_cost, record.price_now]];
 }
 
-/** This player's recorded mornings, with today taken from the card itself,
- *  so the trend always ends on the number shown above it. */
-function trendDays(record, interval) {
-  const days = [];
-  const points = forecasts.players[String(record.code)];
-  if (points && points.length) {
-    for (let day = points[0][0]; day < forecasts.dates.length; day++) {
-      if (forecasts.dates[day] >= today()) break;
-      const values = recordedOn(points, day);
-      if (!values) continue;
-      const [price, pred, lower, upper] = values;
-      days.push({ date: forecasts.dates[day], gw: forecasts.gameweeks[day], price, pred, lower, upper });
-    }
-  }
-  if (!board.is_live) return days;
-  days.push({ date: today(), gw: board.gameweeks_finished, price: record.price_now,
-    pred: interval.pred, lower: interval.lower, upper: interval.upper });
-  return days;
-}
-
 function cardHtml(record) {
-  const values = {};
-  for (const name of model.spec.form.numeric_names) values[name] = record[name];
-  values.element_type = record.element_type;
-  values.team_name = record.team_name;
+  const values = boardValues(model.spec, record);
   const interval = model.predict(values);
 
   const xref = state.xref in X_FIELDS ? state.xref : DEFAULT_X;
@@ -361,8 +326,10 @@ function cardHtml(record) {
   const games = Number(record.games_played || 0);
   const note = `<p class="fine">Projected from ${fmt(games)} gameweeks to a full 38: `
     + `${fmt(record.total_points)} points and ${fmt(record.minutes)} minutes.</p>`;
-  const link = `<a class="btn-ghost card-link" href="lab.html?season=${SEASON}&amp;player=${record.code}">`
-    + '<i class="bi bi-sliders"></i>Tweak this season in What if</a>';
+  const link = '<div class="card-links">'
+    + `<a class="btn-ghost" href="player.html?code=${record.code}"><i class="bi bi-person-badge"></i>Player page</a>`
+    + `<a class="btn-ghost" href="lab.html?season=${SEASON}&amp;player=${record.code}">`
+    + '<i class="bi bi-sliders"></i>Tweak this season in What if</a></div>';
 
   const header = ui.playerHeader(record.web_name, record.team_name, record.element_type,
     ui.statStrip([
@@ -374,7 +341,7 @@ function cardHtml(record) {
   const answer = ui.answer(model, interval, reference, REFERENCE_WORDS[xref], short,
     `Predicted ${seasonLabel(TARGET)} price`, `<div>${note}${link}</div>`);
   const why = ui.whyThisPrice(model, values, [short, reference]);
-  const days = trendDays(record, interval);
+  const days = trendDays(forecasts, board, record, interval);
   const trend = ui.forecastTrend(days);
   const past = ui.priceHistory(`The ${seasonLabel(SEASON)} season is still running, so its end price is today's.`);
 
@@ -531,6 +498,7 @@ function poll() {
 }
 
 async function main() {
+  initNavSearch();
   try {
     [model, board, history, forecasts] = await Promise.all([
       loadModel(), loadJson("board"), loadJson("history"), loadJson("forecasts")]);

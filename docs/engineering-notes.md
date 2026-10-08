@@ -350,8 +350,35 @@ per player (`[day, price, pred, lower, upper]` when anything moved, `[day]` from
 a day he was missing). One row per player per day was ~16 KB a day, heading for
 ~5 MB by May; between gameweeks most forecasts hold for days, so change points
 were 28 KB for the first nine days. `recordedOn()` in `web/js/board.js` carries
-the last point forward. On a phone the movers drop the earlier forecast and keep
+the last point forward (now in `web/js/records.js`, shared with the player page). On a phone the movers drop the earlier forecast and keep
 the new one and the change chip, which imply it.
+
+### Player page and header search
+
+`player.html?code=<code>` is one page per player, current or departed (ideas
+#38, #31, #28, #5). A query string, not `/player/<code>`: GitHub Pages can't
+route a path without a file per player. Decisions worth keeping:
+
+- **Join on `code`, never on name.** FPL renamed Salah to M.Salah between
+  seasons. `players.json` keeps earlier names in `other_names` so they still
+  search.
+- **Search has its own 113 KB index (`players.json`), loaded on first use.**
+  `seasons.json` (~670 KB) would have worked but every page would pay for it.
+- **A current player's forecast comes from his `board.json` record**, through
+  the same `boardValues()` / `trendDays()` the Price Watch card uses
+  (`web/js/records.js`), so the page and the card agree to the penny.
+- **Past calls are computed in the browser the way What if computes them**
+  (`seasonValues()` + `withRatios()`), so opening that season in What if shows
+  the same number (checked: Salah 2024-25 → £14.8m on both).
+- **Each call sits under the season it is *for*, and comes first in its group**:
+  it was made before that season began. Calls made from seasons up to
+  `TRAIN_THROUGH` are faint, since matching training data proves nothing.
+- **The season table is descriptive (points, minutes, start, end), with no
+  model column**, to stay clear of the "no accuracy tables" rule. The model's
+  calls appear only in the chart.
+- **No per-player Open Graph image (#16).** Link-preview crawlers don't run
+  JavaScript, so a query-string page can't set its own preview; it would need
+  a generated HTML file per player.
 
 ---
 
