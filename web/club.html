@@ -55,6 +55,7 @@
           <div class="segmented" role="radiogroup" aria-label="Measure" id="club-sort">
             <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="club-sort" id="sort-total" value="total" checked><label class="form-check-label" for="sort-total">Squad total</label></div>
             <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="club-sort" id="sort-average" value="average"><label class="form-check-label" for="sort-average">Per player</label></div>
+            <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="club-sort" id="sort-minutes" value="minutes"><label class="form-check-label" for="sort-minutes">Playing time</label></div>
             <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="club-sort" id="sort-owned" value="owned"><label class="form-check-label" for="sort-owned">Managers' money</label></div>
           </div>
         </div>
@@ -86,7 +87,14 @@
           <div id="club-list" class="tlist tlist-value"></div>
         </div>
         <div class="panel club-history">
-          <h3 class="section-title">Squad value by season</h3>
+          <div class="club-history-head">
+            <h3 class="section-title">Squad value by season</h3>
+            <div class="segmented" role="radiogroup" aria-label="Weighting" id="club-history-weight">
+              <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="club-history" id="history-squad" value="squad" checked><label class="form-check-label" for="history-squad">Whole squad</label></div>
+              <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="club-history" id="history-minutes" value="minutes"><label class="form-check-label" for="history-minutes">Playing time</label></div>
+              <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="club-history" id="history-owned" value="owned"><label class="form-check-label" for="history-owned">Managers' money</label></div>
+            </div>
+          </div>
           <p class="why-lede" id="club-history-note"></p>
           <div id="club-history-chart"></div>
         </div>

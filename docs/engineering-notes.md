@@ -394,7 +394,12 @@ Decisions worth keeping:
   big squads; per player is fair between squads; managers' money weights each
   change by `selected_by_percent / 100`, i.e. what the forecast does to the
   average manager's holdings (Chelsea leads at +£2.42m, not Brighton, because
-  its risers are the owned ones).
+  its risers are the owned ones). A fourth, **playing time**, weights each
+  change by the player's share of his club's minutes, minutes over (club games
+  played × 90), capped at 1. A club's shares add up to about eleven (10.6 to
+  11.3 at GW5, and about 11 in finished seasons), so it reads as the change in
+  the side that actually plays: Brighton +£11.21m, against +£12.95m for the
+  plain total.
 - **The picked club is marked by an ink outline and a bold label, not a
   colour**: green and pink-red already mean direction.
 - **Pooled clubs are named, not hidden.** 7 of the 20 clubs share the model's
@@ -417,7 +422,12 @@ Decisions worth keeping:
   toggle says. Five gameweeks in, only ~23 of a club's players have played,
   so the toggle's count set a partial season against complete ones (Spurs
   £127.5m against £158.5m, mostly squad size). Past seasons count everyone
-  at the club that season in `seasons.json`.
+  at the club that season in `seasons.json`. Its own toggle weights the
+  prices instead: by playing time (a finished season's minutes over 38 × 90,
+  so about an XI's worth, £56m to £60m for Spurs) or by ownership (the share
+  of managers owning each player at the end of that season, from
+  `selected_by_percent`; today's for this one). A player who changed club
+  mid-season counts wholly for the club he ended it at.
 - **Club names differ between sources.** The history mirror calls 2024-25
   Ipswich "Ipswich"; the live API says "Ipswich Town". `FORMER_NAMES` in
   `web/js/records.js` maps them for the squad history and for linking a

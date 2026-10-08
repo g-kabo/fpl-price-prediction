@@ -30,9 +30,19 @@ const MEASURES = {
   total: { label: "Squad total", note: "the sum of every counted player's predicted change against today's price" },
   average: { label: "Per player", note: "the average predicted change per counted player, so big and small squads compare fairly" },
   owned: { label: "Managers' money", note: "each player's predicted change weighted by the share of managers who own him: what the forecast means for the average manager's squad" },
+  minutes: { label: "Playing time", note: "each player's predicted change weighted by his share of the club's minutes so far, so the shares add up to about eleven: the change in the side that actually plays" },
 };
 
-const state = { count: "played", sort: "total", team: null, listSort: { ...DEFAULT_SORT }, listPos: null };
+/** Squad value by season: every player at the club, or weighted as two of
+ *  the measures above weight a change. */
+const HISTORY_WEIGHTS = {
+  squad: "every player at the club that season, whether he played or not, so totals move with squad size as well as prices",
+  minutes: "each player's price weighted by his share of the club's minutes that season (38 games of 90 minutes for a finished one): the value of the side that actually played, about eleven players' worth",
+  owned: "each player's price weighted by the share of managers who owned him at the end of that season (today, for this one): how much of the average manager's squad the club's players made up",
+};
+
+const state = { count: "played", sort: "total", team: null, listSort: { ...DEFAULT_SORT }, listPos: null,
+  history: "squad" };
 
 let model;
 let board;
@@ -45,11 +55,20 @@ let clubs = [];
 
 const counted = (p) => state.count === "all" || p.minutes_now > 0;
 
-/** A group of players under one of the three measures. */
+/** A player's share of his club's minutes so far: his minutes over its
+ *  games played (board.json's games_played is the club's) times 90, capped
+ *  at 1. A club's shares add up to about eleven. */
+const minuteShare = (p) => (p.games_played > 0 ? Math.min((p.minutes_now || 0) / (p.games_played * 90), 1) : 0);
+
+/** The share of managers who own a player. */
+const ownedShare = (p) => Number(p.selected_by_percent || 0) / 100;
+
+/** A group of players under one of the four measures. */
 function measureOf(players, measure) {
   const total = players.reduce((t, p) => t + p.delta, 0);
   if (measure === "average") return players.length ? total / players.length : 0;
-  if (measure === "owned") return players.reduce((t, p) => t + (Number(p.selected_by_percent || 0) / 100) * p.delta, 0);
+  if (measure === "owned") return players.reduce((t, p) => t + ownedShare(p) * p.delta, 0);
+  if (measure === "minutes") return players.reduce((t, p) => t + minuteShare(p) * p.delta, 0);
   return total;
 }
 
@@ -76,6 +95,7 @@ function summarise(team) {
     team, squad, players, n, total,
     average: n ? total / n : 0,
     owned: measureOf(players, "owned"),
+    minutes: measureOf(players, "minutes"),
     best,
     now: sum((p) => p.price_now),
     predicted: sum((p) => p.pred),
@@ -217,6 +237,7 @@ function renderSummary(club) {
     + figure("Value today", money(club.now))
     + figure(`Predicted ${target}`, money(club.predicted))
     + figure("Per player", money(club.average, true, 2))
+    + figure("Playing time", money(club.minutes, true, 2), '<span class="club-stat-hint">the side that plays</span>')
     + figure("Managers' money", money(club.owned, true, 2), '<span class="club-stat-hint">per average manager</span>')
     + figure("Rising · falling", `${club.rising} · ${club.falling}`, `<span class="club-stat-hint">of ${club.n}</span>`)
     + "</div>"
@@ -289,30 +310,46 @@ function renderList(club) {
 /** "Spurs'", "Hull City's". */
 const possessive = (name) => (name.endsWith("s") ? `${name}'` : `${name}'s`);
 
+/** A finished season's weight for one player, under the history toggle. */
+function pastWeight(r) {
+  if (state.history === "minutes") return Math.min(Number(r.minutes || 0) / (38 * 90), 1);
+  if (state.history === "owned") return Number(r.selected_by_percent || 0) / 100;
+  return 1;
+}
+
+/** This season's weight for one player, under the history toggle. */
+function currentWeight(p) {
+  if (state.history === "minutes") return minuteShare(p);
+  if (state.history === "owned") return ownedShare(p);
+  return 1;
+}
+
 /** The club's squad value at the start and end of every season it played,
- *  from seasons.json, with next season's forecast. Always the whole squad,
- *  whatever the toggle says: counting only players who've played would set
- *  a season five gameweeks old against complete ones. */
+ *  from seasons.json, with next season's forecast. Never filtered by the
+ *  "players who've played" toggle: that count would set a season five
+ *  gameweeks old against complete ones. Its own toggle weights the prices
+ *  instead, as playing time or ownership weight a change. */
 function renderHistory(club) {
   const names = [club.team, ...(FORMER_NAMES[club.team] || [])];
   const bySeason = new Map();
   for (const r of pastSeasons) {
     if (!names.includes(r.team_name)) continue;
+    const w = pastWeight(r);
     const s = bySeason.get(r.season) || { start: 0, end: 0 };
-    s.start += Number(r.start_cost || 0);
-    s.end += Number(r.final_cost || 0);
+    s.start += w * Number(r.start_cost || 0);
+    s.end += w * Number(r.final_cost || 0);
     bySeason.set(r.season, s);
   }
   const current = TARGET - 1;
   const seasons = [...bySeason.entries()].sort(([a], [b]) => a - b).map(([season, s]) => [season, s.start, s.end]);
-  const total = (field) => club.squad.reduce((t, p) => t + Number(p[field] || 0), 0);
+  const total = (field) => club.squad.reduce((t, p) => t + currentWeight(p) * Number(p[field] || 0), 0);
   seasons.push([current, total("start_cost"), total("price_now")]);
   const first = seasons[0][0];
   const gaps = current - first + 1 > seasons.length;
-  $("club-history-note").textContent = `The total price of ${possessive(club.team)} whole squad at the start `
-    + `and end of each Premier League season since ${seasonLabel(first)}, and the model's ${seasonLabel(TARGET)} `
-    + "forecast for today's squad. Every player at the club that season counts, whether he played or not, so "
-    + "totals move with squad size as well as prices."
+  const what = { squad: "whole squad", minutes: "side, weighted by playing time,", owned: "players, weighted by ownership," }[state.history];
+  $("club-history-note").textContent = `The price of ${possessive(club.team)} ${what} at the start and end of `
+    + `each Premier League season since ${seasonLabel(first)}, and the model's ${seasonLabel(TARGET)} forecast for `
+    + `today's squad. It counts ${HISTORY_WEIGHTS[state.history]}.`
     + `${gaps ? " Missing seasons were outside the Premier League." : ""} The ${seasonLabel(current)} end figure is today's.`;
   drawPriceHistory($("club-history-chart"), seasons, TARGET, total("pred"));
 }
@@ -376,6 +413,11 @@ function wire() {
     input.addEventListener("change", () => { state.count = input.value; renderAll(); }));
   document.querySelectorAll('input[name="club-sort"]').forEach((input) =>
     input.addEventListener("change", () => { state.sort = input.value; renderBars(); renderGrid(); }));
+  document.querySelectorAll('input[name="club-history"]').forEach((input) =>
+    input.addEventListener("change", () => {
+      state.history = input.value;
+      renderHistory(clubs.find((c) => c.team === state.team));
+    }));
   $("club-grid").addEventListener("click", (event) => {
     const cell = event.target.closest("[data-team]");
     if (!cell) return;
