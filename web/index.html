@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Price Watch · FPL Price Prediction</title>
+  <meta name="description" content="Who the model thinks Fantasy Premier League should reprice next season, from this season's form projected to 38 gameweeks.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="modulepreload" href="js/board.js">
+  <link rel="preload" href="data/board.json" as="fetch" crossorigin>
+  <link rel="preload" href="data/model.json" as="fetch" crossorigin>
+</head>
+<body>
+<div class="app-shell">
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="./"><span class="brand-mark"><i class="bi bi-tag-fill"></i></span><span>FPL <strong>Price Prediction</strong></span></a>
+      <nav class="nav-tabs-row">
+        <a class="nav-link nav-tab active" href="./" aria-current="page">Price Watch</a>
+        <a class="nav-link nav-tab" href="lab.html">What if</a>
+        <a class="nav-link nav-tab" href="how-it-works.html">How it works</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero">
+      <div class="wrap hero-inner">
+        <div>
+          <h1>Price Watch <span class="h1-season" id="board-season"></span></h1>
+          <p class="lede" id="board-lede">Who the model thinks FPL should reprice next season, from current form projected to a full 38-gameweek season.</p>
+        </div>
+        <div class="hero-side">
+          <div id="board-status" class="chips"></div>
+          <div class="hero-actions">
+            <button type="button" id="board-settings-toggle" class="btn-on-dark" aria-expanded="false" aria-controls="board-settings"><i class="bi bi-sliders"></i>Projection settings</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div id="board-settings" class="settings" hidden>
+      <div class="wrap settings-grid">
+        <div class="field">
+          <div class="field-label" id="xref-label">Compare against</div>
+          <div class="segmented segmented-light" role="radiogroup" aria-labelledby="xref-label" id="board-xref">
+            <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="board-xref" id="xref-price_now" value="price_now" checked><label class="form-check-label" for="xref-price_now">Price today</label></div>
+            <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="board-xref" id="xref-start_cost" value="start_cost"><label class="form-check-label" for="xref-start_cost">Start price (August)</label></div>
+          </div>
+          <div class="field-hint">Today's price is what a manager holding him pays now. August is like-for-like, since the forecast is itself a start price.</div>
+        </div>
+      </div>
+    </div>
+
+    <section class="block block-pitch">
+      <div class="wrap">
+        <div class="block-head"><div><h2 class="block-title">The model's XI</h2><p class="block-note" id="board-xi-note"></p></div></div>
+        <div class="pitch-wrap">
+          <div id="board-pitch" class="pitch"><div class="empty"><i class="bi bi-hourglass-split"></i><p>Loading the live data.</p></div></div>
+          <div class="segmented segmented-pitch" role="radiogroup" aria-label="Risers or fallers" id="board-xi">
+            <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="board-xi" id="xi-rise" value="rise" checked><label class="form-check-label" for="xi-rise">Risers</label></div>
+            <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="board-xi" id="xi-fall" value="fall"><label class="form-check-label" for="xi-fall">Fallers</label></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="wrap">
+        <div class="block-head"><div><h2 class="block-title">Transfer list</h2><p class="block-note">Every current player. Filters apply to the list and the market map below it.</p></div></div>
+        <div class="filters">
+          <div class="search"><i class="bi bi-search"></i><input id="board-search" class="search-input" type="search" placeholder="Find a player" aria-label="Find a player" autocomplete="off"></div>
+          <div class="pos-filter" id="board-pos" role="group" aria-label="Positions"></div>
+          <details class="multi" id="board-clubs"><summary><span id="board-clubs-label">All clubs</span><i class="bi bi-chevron-down"></i></summary><div class="multi-panel" id="board-clubs-panel"></div></details>
+        </div>
+        <div id="board-count" class="list-count"></div>
+        <div id="board-list" class="tlist"></div>
+        <div id="board-more-wrap" class="more"><button type="button" id="board-more" class="btn-ghost"><i class="bi bi-chevron-down"></i>Show more players</button></div>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="wrap">
+        <div class="block-head"><div><h2 class="block-title">Market map</h2><p class="block-note" id="board-map-note"></p></div></div>
+        <div class="panel"><div id="board-map"></div></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p id="footer-model">Linear model, trained on every completed season since 2017-18.</p>
+      <p>Data from the official FPL API and <a href="https://github.com/vaastav/Fantasy-Premier-League" target="_blank" rel="noopener">vaastav/Fantasy-Premier-League</a>. A fan project, not affiliated with the Premier League or Fantasy Premier League.</p>
+    </div>
+  </footer>
+</div>
+
+<div class="offcanvas offcanvas-end player-card" tabindex="-1" id="board-card" aria-label="Player">
+  <div class="offcanvas-header"><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button></div>
+  <div class="offcanvas-body"><div id="board-card-body"></div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/plotly.js-basic-dist-min@2.35.2/plotly-basic.min.js" defer></script>
+<script type="module" src="js/board.js"></script>
+</body>
+</html>

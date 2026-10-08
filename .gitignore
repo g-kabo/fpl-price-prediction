@@ -8,6 +8,11 @@ venv/
 # Trained model artefact — 6 MB binary, regenerate with train_and_save.py
 models/*.joblib
 
+# Static site data and parity fixtures: rebuilt by export_static.py
+web/data/
+web/tests/parity.json
+_site/
+
 # Pipeline outputs — regenerate with run_pipeline.py / backtest.py
 output/
 

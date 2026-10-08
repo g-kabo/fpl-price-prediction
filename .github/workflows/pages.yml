@@ -1,0 +1,69 @@
+# Build the static site in web/ and publish it to GitHub Pages.
+#
+# The site is plain HTML and JavaScript; what it needs from Python (the
+# fitted model, today's projection) is exported to web/data/ by
+# export_static.py and is never committed -- it is rebuilt here each time.
+#
+# Runs on every push to main (code changes), by hand, and straight after the
+# daily snapshot (see snapshot.yml): a push made with the workflow's own
+# token does not start other workflows, so the daily run calls this one.
+#
+# One-off setup: Settings > Pages > Source: "GitHub Actions".
+name: Deploy site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      # main, not the triggering commit: when the daily run calls this, the
+      # snapshot it just committed is newer than the commit that started it.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+
+      - run: pip install -r requirements.txt
+
+      # The saved model is gitignored: refit it, as the data may have changed.
+      - run: python train_and_save.py --force
+
+      - run: python export_static.py --parity
+
+      # The JavaScript model must agree with Python before anything ships.
+      - run: node web/tests/parity.mjs
+
+      - name: Assemble the site
+        run: |
+          mkdir _site
+          cp -r web/. _site/
+          rm -rf _site/tests _site/package.json
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
