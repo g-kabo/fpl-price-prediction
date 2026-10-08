@@ -66,9 +66,12 @@
         <div class="block-head"><div><h2 class="block-title">The model's XI</h2><p class="block-note" id="board-xi-note"></p></div></div>
         <div class="pitch-wrap">
           <div id="board-pitch" class="pitch"><div class="empty"><i class="bi bi-hourglass-split"></i><p>Loading the live data.</p></div></div>
-          <div class="segmented segmented-pitch" role="radiogroup" aria-label="Risers or fallers" id="board-xi">
-            <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="board-xi" id="xi-rise" value="rise" checked><label class="form-check-label" for="xi-rise">Risers</label></div>
-            <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="board-xi" id="xi-fall" value="fall"><label class="form-check-label" for="xi-fall">Fallers</label></div>
+          <div class="pitch-controls">
+            <div class="segmented segmented-pitch" role="radiogroup" aria-label="Risers or fallers" id="board-xi">
+              <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="board-xi" id="xi-rise" value="rise" checked><label class="form-check-label" for="xi-rise">Risers</label></div>
+              <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="board-xi" id="xi-fall" value="fall"><label class="form-check-label" for="xi-fall">Fallers</label></div>
+            </div>
+            <select id="board-formation" class="formation-select" aria-label="Formation"></select>
           </div>
         </div>
       </div>

@@ -20,8 +20,16 @@ import { boardValues, recordedOn, snapshotDay, trendDays } from "./records.js";
 import { direction, money } from "./theme.js";
 import * as ui from "./ui.js";
 
-/** Shape of the XI on the pitch, goalkeeper first, the way FPL draws a team. */
-const FORMATION = [["GK", 1], ["DEF", 4], ["MID", 4], ["FWD", 2]];
+/** Every formation FPL allows: one goalkeeper, then 3-5 defenders, 2-5
+ *  midfielders and 1-3 forwards, ten outfielders in all. */
+const FORMATIONS = ["3-4-3", "3-5-2", "4-3-3", "4-4-2", "4-5-1", "5-2-3", "5-3-2", "5-4-1"];
+const DEFAULT_FORMATION = "4-4-2";
+
+/** "4-3-3" as rows on the pitch, goalkeeper first, the way FPL draws a team. */
+function formationRows(name) {
+  const [def, mid, fwd] = name.split("-").map(Number);
+  return [["GK", 1], ["DEF", def], ["MID", mid], ["FWD", fwd]];
+}
 const PAGE_SIZE = 20;
 
 /** How often an open page checks for a new daily snapshot. */
@@ -44,6 +52,7 @@ const $ = (id) => document.getElementById(id);
 
 const state = {
   xi: "rise",
+  formation: formationFromAddress(),
   window: "week",
   xref: DEFAULT_X,
   search: "",
@@ -64,6 +73,12 @@ let players = [];
 let positions = [];
 let card;
 let deeplink = new URLSearchParams(location.search).get("player");
+
+/** ?formation=4-3-3 or ?formation=best; anything else is the default. */
+function formationFromAddress() {
+  const asked = new URLSearchParams(location.search).get("formation");
+  return asked === "best" || FORMATIONS.includes(asked) ? asked : DEFAULT_FORMATION;
+}
 
 // ---------------------------------------------------------------- data
 
@@ -122,21 +137,54 @@ function spot(p) {
     + `<i class="bi bi-arrow-right"></i><span class="spot-pred">${money(p.pred)}</span></span></button>`;
 }
 
+/** The XI in formation `name`: the top players per position, already
+ *  sorted biggest move first in `byPosition`, and their total move. */
+function pickXI(byPosition, name) {
+  const lines = formationRows(name).map(([position, count]) => byPosition[position].slice(0, count));
+  const total = lines.flat().reduce((sum, p) => sum + p.delta, 0);
+  return { name, lines, total };
+}
+
+/** The formation whose XI moves most in the direction shown: the biggest
+ *  total rise for risers, the biggest total fall for fallers. */
+function bestXI(byPosition) {
+  const sign = state.xi === "rise" ? 1 : -1;
+  return FORMATIONS.map((name) => pickXI(byPosition, name))
+    .reduce((best, xi) => (sign * xi.total > sign * best.total ? xi : best));
+}
+
+/** Label the "Best" option with the formation it currently picks. */
+function renderFormationPicker(best) {
+  const select = $("board-formation");
+  const options = [`<option value="best">Best: ${best.name}</option>`,
+    ...FORMATIONS.map((name) => `<option value="${name}">${name}</option>`)];
+  select.innerHTML = options.join("");
+  select.value = state.formation;
+}
+
 /** The biggest predicted movers per position, in formation. Drawn from
  *  players who have played this season, league-wide: the filters below
  *  scope the list and the map, not the XI. */
 function renderPitch() {
   const rows = withDelta();
   const pool = rows.filter((p) => p.minutes_now > 0 && Number.isFinite(p.delta));
-  const lines = [];
-  for (const [position, count] of FORMATION) {
-    const group = pool.filter((p) => p.element_type === position);
-    group.sort((a, b) => (state.xi === "rise" ? b.delta - a.delta : a.delta - b.delta));
-    lines.push(`<div class="pitch-row">${group.slice(0, count).map(spot).join("")}</div>`);
+  const byPosition = {};
+  for (const position of ["GK", "DEF", "MID", "FWD"]) {
+    byPosition[position] = pool.filter((p) => p.element_type === position)
+      .sort((a, b) => (state.xi === "rise" ? b.delta - a.delta : a.delta - b.delta));
   }
+  const best = bestXI(byPosition);
+  const xi = state.formation === "best" ? best : pickXI(byPosition, state.formation);
+  renderFormationPicker(best);
+  const lines = xi.lines.map((line) => `<div class="pitch-row">${line.map(spot).join("")}</div>`);
+
   const against = REFERENCE_WORDS[state.xref];
+  const shape = state.formation === "best"
+    ? `in a ${xi.name}, the formation with the biggest total ${state.xi === "rise" ? "rise" : "fall"}`
+    : `in a ${xi.name}`;
   $("board-xi-note").textContent = `Biggest predicted ${state.xi === "rise" ? "rises" : "falls"} `
-    + `against ${against}, by position, from players who have featured this season. Each tag reads `
+    + `against ${against}, by position, ${shape}, from players who have featured this season: `
+    + `${money(xi.total, true)} across the eleven. Each tag reads `
     + `${state.xref === "price_now" ? "today" : "August"} → ${seasonLabel(TARGET)}.`;
   $("board-pitch").innerHTML = '<div class="pitch-lines"></div><div class="pitch-six"></div>'
     + `<div class="pitch-halfway"></div>${lines.join("")}`;
@@ -374,6 +422,15 @@ function wire() {
     input.addEventListener("change", () => { state.xref = input.value; state.pages = 1; renderAll(); }));
   document.querySelectorAll('input[name="board-xi"]').forEach((input) =>
     input.addEventListener("change", () => { state.xi = input.value; renderPitch(); }));
+  $("board-formation").addEventListener("change", (event) => {
+    state.formation = event.target.value;
+    // Kept in the address so the view can be shared; the default stays out of it.
+    const url = new URL(location.href);
+    if (state.formation === DEFAULT_FORMATION) url.searchParams.delete("formation");
+    else url.searchParams.set("formation", state.formation);
+    window.history.replaceState(null, "", url);
+    renderPitch();
+  });
   document.querySelectorAll('input[name="board-window"]').forEach((input) =>
     input.addEventListener("change", () => { state.window = input.value; renderMovers(); }));
   $("board-movers").addEventListener("click", (event) => {
