@@ -380,6 +380,35 @@ route a path without a file per player. Decisions worth keeping:
   JavaScript, so a query-string page can't set its own preview; it would need
   a generated HTML file per player.
 
+### Clubs page
+
+`club.html?team=<club>` groups `board.json` by club (ideas #13, #62, #63, #64).
+Every change is the forecast against today's price, Price Watch's default.
+Decisions worth keeping:
+
+- **Players who have played count by default**, with a whole-squad toggle.
+  The players who haven't are each forecast down about £0.13m from their price
+  alone, so a raw total mostly measures squad size (Chelsea −£0.41m counting
+  everyone, +£1.69m counting players who've played).
+- **Three measures, because they tell different stories.** Squad total favours
+  big squads; per player is fair between squads; managers' money weights each
+  change by `selected_by_percent / 100`, i.e. what the forecast does to the
+  average manager's holdings (Chelsea leads at +£2.42m, not Brighton, because
+  its risers are the owned ones).
+- **The picked club is marked by an ink outline and a bold label, not a
+  colour**: green and pink-red already mean direction.
+- **Pooled clubs are named, not hidden.** 7 of the 20 clubs share the model's
+  "other club" setting, so the club part of their forecasts is an average.
+  `ui.pooledNote()` says so on the club page, the Price Watch card and the
+  player page.
+- **The squad pitch shows players who've played; the rest go on a bench.**
+  Rows wrap: a club can have 12 midfielders who've played.
+- **The club trend is the average gap per player, over today's squad.** An
+  average rather than a total, because a player missing from an earlier day
+  would otherwise show up as a step. The other 19 clubs are drawn faint behind
+  it for scale.
+- Plotly's `tickformat: "+.2f"` is silently ignored on this axis; `.2f` works.
+
 ---
 
 ## Differences from the R

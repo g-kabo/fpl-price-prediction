@@ -259,6 +259,21 @@ export function outOfRange(model, values, asFloat) {
     + '<p class="fine">A linear model keeps answering past its data, but the answer is a guess.</p></div>';
 }
 
+/** True for a club the model folds into its shared "other club" setting. */
+export function isPooled(model, team) {
+  return Boolean(team) && !model.spec.teams_retained.includes(team);
+}
+
+/** A note for a forecast that leans on the shared club setting, or "". The
+ *  forecast is fine; the club part of it is an average, not that club's own. */
+export function pooledNote(model, team) {
+  if (!isPooled(model, team)) return "";
+  return `<p class="fine pooled-note"><i class="bi bi-people"></i> The model has too little history for `
+    + `${esc(team)} to give it a club setting of its own, so it shares one with the other clubs `
+    + "in that position. The club part of this price is their average, not "
+    + `${esc(team)}'s own.</p>`;
+}
+
 export function priceHistory(note) {
   return '<div class="history"><h3 class="section-title">Price history</h3>'
     + `<div class="history-chart"></div><p class="fine">${esc(note)}</p></div>`;

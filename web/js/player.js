@@ -141,7 +141,7 @@ function forecastSection(record, interval) {
     + `price, as Price Watch does by default.</p>`;
   return '<section class="panel player-panel">'
     + ui.answer(model, interval, record.price_now, "today's price", "Today",
-      `Predicted ${seasonLabel(TARGET)} price`, note)
+      `Predicted ${seasonLabel(TARGET)} price`, note + ui.pooledNote(model, record.team_name))
     + "</section>";
 }
 

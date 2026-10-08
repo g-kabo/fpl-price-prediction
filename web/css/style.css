@@ -1685,3 +1685,76 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
   .nav-tabs-row { order: 3; flex: 1 0 100%; justify-content: space-between; margin: 0 -6px; }
   .nav-tabs-row .nav-tab { padding: 0 6px; min-height: 42px; font-size: 0.9rem; }
 }
+
+/* ---------- clubs -------------------------------------------------------- */
+
+.pooled-note i { color: var(--aubergine-3); }
+
+.club-head { align-items: center; }
+.club-title { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.club-title .block-note { margin-top: 4px; }
+.club-pick { display: flex; align-items: center; gap: 10px; }
+.club-pick .select { width: 220px; }
+
+.club-summary { margin-bottom: 20px; }
+.club-stats {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, auto));
+  justify-content: space-between;
+  align-items: end;
+  gap: 16px 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+.club-stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.club-stat-value {
+  font-family: var(--font-fig);
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--aubergine);
+  font-variant-numeric: tabular-nums;
+}
+.club-stat-label { font-size: 0.85rem; font-weight: 600; color: var(--ink-soft); }
+.club-stat-hint { font-size: 0.78rem; color: var(--ink-soft); }
+
+.club-lines { display: flex; flex-wrap: wrap; gap: 12px 36px; padding-top: 14px; }
+.club-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.club-line a { font-weight: 700; color: var(--ink); text-decoration: none; }
+.club-line a:hover { text-decoration: underline; }
+.club-line-label { font-size: 0.85rem; font-weight: 600; color: var(--ink-soft); }
+.club-line-pos { gap: 14px; }
+.club-pos { display: inline-flex; align-items: center; gap: 6px; }
+.club-pos-n { font-family: var(--font-fig); font-weight: 600; color: var(--ink-soft); }
+.club-pos-none { font-size: 0.85rem; color: var(--ink-soft); }
+
+/* A whole squad: rows wrap, and spots are narrower than the XI's. */
+.club-pitch { gap: 14px; }
+.club-pitch .pitch-row { flex-wrap: wrap; justify-content: center; gap: 10px 6px; }
+.club-pitch .spot { width: 112px; }
+a.spot { text-decoration: none; }
+
+.club-bench { margin-top: 16px; }
+.club-bench .tile-grid { margin-top: 12px; }
+.club-bench .tile-side { flex-direction: row; align-items: center; gap: 8px; }
+
+.club-trend { margin-top: 20px; }
+
+@media (max-width: 1100px) {
+  .club-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 720px) {
+  .club-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .club-pick { width: 100%; }
+  .club-pick .select { flex: 1; width: auto; }
+  .club-pitch .spot { width: 82px; }
+}
+
+/* Five tabs at 360px: tighter still, and the row scrolls sideways rather
+   than widening the page on anything narrower. */
+@media (max-width: 420px) {
+  .nav-tabs-row { margin: 0 -4px; overflow-x: auto; scrollbar-width: none; }
+  .nav-tabs-row::-webkit-scrollbar { display: none; }
+  .nav-tabs-row .nav-tab { padding: 0 4px; font-size: 0.84rem; white-space: nowrap; flex: none; }
+}

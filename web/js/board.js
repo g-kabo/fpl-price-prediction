@@ -339,7 +339,7 @@ function cardHtml(record) {
       ["Gameweeks", fmt(games)],
     ]));
   const answer = ui.answer(model, interval, reference, REFERENCE_WORDS[xref], short,
-    `Predicted ${seasonLabel(TARGET)} price`, `<div>${note}${link}</div>`);
+    `Predicted ${seasonLabel(TARGET)} price`, `<div>${note}${ui.pooledNote(model, record.team_name)}${link}</div>`);
   const why = ui.whyThisPrice(model, values, [short, reference]);
   const days = trendDays(forecasts, board, record, interval);
   const trend = ui.forecastTrend(days);

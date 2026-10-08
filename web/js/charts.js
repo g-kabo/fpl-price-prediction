@@ -122,6 +122,85 @@ export function drawTrackRecord(el, groups) {
   }));
 }
 
+/** Every club's predicted change, biggest rise at the top.
+ *
+ *  `clubs` is one {team, value, pooled} per club, already sorted. Diverging
+ *  bars in the site's rise and fall colours, because the sign is the whole
+ *  point; the picked club is picked out by an ink outline and a bold label,
+ *  not by a colour, since colour already means direction. Pooled clubs carry
+ *  a quiet "pooled" after their name. `onPick(team)` on a click. */
+export function drawClubBars(el, clubs, selected, valueLabel, onPick) {
+  const names = clubs.map((c) => {
+    const name = c.team === selected ? `<b>${c.team}</b>` : c.team;
+    return c.pooled ? `${name} <span style="color:${INK_SOFT};font-size:11px">pooled</span>` : name;
+  });
+  const values = clubs.map((c) => c.value);
+  const trace = {
+    type: "bar", orientation: "h", y: names, x: values,
+    marker: {
+      color: values.map((v) => (v >= 0 ? RISE : FALL)),
+      line: { color: clubs.map((c) => (c.team === selected ? INK : "rgba(0,0,0,0)")), width: 2.5 },
+    },
+    text: values.map((v) => money(v, true, 2)), textposition: "outside", cliponaxis: false,
+    textfont: { size: 12, family: FONT_FIGURES, color: INK },
+    customdata: clubs.map((c) => [c.team, c.n]),
+    hovertemplate: `<b>%{customdata[0]}</b><br>${valueLabel} %{text}<br>%{customdata[1]} players<br><i>click to open</i><extra></extra>`,
+  };
+  const span = Math.max(...values.map(Math.abs), 0.1);
+  draw(el, [trace], baseLayout({
+    margin: { l: 8, r: 16, t: 8, b: 8 }, height: 30 * clubs.length + 40, bargap: 0.3,
+    yaxis: { autorange: "reversed", tickfont: { size: 13, color: INK }, showgrid: false,
+      automargin: true, ticksuffix: "  " },
+    xaxis: { range: [-span * 1.3, span * 1.3], tickprefix: "£", ticksuffix: "m",
+      tickfont: { size: 12, color: INK_SOFT }, gridcolor: LINE, zeroline: true,
+      zerolinecolor: INK_SOFT, zerolinewidth: 1.5, automargin: true },
+  }));
+  if (!el.dataset.clickBound) {
+    el.dataset.clickBound = "1";
+    el.on("plotly_click", (event) => {
+      const team = event.points?.[0]?.customdata?.[0];
+      if (team) onPick(team);
+    });
+  }
+}
+
+/** Each club's average forecast change per player, morning by morning,
+ *  with one club drawn and the other nineteen faint behind it for context.
+ *  `series` maps a club to [{date, value}], oldest first. */
+export function drawClubTrend(el, series, selected, targetSeason) {
+  const traces = [];
+  for (const [team, days] of Object.entries(series)) {
+    if (team === selected || !days.length) continue;
+    traces.push({ type: "scatter", mode: "lines", x: days.map((d) => d.date), y: days.map((d) => d.value),
+      line: { color: "#d9d2de", width: 1.2 }, name: team,
+      hovertemplate: `${team} %{y:+.2f}<extra></extra>` });
+  }
+  const own = series[selected] || [];
+  const marker = own.length <= 14 ? { size: 7, color: AUBERGINE, line: { width: MARK_RING, color: SURFACE } } : undefined;
+  traces.push({ type: "scatter", mode: marker ? "lines+markers" : "lines", x: own.map((d) => d.date),
+    y: own.map((d) => d.value), line: { color: AUBERGINE, width: 3 }, marker, name: selected,
+    customdata: own.map((d) => dayMonth(d.date)),
+    hovertemplate: `<b>${selected}</b> · %{customdata}<br>Average forecast change £%{y:+.2f}m<extra></extra>` });
+
+  const all = Object.values(series).flat().map((d) => d.value);
+  const span = Math.max(...all.map(Math.abs), 0.05) * 1.15;
+  const dates = Object.values(series).flat().map((d) => d.date).sort();
+  const halfDay = (iso, sign) => new Date(Date.parse(`${iso}T00:00:00Z`) + sign * 43_200_000).toISOString();
+  const last = own[own.length - 1];
+  draw(el, traces, baseLayout({
+    margin: { l: 8, r: 64, t: 12, b: 8 }, height: 280, hovermode: "closest",
+    annotations: last ? [{ x: last.date, y: last.value, text: money(last.value, true, 2), showarrow: false,
+      xanchor: "left", xshift: 8, font: { size: 13, family: FONT_FIGURES, color: INK } }] : [],
+    xaxis: { type: "date", tickformat: "%-d %b", tickfont: { size: 12, color: INK_SOFT },
+      range: dates.length ? [halfDay(dates[0], -1), halfDay(dates[dates.length - 1], 1)] : undefined,
+      showgrid: false, showline: true, linecolor: LINE, automargin: true },
+    yaxis: { range: [-span, span], tickprefix: "£", ticksuffix: "m", tickformat: ".2f",
+      tickfont: { size: 12, color: INK_SOFT }, gridcolor: LINE, zeroline: true,
+      zerolinecolor: INK_SOFT, automargin: true,
+      title: { text: `Forecast ${seasonLabel(targetSeason)} minus that day's price`, font: { size: 12, color: INK_SOFT } } },
+  }));
+}
+
 /** PRICE_FORECAST at a given opacity, for the forecast's likely range. */
 function faint(hex, alpha) {
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
