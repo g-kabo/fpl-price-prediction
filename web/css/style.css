@@ -1739,6 +1739,11 @@ a.spot { text-decoration: none; }
 .club-bench .tile-side { flex-direction: row; align-items: center; gap: 8px; }
 
 .club-trend { margin-top: 20px; }
+.club-list-block { margin-top: 24px; }
+.club-list-block .tlist { margin-top: 12px; }
+.club-list-block .tl-club { display: none; }
+a.tl-row { text-decoration: none; }
+a.tl-row:hover { color: var(--ink); }
 
 @media (max-width: 1100px) {
   .club-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }

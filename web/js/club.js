@@ -16,6 +16,7 @@ import { loadJson, loadModel, showError } from "./data.js";
 import { dayMonth, esc, seasonLabel } from "./format.js";
 import { drawClubBars, drawClubTrend } from "./charts.js";
 import { initNavSearch, playerUrl } from "./nav.js";
+import { DEFAULT_SORT, listHtml, nextSort, sortRows } from "./tlist.js";
 import { recordedOn, snapshotDay } from "./records.js";
 import { direction, money } from "./theme.js";
 import * as ui from "./ui.js";
@@ -31,7 +32,7 @@ const MEASURES = {
   owned: { label: "Managers' money", note: "each player's predicted change weighted by the share of managers who own him: what the forecast means for the average manager's squad" },
 };
 
-const state = { count: "played", sort: "total", team: null };
+const state = { count: "played", sort: "total", team: null, listSort: { ...DEFAULT_SORT } };
 
 let model;
 let board;
@@ -106,12 +107,10 @@ function trendSeries() {
 function renderBars() {
   const measure = MEASURES[state.sort];
   const sorted = [...clubs].sort((a, b) => b[state.sort] - a[state.sort])
-    .map((c) => ({ team: c.team, value: c[state.sort], pooled: c.pooled, n: c.n }));
+    .map((c) => ({ team: c.team, value: c[state.sort], n: c.n }));
   const who = state.count === "played" ? "players who have played this season" : "every player in the squad";
-  const pooled = clubs.filter((c) => c.pooled).length;
   $("club-bars-note").textContent = `${measure.label}: ${measure.note}, counting ${who}. `
-    + `Against today's prices, forecast for ${seasonLabel(TARGET)}. The ${pooled} clubs marked "pooled" share `
-    + "one club setting in the model. Click a club to see its squad.";
+    + `Against today's prices, forecast for ${seasonLabel(TARGET)}. Click a club to see its squad.`;
   $("club-bars").querySelector(".loading")?.remove();
   drawClubBars($("club-bars"), sorted, state.team, measure.label, pick);
 }
@@ -192,6 +191,19 @@ function renderSquad(club) {
     + `most are forecast down.</p><div class="tile-grid">${tiles}</div></details>`;
 }
 
+/** The squad as Price Watch's transfer list, under the same "which players
+ *  count" as the totals, each row linking to the player page. */
+function renderList(club) {
+  const rows = sortRows(club.players.map((p) => ({ ...p, ref: p.price_now })), state.listSort);
+  const labels = { player: "Player", points: "Pts", minutes: "Mins", selected: "Sel.", ref: "Today",
+    pred: seasonLabel(TARGET), move: "Move" };
+  const who = state.count === "played" ? "who've played this season" : "in the squad";
+  $("club-list-note").textContent = `All ${rows.length} players ${who}. Click a column to sort, or a player `
+    + "to open his page.";
+  $("club-list").innerHTML = rows.length ? listHtml(rows, state.listSort, labels, (p) => playerUrl(p.code))
+    : ui.empty("No players to list.");
+}
+
 function renderTrend(club, series) {
   const days = series[club.team] || [];
   const note = $("club-trend-note");
@@ -219,6 +231,7 @@ function renderClub() {
   $("club-select").value = club.team;
   renderSummary(club);
   renderSquad(club);
+  renderList(club);
   renderTrend(club, series);
 }
 
@@ -247,6 +260,12 @@ function wire() {
   document.querySelectorAll('input[name="club-sort"]').forEach((input) =>
     input.addEventListener("change", () => { state.sort = input.value; renderBars(); }));
   $("club-select").addEventListener("change", (event) => pick(event.target.value, false));
+  $("club-list").addEventListener("click", (event) => {
+    const header = event.target.closest("[data-sort]");
+    if (!header) return;
+    state.listSort = nextSort(state.listSort, header.dataset.sort);
+    renderList(clubs.find((c) => c.team === state.team));
+  });
 }
 
 async function main() {

@@ -15,6 +15,7 @@ import { loadJson, loadModel, showError } from "./data.js";
 import { dayMonth, esc, fixed, fmt, fold, seasonLabel } from "./format.js";
 import { DEFAULT_X, X_FIELDS, drawForecastTrend, drawPriceHistory, drawPriceScatter } from "./charts.js";
 import { initNavSearch } from "./nav.js";
+import { DEFAULT_SORT, listHtml, nextSort, sortRows } from "./tlist.js";
 import { boardValues, recordedOn, snapshotDay, trendDays } from "./records.js";
 import { direction, money } from "./theme.js";
 import * as ui from "./ui.js";
@@ -25,21 +26,6 @@ const PAGE_SIZE = 20;
 
 /** How often an open page checks for a new daily snapshot. */
 const POLL_MS = 60 * 60 * 1000;
-
-/** The transfer list's columns: [key, player field, numeric?]. A numeric
- *  one starts biggest-first, the player name A to Z, and a second click on
- *  the same header reverses it. */
-const COLUMNS = [
-  ["player", "name_key", false],
-  ["points", "points_now", true],
-  ["minutes", "minutes_now", true],
-  ["selected", "selected_by_percent", true],
-  ["ref", "ref", true],
-  ["pred", "pred", true],
-  ["move", "delta", true],
-];
-const COLUMN = Object.fromEntries(COLUMNS.map(([key, field, numeric]) => [key, [field, numeric]]));
-const DEFAULT_SORT = { col: "move", desc: true };
 
 const REFERENCE_WORDS = { price_now: "today's price", start_cost: "his August price" };
 
@@ -234,47 +220,8 @@ function renderMovers() {
 
 // ---------------------------------------------------------------- the list
 
-function compare(a, b) {
-  const [field] = COLUMN[state.sort.col] || COLUMN.move;
-  const x = a[field];
-  const y = b[field];
-  const missing = (v) => v === null || v === undefined || Number.isNaN(v);
-  if (missing(x) !== missing(y)) return missing(x) ? 1 : -1; // missing last, either way
-  let order = 0;
-  if (!missing(x)) order = typeof x === "string" ? (x < y ? -1 : x > y ? 1 : 0) : x - y;
-  if (state.sort.desc) order = -order;
-  if (order !== 0) return order;
-  // Ties fall back to the predicted move, so equal points or minutes still
-  // come out in a meaningful order rather than whatever order they arrived.
-  const dx = a.delta;
-  const dy = b.delta;
-  if (missing(dx) !== missing(dy)) return missing(dx) ? 1 : -1;
-  return missing(dx) ? 0 : dy - dx;
-}
-
-function sortHeader(key, label) {
-  const active = state.sort.col === key;
-  const icon = active ? (state.sort.desc ? "bi-caret-down-fill" : "bi-caret-up-fill") : "bi-chevron-expand";
-  return `<button type="button" class="sort-col${key !== "player" ? " num" : ""}${active ? " is-active" : ""}" `
-    + `data-sort="${key}" title="Sort by ${esc(label)}">${esc(label)}<i class="bi ${icon}"></i></button>`;
-}
-
-function listRow(p) {
-  return `<button type="button" class="tl-row" data-code="${p.code}">`
-    + `<span class="tl-player">${ui.shirt(p.team_name, "sm")}<span class="tl-who">`
-    + `<span class="tl-name">${esc(p.web_name)}</span><span class="tl-sub">${ui.positionPill(p.element_type)}`
-    + `<span class="tl-club">${esc(p.team_name)}</span></span></span></span>`
-    + `<span class="num tl-stat">${Math.trunc(p.points_now || 0)}</span>`
-    + `<span class="num tl-stat">${Math.trunc(p.minutes_now || 0).toLocaleString("en-GB")}</span>`
-    + `<span class="num tl-stat">${fixed(Number(p.selected_by_percent || 0), 1)}%</span>`
-    + `<span class="num tl-now">${money(p.ref)}</span><span class="num tl-pred">${money(p.pred)}</span>`
-    + `<span class="num">${ui.deltaChip(p.delta, "sm")}</span></button>`;
-}
-
 function renderList() {
-  const all = filtered(withDelta());
-  all.forEach((p) => { p.name_key = fold(p.web_name); });
-  all.sort(compare);
+  const all = sortRows(filtered(withDelta()), state.sort);
 
   const limit = PAGE_SIZE * state.pages;
   const shown = all.slice(0, limit);
@@ -288,8 +235,7 @@ function renderList() {
   const nowLabel = state.xref !== "start_cost" ? "Today" : "August";
   const labels = { player: "Player", points: "Pts", minutes: "Mins", selected: "Sel.", ref: nowLabel,
     pred: seasonLabel(TARGET), move: "Move" };
-  const head = `<div class="tlist-head">${COLUMNS.map(([key]) => sortHeader(key, labels[key])).join("")}</div>`;
-  $("board-list").innerHTML = head + shown.map(listRow).join("");
+  $("board-list").innerHTML = listHtml(shown, state.sort, labels);
   $("board-count").textContent = `Showing ${shown.length} of ${all.length} players`;
   $("board-more-wrap").hidden = shown.length >= all.length;
 }
@@ -462,11 +408,7 @@ function wire() {
   $("board-list").addEventListener("click", (event) => {
     const header = event.target.closest("[data-sort]");
     if (header) {
-      const key = header.dataset.sort;
-      // Same header again reverses the order; a new one starts at its natural end.
-      state.sort = key === state.sort.col
-        ? { col: key, desc: !state.sort.desc }
-        : { col: key, desc: COLUMN[key][1] };
+      state.sort = nextSort(state.sort, header.dataset.sort);
       state.pages = 1;
       renderList();
       return;

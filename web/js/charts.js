@@ -124,16 +124,12 @@ export function drawTrackRecord(el, groups) {
 
 /** Every club's predicted change, biggest rise at the top.
  *
- *  `clubs` is one {team, value, pooled} per club, already sorted. Diverging
- *  bars in the site's rise and fall colours, because the sign is the whole
- *  point; the picked club is picked out by an ink outline and a bold label,
- *  not by a colour, since colour already means direction. Pooled clubs carry
- *  a quiet "pooled" after their name. `onPick(team)` on a click. */
+ *  `clubs` is one {team, value, n} per club, already sorted. Diverging bars
+ *  in the site's rise and fall colours, because the sign is the whole point;
+ *  the picked club is picked out by an ink outline and a bold label, not by
+ *  a colour, since colour already means direction. `onPick(team)` on a click. */
 export function drawClubBars(el, clubs, selected, valueLabel, onPick) {
-  const names = clubs.map((c) => {
-    const name = c.team === selected ? `<b>${c.team}</b>` : c.team;
-    return c.pooled ? `${name} <span style="color:${INK_SOFT};font-size:11px">pooled</span>` : name;
-  });
+  const names = clubs.map((c) => (c.team === selected ? `<b>${c.team}</b>` : c.team));
   const values = clubs.map((c) => c.value);
   const trace = {
     type: "bar", orientation: "h", y: names, x: values,
