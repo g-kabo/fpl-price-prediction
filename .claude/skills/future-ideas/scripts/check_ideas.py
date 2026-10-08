@@ -94,6 +94,8 @@ def check(text: str) -> list[str]:
     # Every number named in a guide, combination or verdict must be an idea;
     # the branch guide must place every idea exactly once.
     placed: dict[int, int] = {}
+    on_pages: set[int] = set()
+    off_site: set[int] = set()  # verdict Report or Tooling: never on a page
     section = ""
     for n, line in enumerate(lines, start=1):
         if line.startswith("## "):
@@ -102,9 +104,17 @@ def check(text: str) -> list[str]:
         if not line.startswith("|") or line.startswith("|---"):
             continue
         row = cells(line)
-        if section.startswith(("Branch or straight", "Report or app", "Combinations")) and len(row) > 1:
+        if section.startswith("Report or app") and row[0] in ("**Report**", "**Tooling**"):
+            off_site.update(numbers(row[1]))
+        if section.startswith("Ideas by existing page") and len(row) > 1:
+            on_pages.update(numbers(row[1]))
+        if section.startswith(("Branch or straight", "Report or app", "Combinations",
+                               "Ideas by existing page")) and len(row) > 1:
             if row[1] in ("Ideas",) or "everything else" in row[1]:
                 continue
+            bare = re.findall(r"(?<![\[\-\d])\b\d+\b(?![\]\d])", row[1])
+            if bare:
+                problems.append(f"line {n}: unlinked idea numbers {', '.join(bare)}: run docs/link_ideas.py")
             for number in numbers(row[1]):
                 if number not in ideas:
                     problems.append(f"line {n}: {section!r} names idea {number}, which doesn't exist")
@@ -116,6 +126,13 @@ def check(text: str) -> list[str]:
     # Finished and dropped ideas may leave the guide; open ones may not.
     for number in sorted(set(open_ideas) - set(placed)):
         problems.append(f"idea {number} is open but missing from the branch guide")
+    # Every open idea that lands on the site needs a row in "Ideas by existing
+    # page"; reports and tooling never do, and finished ideas leave it.
+    if any(l.startswith("## Ideas by existing page") for l in lines):
+        for number in sorted(set(open_ideas) - off_site - on_pages):
+            problems.append(f"idea {number} is open and on the site but missing from 'Ideas by existing page'")
+        for number in sorted(on_pages & (set(ideas) - set(open_ideas))):
+            problems.append(f"idea {number} is done or dropped but still in 'Ideas by existing page'")
 
     for target in sorted({int(t) for t in LINK.findall(text)} - set(ideas)):
         problems.append(f"a link points at idea {target}, which doesn't exist")

@@ -16,10 +16,15 @@ from pathlib import Path
 
 PATH = Path(__file__).with_name("future-ideas.md")
 
-ROW = re.compile(r"^\| (\d+) \|")
+#: An idea's row, with or without the anchor an earlier run added.
+ROW = re.compile(r'^\| (?:<a name="idea-\d+"></a>)?(\d+) \|')
 #: ``#8`` not already inside a link (``[#8]``) and not part of a longer word.
 REFERENCE = re.compile(r"(?<![\[\w#/&])#(\d{1,3})\b")
-NUMBER_LIST = re.compile(r"^\s*\d+(\s*,\s*\d+)*\s*$")
+#: A cell that is only a list of ideas, each a bare number or an existing link.
+_ITEM = r"(?:\d+|\[\d+\]\(#idea-\d+\))"
+NUMBER_LIST = re.compile(rf"^\s*{_ITEM}(\s*,\s*{_ITEM})*\s*$")
+#: A bare number in such a list, not the inside of a link.
+BARE_NUMBER = re.compile(r"(?<![\[\-\d])\b(\d+)\b(?![\]\d])")
 JUMP_PREFIX = "**Jump to:**"
 
 
@@ -53,8 +58,8 @@ def link(text: str) -> str:
                 if "idea-" in cell and "<a name" in cell:
                     continue
                 if NUMBER_LIST.match(cell):
-                    cells[i] = re.sub(r"\d+", lambda m: f"[{m.group(0)}](#idea-{m.group(0)})"
-                                      if int(m.group(0)) in ideas else m.group(0), cell)
+                    cells[i] = BARE_NUMBER.sub(lambda m: f"[{m.group(1)}](#idea-{m.group(1)})"
+                                               if int(m.group(1)) in ideas else m.group(0), cell)
                 else:
                     cells[i] = REFERENCE.sub(ref, cell)
             line = "|".join(cells)

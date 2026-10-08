@@ -37,7 +37,8 @@ about `dcc.Store` and Render). Before adding anything:
   ideas ("ideas #32 and #42"). For each idea touched since the last review, set
   its Status: `done`, `done (report: <path>)` for a report, `in progress
   (branch <name>)`, or `dropped (<reason>)`. Status values are `idea`, `planned`,
-  `in progress`, `done` and `dropped`.
+  `in progress`, `done` and `dropped`. A finished or dropped idea also leaves
+  "Ideas by existing page"; a shipped feature may need a new row there.
 - Check `git stash list`. A stashed copy of the doc has happened before: 30
   ideas were stranded in a stash for days. If one exists, merge it before
   editing, never over it.
@@ -147,6 +148,19 @@ Otherwise it goes straight to `main`. Reports and scripts that don't change the
 site go to `main`. Scheduled workflow changes go to `main` and are checked
 with a manual run, because a schedule only runs from the default branch.
 
+### Ideas by existing page
+
+This table is the same backlog read by where each idea would land, for anyone
+working on one page who wants to know what else is waiting for it. Put each
+new idea that changes the site in every row it touches: a part of Price Watch
+(header and settings, XI, forecast movers, transfer list, market map, player
+card), a part of What if (picker, answer, season form, why this price), How it
+works, "Site-wide" for things that change every page, or "New pages". Leave
+reports and tooling out. When an idea is done or dropped, take it out, and when
+a page gains a new part (or a new page ships), add a row so the table keeps
+matching the real site. Name each row for what a visitor sees, and say in a
+few words what its ideas would add.
+
 ### Combinations
 
 Look for ideas that are worth more built together: ones that share a screen, a
@@ -167,9 +181,10 @@ Run, from the repo root, with the interpreter CLAUDE.md names:
 
 `link_ideas.py` adds anchors and links and rebuilds the "Jump to" line, and is
 safe to re-run. `check_ideas.py` reports duplicate numbers, invalid scores or
-statuses, ideas missing from (or repeated in) the branch guide, combinations
-and verdicts naming ideas that don't exist, broken links, and tables split by
-a blank line. Fix anything it reports before finishing.
+statuses, ideas missing from (or repeated in) the branch guide, open on-site
+ideas missing from "Ideas by existing page" (and finished ones left in it),
+combinations and verdicts naming ideas that don't exist, broken links, and
+tables split by a blank line. Fix anything it reports before finishing.
 
 Then tell the user, briefly:
 
