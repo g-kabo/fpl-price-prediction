@@ -62,6 +62,15 @@
       </div>
     </section>
 
+    <section class="block">
+      <div class="wrap">
+        <div class="block-head"><div><h2 class="block-title">Club by position</h2>
+          <p class="block-note">Where each club's change comes from: the same measure as the chart above, split by position. Read down a column to compare one position across clubs, or across a row to see where a club's total comes from.</p></div></div>
+        <div class="club-grid" id="club-grid" role="group" aria-label="Predicted change by club and position"></div>
+        <div class="grid-legend" id="club-grid-legend"></div>
+      </div>
+    </section>
+
     <section class="block" id="club-detail">
       <div class="wrap">
         <div class="block-head club-head">
@@ -71,10 +80,15 @@
         <div id="club-summary"></div>
         <div class="pitch-wrap"><div id="club-pitch" class="pitch club-pitch"></div></div>
         <div id="club-bench"></div>
-        <div class="club-list-block">
+        <div class="club-list-block" id="club-list-block">
           <h3 class="section-title">Squad list</h3>
           <p class="block-note" id="club-list-note"></p>
-          <div id="club-list" class="tlist"></div>
+          <div id="club-list" class="tlist tlist-value"></div>
+        </div>
+        <div class="panel club-history">
+          <h3 class="section-title">Squad value by season</h3>
+          <p class="why-lede" id="club-history-note"></p>
+          <div id="club-history-chart"></div>
         </div>
         <div class="panel club-trend">
           <h3 class="section-title">Club forecast trend</h3>

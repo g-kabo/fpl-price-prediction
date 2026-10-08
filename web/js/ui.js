@@ -308,9 +308,16 @@ export function forecastTrend(days) {
     + "after a gameweek, as points and minutes come in, and a little with each price change.</p></div>";
 }
 
-/** Shirt, name plate, club and position: the top of a player card. */
-export function playerHeader(name, team, position, meta = "") {
+/** A club's name, as a link to its Clubs page when `href` is given. */
+export function clubName(team, href = null) {
+  return href ? `<a class="player-club club-link" href="${href}">${esc(team || "")}</a>`
+    : `<span class="player-club">${esc(team || "")}</span>`;
+}
+
+/** Shirt, name plate, club and position: the top of a player card.
+ *  `clubHref` makes the club name a link to its Clubs page. */
+export function playerHeader(name, team, position, meta = "", clubHref = null) {
   return `<div class="player-header">${shirt(team, "lg")}<div><h2 class="player-name">${esc(name)}</h2>`
-    + `<div class="player-sub">${positionPill(position)}<span class="player-club">${esc(team || "")}</span></div>`
+    + `<div class="player-sub">${positionPill(position)}${clubName(team, clubHref)}</div>`
     + `${meta}</div></div>`;
 }

@@ -408,6 +408,23 @@ Decisions worth keeping:
   would otherwise show up as a step. The other 19 clubs are drawn faint behind
   it for scale.
 - Plotly's `tickformat: "+.2f"` is silently ignored on this axis; `.2f` works.
+- **Club by position is an HTML grid, not a Plotly heatmap**: the
+  `plotly-basic` build the site loads has no heatmap trace. It uses the
+  chart's measure and order, so the two read together. GK is a narrower
+  column, since most clubs have one keeper who has played. On a phone the
+  cells drop "£" and "m" (the legend carries the unit) so "+£12.9m" fits.
+- **Squad value by season always counts the whole squad**, whatever the
+  toggle says. Five gameweeks in, only ~23 of a club's players have played,
+  so the toggle's count set a partial season against complete ones (Spurs
+  £127.5m against £158.5m, mostly squad size). Past seasons count everyone
+  at the club that season in `seasons.json`.
+- **Club names differ between sources.** The history mirror calls 2024-25
+  Ipswich "Ipswich"; the live API says "Ipswich Town". `FORMER_NAMES` in
+  `web/js/records.js` maps them for the squad history and for linking a
+  player's past seasons to the Clubs page. Check it when a club is promoted.
+- **The transfer list lives in `web/js/tlist.js`**, shared by Price Watch
+  (rows are buttons that open the card) and the Clubs page (rows are links to
+  the player page, with an optional points-per-£m column).
 
 ---
 

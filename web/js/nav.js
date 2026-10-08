@@ -63,6 +63,7 @@ export function searchPlayers(players, text, limit = LIMIT) {
 }
 
 export const playerUrl = (code) => `player.html?code=${code}`;
+export const clubUrl = (team) => `club.html?team=${encodeURIComponent(team)}`;
 
 function option(p, id, active) {
   const when = p.current ? "" : `<span class="sr-when">Last in FPL ${seasonLabel(p.last_season)}</span>`;

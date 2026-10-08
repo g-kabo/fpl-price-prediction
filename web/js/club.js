@@ -13,11 +13,11 @@
 //     as such, because the club part of their forecasts is an average.
 
 import { loadJson, loadModel, showError } from "./data.js";
-import { dayMonth, esc, seasonLabel } from "./format.js";
-import { drawClubBars, drawClubTrend } from "./charts.js";
+import { dayMonth, esc, fixed, seasonLabel } from "./format.js";
+import { drawClubBars, drawClubTrend, drawPriceHistory } from "./charts.js";
 import { initNavSearch, playerUrl } from "./nav.js";
 import { DEFAULT_SORT, listHtml, nextSort, sortRows } from "./tlist.js";
-import { recordedOn, snapshotDay } from "./records.js";
+import { FORMER_NAMES, recordedOn, seasonRows, snapshotDay } from "./records.js";
 import { direction, money } from "./theme.js";
 import * as ui from "./ui.js";
 
@@ -32,17 +32,29 @@ const MEASURES = {
   owned: { label: "Managers' money", note: "each player's predicted change weighted by the share of managers who own him: what the forecast means for the average manager's squad" },
 };
 
-const state = { count: "played", sort: "total", team: null, listSort: { ...DEFAULT_SORT } };
+const state = { count: "played", sort: "total", team: null, listSort: { ...DEFAULT_SORT }, listPos: null };
 
 let model;
 let board;
 let forecasts;
+let pastSeasons = [];
 let TARGET;
 let clubs = [];
 
 // ---------------------------------------------------------------- data
 
 const counted = (p) => state.count === "all" || p.minutes_now > 0;
+
+/** A group of players under one of the three measures. */
+function measureOf(players, measure) {
+  const total = players.reduce((t, p) => t + p.delta, 0);
+  if (measure === "average") return players.length ? total / players.length : 0;
+  if (measure === "owned") return players.reduce((t, p) => t + (Number(p.selected_by_percent || 0) / 100) * p.delta, 0);
+  return total;
+}
+
+/** Points per £m of today's price. */
+const valueOf = (p) => (p.price_now > 0 ? (p.points_now || 0) / p.price_now : 0);
 
 /** One club's squad and its totals under the current "which players count". */
 function summarise(team) {
@@ -54,13 +66,17 @@ function summarise(team) {
   const total = sum((p) => p.delta);
   const byPosition = Object.fromEntries(POSITIONS.map((pos) => {
     const group = players.filter((p) => p.element_type === pos);
-    return [pos, { n: group.length, total: group.reduce((t, p) => t + p.delta, 0) }];
+    return [pos, { players: group, n: group.length, total: measureOf(group, "total") }];
   }));
+  // Best value counts only players who've played: points per £m means
+  // nothing for a player with no minutes.
+  const best = squad.filter((p) => p.minutes_now > 0).sort((a, b) => valueOf(b) - valueOf(a))[0];
   const ranked = [...players].sort((a, b) => b.delta - a.delta);
   return {
     team, squad, players, n, total,
     average: n ? total / n : 0,
-    owned: sum((p) => (Number(p.selected_by_percent || 0) / 100) * p.delta),
+    owned: measureOf(players, "owned"),
+    best,
     now: sum((p) => p.price_now),
     predicted: sum((p) => p.pred),
     rising: players.filter((p) => direction(p.delta) === "rise").length,
@@ -115,6 +131,63 @@ function renderBars() {
   drawClubBars($("club-bars"), sorted, state.team, measure.label, pick);
 }
 
+// ---------------------------------------------------------------- club by position
+
+/** Fill for a cell: the rise or fall colour, darker the bigger the move,
+ *  with the label turning white once the fill is dark enough. */
+function cellColours(value, cap) {
+  const strength = cap > 0 ? Math.min(Math.abs(value) / cap, 1) : 0;
+  const rgb = value >= 0 ? "0, 122, 63" : "214, 0, 79";
+  return {
+    background: `rgba(${rgb}, ${(0.08 + strength * 0.82).toFixed(3)})`,
+    color: strength > 0.5 ? "#ffffff" : value >= 0 ? "var(--rise-on)" : "#7a002d",
+  };
+}
+
+function cellHtml(team, pos, group, value, cap, places) {
+  const { background, color } = cellColours(value, cap);
+  const picked = team === state.team && (pos === state.listPos || (pos === "ALL" && state.listPos === null));
+  const label = group.length ? money(value, true, places) : "–";
+  // Phones get the figure without "£" and "m": the legend carries the unit.
+  const short = group.length ? label.replace("£", "").replace(/m$/, "") : "–";
+  const who = `${group.length} player${group.length === 1 ? "" : "s"}`;
+  return `<button type="button" class="grid-cell${picked ? " is-picked" : ""}" data-team="${esc(team)}" `
+    + `data-pos="${pos}" style="background:${background};color:${color}" `
+    + `aria-label="${esc(team)} ${pos === "ALL" ? "whole squad" : pos}: ${label}, ${who}">`
+    + `<span class="grid-value"><span class="grid-long">${label}</span><span class="grid-short">${short}</span></span>`
+    + `<span class="grid-n">${who}</span></button>`;
+}
+
+/** Every club by position, under the chart's measure and in its order. A
+ *  cell opens that club with its squad list cut to that position. */
+function renderGrid() {
+  const places = state.sort === "total" ? 1 : 2;
+  const rows = [...clubs].sort((a, b) => b[state.sort] - a[state.sort]).map((club) => ({
+    club,
+    cells: POSITIONS.map((pos) => {
+      const group = club.byPosition[pos].players;
+      return { pos, group, value: measureOf(group, state.sort) };
+    }),
+  }));
+  const cap = Math.max(...rows.flatMap((r) => r.cells.map((c) => Math.abs(c.value))), 0.01) * 0.85;
+  const capAll = Math.max(...clubs.map((c) => Math.abs(c[state.sort])), 0.01) * 0.85;
+
+  const head = '<div class="grid-row grid-head"><div>Club</div>'
+    + POSITIONS.map((pos) => `<div>${ui.positionPill(pos)}</div>`).join("") + "<div>All</div></div>";
+  $("club-grid").innerHTML = head + rows.map(({ club, cells }) => '<div class="grid-row">'
+    + `<button type="button" class="grid-club" data-team="${esc(club.team)}">${ui.shirt(club.team, "xs")}`
+    + `<span>${esc(club.team)}</span></button>`
+    + cells.map((c) => cellHtml(club.team, c.pos, c.group, c.value, cap, places)).join("")
+    + `<div class="grid-all">${cellHtml(club.team, "ALL", club.players, club[state.sort], capAll, places)}</div>`
+    + "</div>").join("");
+  const low = cellColours(-1, 1).background;
+  const mid = cellColours(0, 1).background;
+  const high = cellColours(1, 1).background;
+  $("club-grid-legend").innerHTML = `<span>${money(-cap, true, places)}</span>`
+    + `<span class="grid-ramp" style="background:linear-gradient(90deg, ${low}, ${mid}, ${high})"></span>`
+    + `<span>${money(cap, true, places)}</span><span>£m. Darker is a bigger move. Click a cell for its players.</span>`;
+}
+
 // ---------------------------------------------------------------- one club
 
 function figure(label, value, extra = "") {
@@ -150,6 +223,9 @@ function renderSummary(club) {
     + '<div class="club-lines">'
     + `<div class="club-line"><span class="club-line-label">Biggest riser</span>${playerLink(club.riser)}</div>`
     + `<div class="club-line"><span class="club-line-label">Biggest faller</span>${playerLink(club.faller)}</div>`
+    + (club.best ? '<div class="club-line"><span class="club-line-label">Best value</span>'
+      + `<a href="${playerUrl(club.best.code)}">${esc(club.best.web_name)}</a>`
+      + `<span class="club-line-fig">${fixed(valueOf(club.best), 1)} points per £m</span></div>` : "")
     + `<div class="club-line club-line-pos"><span class="club-line-label">By position</span>${positions}</div>`
     + "</div>"
     + ui.pooledNote(model, club.team)
@@ -194,14 +270,51 @@ function renderSquad(club) {
 /** The squad as Price Watch's transfer list, under the same "which players
  *  count" as the totals, each row linking to the player page. */
 function renderList(club) {
-  const rows = sortRows(club.players.map((p) => ({ ...p, ref: p.price_now })), state.listSort);
-  const labels = { player: "Player", points: "Pts", minutes: "Mins", selected: "Sel.", ref: "Today",
-    pred: seasonLabel(TARGET), move: "Move" };
+  const players = club.players.filter((p) => !state.listPos || p.element_type === state.listPos);
+  const rows = sortRows(players.map((p) => ({ ...p, ref: p.price_now })), state.listSort);
+  const labels = { player: "Player", points: "Pts", minutes: "Mins", selected: "Sel.", value: "Pts/£m",
+    ref: "Today", pred: seasonLabel(TARGET), move: "Move" };
   const who = state.count === "played" ? "who've played this season" : "in the squad";
-  $("club-list-note").textContent = `All ${rows.length} players ${who}. Click a column to sort, or a player `
-    + "to open his page.";
-  $("club-list").innerHTML = rows.length ? listHtml(rows, state.listSort, labels, (p) => playerUrl(p.code))
+  const only = state.listPos
+    ? ` <button type="button" class="link-button" id="club-list-all">Show every position</button>`
+    : "";
+  $("club-list-note").innerHTML = `${rows.length} ${state.listPos ? `${state.listPos} ` : ""}players ${who}. `
+    + "Pts/£m is points so far per £m of today's price. Click a column to sort, or a player to open his page."
+    + only;
+  $("club-list").innerHTML = rows.length
+    ? listHtml(rows, state.listSort, labels, (p) => playerUrl(p.code), { value: true })
     : ui.empty("No players to list.");
+}
+
+/** "Spurs'", "Hull City's". */
+const possessive = (name) => (name.endsWith("s") ? `${name}'` : `${name}'s`);
+
+/** The club's squad value at the start and end of every season it played,
+ *  from seasons.json, with next season's forecast. Always the whole squad,
+ *  whatever the toggle says: counting only players who've played would set
+ *  a season five gameweeks old against complete ones. */
+function renderHistory(club) {
+  const names = [club.team, ...(FORMER_NAMES[club.team] || [])];
+  const bySeason = new Map();
+  for (const r of pastSeasons) {
+    if (!names.includes(r.team_name)) continue;
+    const s = bySeason.get(r.season) || { start: 0, end: 0 };
+    s.start += Number(r.start_cost || 0);
+    s.end += Number(r.final_cost || 0);
+    bySeason.set(r.season, s);
+  }
+  const current = TARGET - 1;
+  const seasons = [...bySeason.entries()].sort(([a], [b]) => a - b).map(([season, s]) => [season, s.start, s.end]);
+  const total = (field) => club.squad.reduce((t, p) => t + Number(p[field] || 0), 0);
+  seasons.push([current, total("start_cost"), total("price_now")]);
+  const first = seasons[0][0];
+  const gaps = current - first + 1 > seasons.length;
+  $("club-history-note").textContent = `The total price of ${possessive(club.team)} whole squad at the start `
+    + `and end of each Premier League season since ${seasonLabel(first)}, and the model's ${seasonLabel(TARGET)} `
+    + "forecast for today's squad. Every player at the club that season counts, whether he played or not, so "
+    + "totals move with squad size as well as prices."
+    + `${gaps ? " Missing seasons were outside the Premier League." : ""} The ${seasonLabel(current)} end figure is today's.`;
+  drawPriceHistory($("club-history-chart"), seasons, TARGET, total("pred"));
 }
 
 function renderTrend(club, series) {
@@ -215,7 +328,7 @@ function renderTrend(club, series) {
   const first = days[0];
   const last = days[days.length - 1];
   const moved = last.value - first.value;
-  note.innerHTML = `${esc(club.team)}'s average forecast change per player is ${money(last.value, true, 2)} `
+  note.innerHTML = `${esc(possessive(club.team))} average forecast change per player is ${money(last.value, true, 2)} `
     + `today, ${Math.abs(moved) < 0.005 ? "unchanged" : `${moved > 0 ? "up" : "down"} <strong>${money(Math.abs(moved), false, 2)}</strong>`} `
     + `since the morning of ${dayMonth(first.date)}.`;
   drawClubTrend($("club-trend-chart"), series, club.team, TARGET);
@@ -232,6 +345,7 @@ function renderClub() {
   renderSummary(club);
   renderSquad(club);
   renderList(club);
+  renderHistory(club);
   renderTrend(club, series);
 }
 
@@ -239,27 +353,42 @@ function renderAll() {
   summariseAll();
   series = trendSeries();
   renderBars();
+  renderGrid();
   renderClub();
 }
 
 /** Pick a club from the chart or the select, and keep it in the address. */
-function pick(team, scroll = true) {
+function pick(team, scroll = true, pos = null) {
   if (!clubs.some((c) => c.team === team)) return;
   state.team = team;
+  state.listPos = pos;
   const url = new URL(location.href);
   url.searchParams.set("team", team);
   history.replaceState(null, "", url);
   renderBars();
+  renderGrid();
   renderClub();
-  if (scroll) $("club-detail").scrollIntoView({ behavior: "smooth", block: "start" });
+  if (scroll) (pos ? $("club-list-block") : $("club-detail")).scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function wire() {
   document.querySelectorAll('input[name="club-count"]').forEach((input) =>
     input.addEventListener("change", () => { state.count = input.value; renderAll(); }));
   document.querySelectorAll('input[name="club-sort"]').forEach((input) =>
-    input.addEventListener("change", () => { state.sort = input.value; renderBars(); }));
+    input.addEventListener("change", () => { state.sort = input.value; renderBars(); renderGrid(); }));
+  $("club-grid").addEventListener("click", (event) => {
+    const cell = event.target.closest("[data-team]");
+    if (!cell) return;
+    const pos = cell.dataset.pos && cell.dataset.pos !== "ALL" ? cell.dataset.pos : null;
+    pick(cell.dataset.team, true, pos);
+  });
   $("club-select").addEventListener("change", (event) => pick(event.target.value, false));
+  $("club-list-note").addEventListener("click", (event) => {
+    if (event.target.id !== "club-list-all") return;
+    state.listPos = null;
+    renderGrid();
+    renderList(clubs.find((c) => c.team === state.team));
+  });
   $("club-list").addEventListener("click", (event) => {
     const header = event.target.closest("[data-sort]");
     if (!header) return;
@@ -271,7 +400,11 @@ function wire() {
 async function main() {
   initNavSearch();
   try {
-    [model, board, forecasts] = await Promise.all([loadModel(), loadJson("board"), loadJson("forecasts")]);
+    let seasonsData;
+    [model, board, forecasts, seasonsData] = await Promise.all([
+      loadModel(), loadJson("board"), loadJson("forecasts"), loadJson("seasons")]);
+    // Completed seasons only: the season in progress comes from the board.
+    pastSeasons = seasonRows(seasonsData).filter((r) => r.season < model.spec.meta.predict_season);
   } catch (error) {
     showError($("club-bars"), error);
     return;

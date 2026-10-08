@@ -14,7 +14,7 @@
 import { loadJson, loadModel, showError } from "./data.js";
 import { dayMonth, esc, fixed, fmt, fold, seasonLabel } from "./format.js";
 import { DEFAULT_X, X_FIELDS, drawForecastTrend, drawPriceHistory, drawPriceScatter } from "./charts.js";
-import { initNavSearch } from "./nav.js";
+import { clubUrl, initNavSearch } from "./nav.js";
 import { DEFAULT_SORT, listHtml, nextSort, sortRows } from "./tlist.js";
 import { boardValues, recordedOn, snapshotDay, trendDays } from "./records.js";
 import { direction, money } from "./theme.js";
@@ -283,7 +283,7 @@ function cardHtml(record) {
       ["Minutes", Math.trunc(record.minutes_now || 0).toLocaleString("en-GB")],
       ["Selected", `${fixed(Number(record.selected_by_percent || 0), 1)}%`],
       ["Gameweeks", fmt(games)],
-    ]));
+    ]), clubUrl(record.team_name));
   const answer = ui.answer(model, interval, reference, REFERENCE_WORDS[xref], short,
     `Predicted ${seasonLabel(TARGET)} price`, `<div>${note}${ui.pooledNote(model, record.team_name)}${link}</div>`);
   const why = ui.whyThisPrice(model, values, [short, reference]);

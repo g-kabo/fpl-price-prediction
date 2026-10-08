@@ -21,7 +21,12 @@ export const COLUMNS = [
   ["pred", "pred", true],
   ["move", "delta", true],
 ];
-const COLUMN = Object.fromEntries(COLUMNS.map(([key, field, numeric]) => [key, [field, numeric]]));
+/** Points per £m of today's price, offered after "Sel." where a page wants it. */
+const VALUE_COLUMN = ["value", "value_now", true];
+
+const COLUMN = Object.fromEntries([...COLUMNS, VALUE_COLUMN].map(([key, field, numeric]) => [key, [field, numeric]]));
+
+const columnsFor = (value) => (value ? [...COLUMNS.slice(0, 4), VALUE_COLUMN, ...COLUMNS.slice(4)] : COLUMNS);
 
 export const DEFAULT_SORT = { col: "move", desc: true };
 
@@ -48,7 +53,11 @@ function compare(sort) {
 
 /** The rows sorted by `sort`, as a new array. */
 export function sortRows(rows, sort) {
-  return rows.map((p) => ({ ...p, name_key: fold(p.web_name) })).sort(compare(sort));
+  return rows.map((p) => ({
+    ...p,
+    name_key: fold(p.web_name),
+    value_now: p.price_now > 0 ? (p.points_now || 0) / p.price_now : null,
+  })).sort(compare(sort));
 }
 
 /** The sort after a click on header `key`: the same header again reverses
@@ -64,7 +73,7 @@ function sortHeader(sort, key, label) {
     + `data-sort="${key}" title="Sort by ${esc(label)}">${esc(label)}<i class="bi ${icon}"></i></button>`;
 }
 
-function row(p, href) {
+function row(p, href, value) {
   const open = href ? `<a class="tl-row" href="${href(p)}">` : `<button type="button" class="tl-row" data-code="${p.code}">`;
   return open
     + `<span class="tl-player">${ui.shirt(p.team_name, "sm")}<span class="tl-who">`
@@ -73,13 +82,15 @@ function row(p, href) {
     + `<span class="num tl-stat">${Math.trunc(p.points_now || 0)}</span>`
     + `<span class="num tl-stat">${Math.trunc(p.minutes_now || 0).toLocaleString("en-GB")}</span>`
     + `<span class="num tl-stat">${fixed(Number(p.selected_by_percent || 0), 1)}%</span>`
+    + (value ? `<span class="num tl-stat">${p.value_now === null ? "–" : fixed(p.value_now, 1)}</span>` : "")
     + `<span class="num tl-now">${money(p.ref)}</span><span class="num tl-pred">${money(p.pred)}</span>`
     + `<span class="num">${ui.deltaChip(p.delta, "sm")}</span>${href ? "</a>" : "</button>"}`;
 }
 
 /** The header and rows, already sorted. `labels` names each column key;
- *  `href(p)` makes rows links rather than buttons carrying data-code. */
-export function listHtml(rows, sort, labels, href = null) {
-  const head = `<div class="tlist-head">${COLUMNS.map(([key]) => sortHeader(sort, key, labels[key])).join("")}</div>`;
-  return head + rows.map((p) => row(p, href)).join("");
+ *  `href(p)` makes rows links rather than buttons carrying data-code;
+ *  `value` adds points per £m (and the list needs the `tlist-value` class). */
+export function listHtml(rows, sort, labels, href = null, { value = false } = {}) {
+  const head = `<div class="tlist-head">${columnsFor(value).map(([key]) => sortHeader(sort, key, labels[key])).join("")}</div>`;
+  return head + rows.map((p) => row(p, href, value)).join("");
 }

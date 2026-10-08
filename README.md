@@ -36,7 +36,7 @@ per-term contributions, so you can see *why* a player is priced the way he is.
 | **Price Watch** (`/`) | Every player's current 2026-27 form, projected to a full 38-game season, priced for 2027-28. Includes forecast movers since yesterday or the past week, and a scatter of today's price vs predicted, filterable by club. |
 | **What if** (`/lab`) | Load any player's season since 2017-18, or this season as Price Watch projects it (or a typical player), edit the numbers, and see how next season's predicted price moves. |
 | **Players** (`/player.html?code=…`) | One page per player since 2017-18, current or departed: his price each season beside the start price the model would have called, and for current players the forecast, its trend and why. Reachable from the search in every page's header. |
-| **Clubs** (`/club.html?team=…`) | Every club's predicted squad change (total, per player, or weighted by ownership), then one club's squad on a pitch, its forecast trend, and a note where the model pools the club with others. |
+| **Clubs** (`/club.html?team=…`) | Every club's predicted squad change (total, per player, or weighted by ownership), a club-by-position grid, then one club's squad on a pitch and as a sortable list, its squad value by season, its forecast trend, and a note where the model pools the club with others. |
 | **How it works** (`/how-it-works`) | The fitted model written out as one equation, with every weight. |
 
 Every player view shows the predicted price, its 95% interval, a plain-English

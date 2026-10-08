@@ -73,7 +73,8 @@ export function drawPriceHistory(el, seasons, forecastSeason, forecastPrice) {
       font: { size: 12, color: INK_SOFT }, itemsizing: "constant" },
     xaxis: { tickfont: { size: 12, color: INK_SOFT }, showgrid: false, showline: true,
       linecolor: LINE, automargin: true },
-    yaxis: { visible: false, rangemode: "tozero" },
+    // Headroom so the tallest bar's label isn't clipped under the legend.
+    yaxis: { visible: false, range: [0, Math.max(...[...starts, ...finals, ...forecast].filter(Number.isFinite), 1) * 1.15] },
   }));
 }
 

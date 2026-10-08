@@ -1763,3 +1763,93 @@ a.tl-row:hover { color: var(--ink); }
   .nav-tabs-row::-webkit-scrollbar { display: none; }
   .nav-tabs-row .nav-tab { padding: 0 4px; font-size: 0.84rem; white-space: nowrap; flex: none; }
 }
+
+/* ---------- club by position -------------------------------------------- */
+
+.club-grid {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+/* GK is narrower: most clubs have one keeper who has played, so its cells
+   say the least. */
+.grid-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.5fr) minmax(0, 0.7fr) repeat(3, minmax(0, 1fr)) minmax(0, 1.1fr);
+  align-items: stretch;
+}
+.grid-row + .grid-row { border-top: 1px solid var(--line); }
+.grid-head { background: var(--aubergine); color: var(--on-dark-soft); font-weight: 600; font-size: 0.88rem; }
+.grid-head > div { display: flex; align-items: center; justify-content: center; padding: 10px 8px; }
+.grid-head > div:first-child { justify-content: flex-start; padding-left: 14px; }
+.grid-club {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+}
+.grid-club span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grid-club:hover span { text-decoration: underline; }
+.grid-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  margin: 3px;
+  padding: 2px 4px;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  font: inherit;
+  cursor: pointer;
+  transition: transform 0.12s var(--ease-out);
+}
+.grid-cell:hover { transform: scale(1.04); border-color: var(--ink); }
+.grid-cell.is-picked { border-color: var(--ink); box-shadow: inset 0 0 0 2px var(--surface); }
+.grid-value { font-family: var(--font-fig); font-size: 1.02rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.grid-n { font-size: 0.72rem; opacity: 0.8; }
+.grid-value { white-space: nowrap; }
+.grid-short { display: none; }
+.grid-all { display: flex; border-left: 2px solid var(--line-strong); }
+.grid-all .grid-cell { flex: 1; }
+.grid-all .grid-value { font-size: 1.12rem; }
+.grid-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 12px; font-size: 0.85rem; color: var(--ink-soft); }
+.grid-ramp { width: 200px; height: 10px; border-radius: 5px; }
+
+.club-history { margin-top: 20px; }
+.club-line-fig { font-family: var(--font-fig); font-weight: 600; color: var(--aubergine); }
+.link-button { padding: 0; border: 0; background: none; color: var(--aubergine-3); font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
+.club-link { color: inherit; text-decoration: none; border-bottom: 1px dotted currentColor; }
+.club-link:hover { color: var(--on-dark); }
+.st-club a { color: var(--ink); }
+
+/* The list with points per £m: eight columns. */
+.tlist-value .tlist-head, .tlist-value .tl-row {
+  grid-template-columns: minmax(0, 1fr) 56px 64px 64px 64px 84px 84px 124px;
+}
+
+@media (max-width: 720px) {
+  .grid-row { grid-template-columns: minmax(92px, 1.2fr) minmax(0, 0.8fr) repeat(3, minmax(0, 1fr)) minmax(0, 1fr); }
+  .grid-club { padding: 4px 6px; gap: 6px; font-size: 0.82rem; }
+  .grid-club .shirt { display: none; }
+  .grid-cell { margin: 2px; min-height: 40px; }
+  .grid-value { font-size: 0.86rem; }
+  .grid-all .grid-value { font-size: 0.92rem; }
+  .grid-long { display: none; }
+  .grid-short { display: inline; }
+  .grid-cell { min-width: 0; padding: 0; }
+  .grid-n { display: none; }
+  .tlist-value .tlist-head, .tlist-value .tl-row { grid-template-columns: minmax(0, 1fr) 64px 92px; }
+  .tlist-value .tlist-head > :nth-child(n+2):nth-child(-n+6),
+  .tlist-value .tl-row > :nth-child(n+2):nth-child(-n+6) { display: none; }
+}
