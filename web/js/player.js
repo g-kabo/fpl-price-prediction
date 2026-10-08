@@ -19,8 +19,8 @@
 import { loadJson, loadModel, showError } from "./data.js";
 import { esc, fixed, fmt, seasonLabel } from "./format.js";
 import { drawForecastTrend, drawTrackRecord } from "./charts.js";
-import { attachSearch, initNavSearch, playerUrl } from "./nav.js";
-import { boardValues, seasonRows, seasonValues, trendDays, withRatios } from "./records.js";
+import { attachSearch, clubUrl, initNavSearch, playerUrl } from "./nav.js";
+import { boardValues, currentClub, seasonRows, seasonValues, trendDays, withRatios } from "./records.js";
 import { money } from "./theme.js";
 import * as ui from "./ui.js";
 
@@ -35,6 +35,13 @@ let spec;
 let board;
 let forecasts;
 let rows = [];
+let clubsNow = new Set();
+
+/** A link to the club's page when it is in this season's league. */
+function clubHref(team) {
+  const club = currentClub(team, clubsNow);
+  return club ? clubUrl(club) : null;
+}
 let CURRENT;
 let TARGET;
 let FIRST;
@@ -125,7 +132,7 @@ function hero(seasons, record) {
   return '<div class="wrap player-hero-inner">'
     + `<div class="player-id">${ui.shirt(latest.team_name, "xl")}<div>`
     + `<h1 class="player-title">${esc(latest.web_name)}</h1>`
-    + `<div class="player-sub">${ui.positionPill(latest.element_type)}<span class="player-club">${esc(latest.team_name || "")}</span></div>`
+    + `<div class="player-sub">${ui.positionPill(latest.element_type)}${ui.clubName(latest.team_name, clubHref(latest.team_name))}</div>`
     + `<div class="player-meta">${esc(span)}.</div>${strip}</div></div>`
     + `<div class="hero-side"><div class="chips">${status}</div><div class="hero-actions">`
     + '<button type="button" class="btn-on-dark" id="player-copy"><i class="bi bi-link-45deg"></i><span>Copy link</span></button>'
@@ -141,7 +148,7 @@ function forecastSection(record, interval) {
     + `price, as Price Watch does by default.</p>`;
   return '<section class="panel player-panel">'
     + ui.answer(model, interval, record.price_now, "today's price", "Today",
-      `Predicted ${seasonLabel(TARGET)} price`, note)
+      `Predicted ${seasonLabel(TARGET)} price`, note + ui.pooledNote(model, record.team_name))
     + "</section>";
 }
 
@@ -189,7 +196,8 @@ function seasonsTable(seasons, record) {
     const minutes = current ? record.minutes_now : r.minutes;
     const end = current ? record.price_now : r.final_cost;
     return `<tr><td class="st-season">${seasonLabel(r.season)}${current ? '<span class="st-now">so far</span>' : ""}</td>`
-      + `<td><span class="st-club">${ui.shirt(r.team_name, "xs")}${esc(r.team_name || "")}</span></td>`
+      + `<td><span class="st-club">${ui.shirt(r.team_name, "xs")}${clubHref(r.team_name)
+        ? `<a href="${clubHref(r.team_name)}">${esc(r.team_name || "")}</a>` : esc(r.team_name || "")}</span></td>`
       + `<td>${ui.positionPill(r.element_type)}</td>`
       + `<td class="num">${Math.trunc(points || 0)}</td>`
       + `<td class="num st-mins">${Math.trunc(minutes || 0).toLocaleString("en-GB")}</td>`
@@ -331,6 +339,7 @@ async function main() {
   TRAIN_THROUGH = spec.meta.train_through;
   FIRST = spec.first_season;
   rows = seasonRows(seasonsData);
+  clubsNow = new Set(board.players.map((p) => p.team_name).filter(Boolean));
 
   const code = Number(raw);
   if (raw === null || raw === "") renderLanding();

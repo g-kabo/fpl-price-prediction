@@ -259,6 +259,21 @@ export function outOfRange(model, values, asFloat) {
     + '<p class="fine">A linear model keeps answering past its data, but the answer is a guess.</p></div>';
 }
 
+/** True for a club the model folds into its shared "other club" setting. */
+export function isPooled(model, team) {
+  return Boolean(team) && !model.spec.teams_retained.includes(team);
+}
+
+/** A note for a forecast that leans on the shared club setting, or "". The
+ *  forecast is fine; the club adjustment in it is the standard one, not one
+ *  learned for that club, and club adjustments are a small part of a price. */
+export function pooledNote(model, team) {
+  if (!isPooled(model, team)) return "";
+  return `<p class="fine pooled-note"><i class="bi bi-people"></i> ${esc(team)} haven't been in the Premier `
+    + "League long enough for the model to learn a club adjustment of their own, so their players get the "
+    + "standard one shared by newer clubs. It's a small part of the price.</p>";
+}
+
 export function priceHistory(note) {
   return '<div class="history"><h3 class="section-title">Price history</h3>'
     + `<div class="history-chart"></div><p class="fine">${esc(note)}</p></div>`;
@@ -293,9 +308,16 @@ export function forecastTrend(days) {
     + "after a gameweek, as points and minutes come in, and a little with each price change.</p></div>";
 }
 
-/** Shirt, name plate, club and position: the top of a player card. */
-export function playerHeader(name, team, position, meta = "") {
+/** A club's name, as a link to its Clubs page when `href` is given. */
+export function clubName(team, href = null) {
+  return href ? `<a class="player-club club-link" href="${href}">${esc(team || "")}</a>`
+    : `<span class="player-club">${esc(team || "")}</span>`;
+}
+
+/** Shirt, name plate, club and position: the top of a player card.
+ *  `clubHref` makes the club name a link to its Clubs page. */
+export function playerHeader(name, team, position, meta = "", clubHref = null) {
   return `<div class="player-header">${shirt(team, "lg")}<div><h2 class="player-name">${esc(name)}</h2>`
-    + `<div class="player-sub">${positionPill(position)}<span class="player-club">${esc(team || "")}</span></div>`
+    + `<div class="player-sub">${positionPill(position)}${clubName(team, clubHref)}</div>`
     + `${meta}</div></div>`;
 }

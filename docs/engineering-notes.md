@@ -380,6 +380,62 @@ route a path without a file per player. Decisions worth keeping:
   JavaScript, so a query-string page can't set its own preview; it would need
   a generated HTML file per player.
 
+### Clubs page
+
+`club.html?team=<club>` groups `board.json` by club (ideas #13, #62, #63, #64).
+Every change is the forecast against today's price, Price Watch's default.
+Decisions worth keeping:
+
+- **Players who have played count by default**, with a whole-squad toggle.
+  The players who haven't are each forecast down about £0.13m from their price
+  alone, so a raw total mostly measures squad size (Chelsea −£0.41m counting
+  everyone, +£1.69m counting players who've played).
+- **Three measures, because they tell different stories.** Squad total favours
+  big squads; per player is fair between squads; managers' money weights each
+  change by `selected_by_percent / 100`, i.e. what the forecast does to the
+  average manager's holdings (Chelsea leads at +£2.42m, not Brighton, because
+  its risers are the owned ones). A fourth, **playing time**, weights each
+  change by the player's share of his club's minutes, minutes over (club games
+  played × 90), capped at 1. A club's shares add up to about eleven (10.6 to
+  11.3 at GW5, and about 11 in finished seasons), so it reads as the change in
+  the side that actually plays: Brighton +£11.21m, against +£12.95m for the
+  plain total.
+- **The picked club is marked by an ink outline and a bold label, not a
+  colour**: green and pink-red already mean direction.
+- **Pooled clubs are named, not hidden.** 7 of the 20 clubs share the model's
+  "other club" setting, so the club part of their forecasts is an average.
+  `ui.pooledNote()` says so on the club page, the Price Watch card and the
+  player page.
+- **The squad pitch shows players who've played; the rest go on a bench.**
+  Rows wrap: a club can have 12 midfielders who've played.
+- **The club trend is the average gap per player, over today's squad.** An
+  average rather than a total, because a player missing from an earlier day
+  would otherwise show up as a step. The other 19 clubs are drawn faint behind
+  it for scale.
+- Plotly's `tickformat: "+.2f"` is silently ignored on this axis; `.2f` works.
+- **Club by position is an HTML grid, not a Plotly heatmap**: the
+  `plotly-basic` build the site loads has no heatmap trace. It uses the
+  chart's measure and order, so the two read together. GK is a narrower
+  column, since most clubs have one keeper who has played. On a phone the
+  cells drop "£" and "m" (the legend carries the unit) so "+£12.9m" fits.
+- **Squad value by season always counts the whole squad**, whatever the
+  toggle says. Five gameweeks in, only ~23 of a club's players have played,
+  so the toggle's count set a partial season against complete ones (Spurs
+  £127.5m against £158.5m, mostly squad size). Past seasons count everyone
+  at the club that season in `seasons.json`. Its own toggle weights the
+  prices instead: by playing time (a finished season's minutes over 38 × 90,
+  so about an XI's worth, £56m to £60m for Spurs) or by ownership (the share
+  of managers owning each player at the end of that season, from
+  `selected_by_percent`; today's for this one). A player who changed club
+  mid-season counts wholly for the club he ended it at.
+- **Club names differ between sources.** The history mirror calls 2024-25
+  Ipswich "Ipswich"; the live API says "Ipswich Town". `FORMER_NAMES` in
+  `web/js/records.js` maps them for the squad history and for linking a
+  player's past seasons to the Clubs page. Check it when a club is promoted.
+- **The transfer list lives in `web/js/tlist.js`**, shared by Price Watch
+  (rows are buttons that open the card) and the Clubs page (rows are links to
+  the player page, with an optional points-per-£m column).
+
 ---
 
 ## Differences from the R

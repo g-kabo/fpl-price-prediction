@@ -1685,3 +1685,173 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
   .nav-tabs-row { order: 3; flex: 1 0 100%; justify-content: space-between; margin: 0 -6px; }
   .nav-tabs-row .nav-tab { padding: 0 6px; min-height: 42px; font-size: 0.9rem; }
 }
+
+/* ---------- clubs -------------------------------------------------------- */
+
+.pooled-note i { color: var(--aubergine-3); }
+
+.club-head { align-items: center; }
+.club-title { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.club-title .block-note { margin-top: 4px; }
+.club-pick { display: flex; align-items: center; gap: 10px; }
+.club-pick .select { width: 220px; }
+
+.club-summary { margin-bottom: 20px; }
+.club-stats {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, auto));
+  justify-content: space-between;
+  align-items: end;
+  gap: 16px 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+.club-stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.club-stat-value {
+  font-family: var(--font-fig);
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--aubergine);
+  font-variant-numeric: tabular-nums;
+}
+.club-stat-label { font-size: 0.85rem; font-weight: 600; color: var(--ink-soft); }
+.club-stat-hint { font-size: 0.78rem; color: var(--ink-soft); }
+
+.club-lines { display: flex; flex-wrap: wrap; gap: 12px 36px; padding-top: 14px; }
+.club-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.club-line a { font-weight: 700; color: var(--ink); text-decoration: none; }
+.club-line a:hover { text-decoration: underline; }
+.club-line-label { font-size: 0.85rem; font-weight: 600; color: var(--ink-soft); }
+.club-line-pos { gap: 14px; }
+.club-pos { display: inline-flex; align-items: center; gap: 6px; }
+.club-pos-n { font-family: var(--font-fig); font-weight: 600; color: var(--ink-soft); }
+.club-pos-none { font-size: 0.85rem; color: var(--ink-soft); }
+
+/* A whole squad: rows wrap, and spots are narrower than the XI's. */
+.club-pitch { gap: 14px; }
+.club-pitch .pitch-row { flex-wrap: wrap; justify-content: center; gap: 10px 6px; }
+.club-pitch .spot { width: 112px; }
+a.spot { text-decoration: none; }
+
+.club-bench { margin-top: 16px; }
+.club-bench .tile-grid { margin-top: 12px; }
+.club-bench .tile-side { flex-direction: row; align-items: center; gap: 8px; }
+
+.club-trend { margin-top: 20px; }
+.club-list-block { margin-top: 24px; }
+.club-list-block .tlist { margin-top: 12px; }
+.club-list-block .tl-club { display: none; }
+a.tl-row { text-decoration: none; }
+a.tl-row:hover { color: var(--ink); }
+
+@media (max-width: 1100px) {
+  .club-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (max-width: 720px) {
+  .club-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .club-pick { width: 100%; }
+  .club-pick .select { flex: 1; width: auto; }
+  .club-pitch .spot { width: 82px; }
+}
+
+/* Five tabs at 360px: tighter still, and the row scrolls sideways rather
+   than widening the page on anything narrower. */
+@media (max-width: 420px) {
+  .nav-tabs-row { margin: 0 -4px; overflow-x: auto; scrollbar-width: none; }
+  .nav-tabs-row::-webkit-scrollbar { display: none; }
+  .nav-tabs-row .nav-tab { padding: 0 4px; font-size: 0.84rem; white-space: nowrap; flex: none; }
+}
+
+/* ---------- club by position -------------------------------------------- */
+
+.club-grid {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+/* GK is narrower: most clubs have one keeper who has played, so its cells
+   say the least. */
+.grid-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.5fr) minmax(0, 0.7fr) repeat(3, minmax(0, 1fr)) minmax(0, 1.1fr);
+  align-items: stretch;
+}
+.grid-row + .grid-row { border-top: 1px solid var(--line); }
+.grid-head { background: var(--aubergine); color: var(--on-dark-soft); font-weight: 600; font-size: 0.88rem; }
+.grid-head > div { display: flex; align-items: center; justify-content: center; padding: 10px 8px; }
+.grid-head > div:first-child { justify-content: flex-start; padding-left: 14px; }
+.grid-club {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+}
+.grid-club span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grid-club:hover span { text-decoration: underline; }
+.grid-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  margin: 3px;
+  padding: 2px 4px;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  font: inherit;
+  cursor: pointer;
+  transition: transform 0.12s var(--ease-out);
+}
+.grid-cell:hover { transform: scale(1.04); border-color: var(--ink); }
+.grid-cell.is-picked { border-color: var(--ink); box-shadow: inset 0 0 0 2px var(--surface); }
+.grid-value { font-family: var(--font-fig); font-size: 1.02rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.grid-n { font-size: 0.72rem; opacity: 0.8; }
+.grid-value { white-space: nowrap; }
+.grid-short { display: none; }
+.grid-all { display: flex; border-left: 2px solid var(--line-strong); }
+.grid-all .grid-cell { flex: 1; }
+.grid-all .grid-value { font-size: 1.12rem; }
+.grid-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 12px; font-size: 0.85rem; color: var(--ink-soft); }
+.grid-ramp { width: 200px; height: 10px; border-radius: 5px; }
+
+.club-history { margin-top: 20px; }
+.club-history-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.club-history-head .section-title { margin: 0; }
+.club-line-fig { font-family: var(--font-fig); font-weight: 600; color: var(--aubergine); }
+.link-button { padding: 0; border: 0; background: none; color: var(--aubergine-3); font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
+.club-link { color: inherit; text-decoration: none; border-bottom: 1px dotted currentColor; }
+.club-link:hover { color: var(--on-dark); }
+.st-club a { color: var(--ink); }
+
+/* The list with points per £m: eight columns. */
+.tlist-value .tlist-head, .tlist-value .tl-row {
+  grid-template-columns: minmax(0, 1fr) 56px 64px 64px 64px 84px 84px 124px;
+}
+
+@media (max-width: 720px) {
+  .grid-row { grid-template-columns: minmax(92px, 1.2fr) minmax(0, 0.8fr) repeat(3, minmax(0, 1fr)) minmax(0, 1fr); }
+  .grid-club { padding: 4px 6px; gap: 6px; font-size: 0.82rem; }
+  .grid-club .shirt { display: none; }
+  .grid-cell { margin: 2px; min-height: 40px; }
+  .grid-value { font-size: 0.86rem; }
+  .grid-all .grid-value { font-size: 0.92rem; }
+  .grid-long { display: none; }
+  .grid-short { display: inline; }
+  .grid-cell { min-width: 0; padding: 0; }
+  .grid-n { display: none; }
+  .tlist-value .tlist-head, .tlist-value .tl-row { grid-template-columns: minmax(0, 1fr) 64px 92px; }
+  .tlist-value .tlist-head > :nth-child(n+2):nth-child(-n+6),
+  .tlist-value .tl-row > :nth-child(n+2):nth-child(-n+6) { display: none; }
+}

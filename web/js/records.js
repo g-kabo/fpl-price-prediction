@@ -54,6 +54,23 @@ export function trendDays(forecasts, board, record, interval) {
   return days;
 }
 
+// ---------------------------------------------------------------- club names
+
+/** Earlier names a current club went by in seasons.json. The history mirror
+ *  and the live API don't always agree: Ipswich was "Ipswich" in 2024-25 and
+ *  is "Ipswich Town" now. Add a line here when a promoted club disagrees. */
+export const FORMER_NAMES = { "Ipswich Town": ["Ipswich"] };
+
+/** The current name for a club name from any season, if it is a current
+ *  club; null otherwise. `current` is a Set of today's club names. */
+export function currentClub(name, current) {
+  if (current.has(name)) return name;
+  for (const [now, before] of Object.entries(FORMER_NAMES)) {
+    if (before.includes(name) && current.has(now)) return now;
+  }
+  return null;
+}
+
 // ---------------------------------------------------------------- seasons.json
 
 /** seasons.json's rows as objects, one per player-season. */
