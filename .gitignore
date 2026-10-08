@@ -39,3 +39,6 @@ docs/running-locally.md
 
 # Playwright MCP browser screenshots and logs
 .playwright-mcp/
+
+# Feature backlog: personal planning, kept out of the public repo
+docs/future-ideas.md
