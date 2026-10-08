@@ -85,6 +85,12 @@ def check(text: str) -> list[str]:
         status = named.get("Status", "")
         if status.startswith(("idea", "planned", "in progress")):
             open_ideas.append(number)
+        completed = section == "Completed and dropped ideas"
+        closed = status.startswith(("done", "dropped"))
+        if closed and not completed:
+            problems.append(f"line {n}: idea {number} is {status.split()[0]} but not in 'Completed and dropped ideas'")
+        if completed and not closed:
+            problems.append(f"line {n}: idea {number} is in 'Completed and dropped ideas' but its status is {status!r}")
         if not status.startswith(STATUSES):
             problems.append(f"line {n}: idea {number} status {status!r} is not one of {STATUSES}")
 

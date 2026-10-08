@@ -39,6 +39,16 @@ about `dcc.Store` and Render). Before adding anything:
   (branch <name>)`, or `dropped (<reason>)`. Status values are `idea`, `planned`,
   `in progress`, `done` and `dropped`. A finished or dropped idea also leaves
   "Ideas by existing page"; a shipped feature may need a new row there.
+- **Move every `done` or `dropped` idea to "Completed and dropped ideas"** (near the end of
+  the doc), so the sections above hold only work still to do. A dropped idea's
+  Status says why, e.g. `dropped (the site moved to GitHub Pages)`. Cut the whole row, keep its
+  number and anchor (links keep working), and add it to that table in number
+  order. The table has a **From** column: carry it over for an idea from "Ideas
+  sparked by others", and write `–` otherwise. Take the idea out of the branch
+  guide, which is for unbuilt work, deleting any guide row it leaves empty and
+  any guide note about it. Combinations and report verdicts can keep naming it,
+  since they record how it was built. If an idea is reopened, move it back to
+  the section its effort puts it in.
 - Check `git stash list`. A stashed copy of the doc has happened before: 30
   ideas were stranded in a stash for days. If one exists, merge it before
   editing, never over it.
@@ -181,7 +191,8 @@ Run, from the repo root, with the interpreter CLAUDE.md names:
 
 `link_ideas.py` adds anchors and links and rebuilds the "Jump to" line, and is
 safe to re-run. `check_ideas.py` reports duplicate numbers, invalid scores or
-statuses, ideas missing from (or repeated in) the branch guide, open on-site
+statuses, done or dropped ideas outside "Completed and dropped ideas" (or open ones inside it),
+ideas missing from (or repeated in) the branch guide, open on-site
 ideas missing from "Ideas by existing page" (and finished ones left in it),
 combinations and verdicts naming ideas that don't exist, broken links, and
 tables split by a blank line. Fix anything it reports before finishing.
