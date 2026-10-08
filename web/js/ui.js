@@ -265,13 +265,13 @@ export function isPooled(model, team) {
 }
 
 /** A note for a forecast that leans on the shared club setting, or "". The
- *  forecast is fine; the club part of it is an average, not that club's own. */
+ *  forecast is fine; the club adjustment in it is the standard one, not one
+ *  learned for that club, and club adjustments are a small part of a price. */
 export function pooledNote(model, team) {
   if (!isPooled(model, team)) return "";
-  return `<p class="fine pooled-note"><i class="bi bi-people"></i> The model has too little history for `
-    + `${esc(team)} to give it a club setting of its own, so it shares one with the other clubs `
-    + "in that position. The club part of this price is their average, not "
-    + `${esc(team)}'s own.</p>`;
+  return `<p class="fine pooled-note"><i class="bi bi-people"></i> ${esc(team)} haven't been in the Premier `
+    + "League long enough for the model to learn a club adjustment of their own, so their players get the "
+    + "standard one shared by newer clubs. It's a small part of the price.</p>";
 }
 
 export function priceHistory(note) {
