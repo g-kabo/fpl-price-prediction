@@ -1569,7 +1569,7 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
 .player-panel { min-width: 0; }
 .player-panel > :last-child, .player-panel .answer, .player-panel .why,
 .player-panel .history, .player-panel .trend { margin-bottom: 0; }
-.player-wide { grid-column: 1 / -1; }
+.player-wide, .player-body > .loading, .player-body > .load-error { grid-column: 1 / -1; }
 .player-departed > .player-panel:first-child { grid-column: 1 / -1; }
 .player-departed > .player-panel:first-child .answer { max-width: 760px; }
 .player-panel .answer-head .tag::before { background: var(--surface); }
@@ -1594,7 +1594,20 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
 }
 .landing-search .search-input { color: var(--ink); font-size: 1.05rem; }
 .landing-search .search-results { left: 0; right: auto; width: 100%; }
-.player-missing { padding: 28px 16px 0; }
+/* A code nobody has: said plainly, not as a load error. */
+.player-missing {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 28px;
+  padding: 14px 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--ink);
+}
+.player-missing i { font-size: 1.3rem; color: var(--ink-soft); }
+.player-missing p { margin: 0; }
 
 .tile-grid {
   display: grid;
@@ -1663,10 +1676,12 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
   .seasons-table { min-width: 0; }
 }
 
-/* Brand mark, three tabs and the search icon on one line at 360px. */
-@media (max-width: 440px) {
-  .header-inner { gap: 6px; }
-  .nav-tabs-row { gap: 0; }
-  .nav-tabs-row .nav-tab { padding: 0 6px; font-size: 0.86rem; }
-  .nav-search-toggle { width: 34px; }
+/* Phones: four tabs don't fit beside the brand and the search icon, so the
+   tabs take a row of their own under them. */
+@media (max-width: 560px) {
+  .header-inner { flex-wrap: wrap; gap: 0 8px; min-height: 0; padding-top: 8px; }
+  .brand { min-height: 44px; }
+  .brand span:last-child { display: inline; font-size: 1.15rem; }
+  .nav-tabs-row { order: 3; flex: 1 0 100%; justify-content: space-between; margin: 0 -6px; }
+  .nav-tabs-row .nav-tab { padding: 0 6px; min-height: 42px; font-size: 0.9rem; }
 }

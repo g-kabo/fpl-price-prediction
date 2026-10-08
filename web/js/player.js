@@ -301,7 +301,8 @@ function renderLanding(message = "") {
   const departed = [...lastSeason.values()].filter((r) => !current.has(r.code))
     .sort((a, b) => b.final_cost - a.final_cost).slice(0, DEPARTED);
 
-  const notice = message ? `<div class="load-error player-missing"><p>${esc(message)}</p></div>` : "";
+  const notice = message
+    ? `<div class="player-missing"><i class="bi bi-person-x"></i><p>${esc(message)}</p></div>` : "";
   $("player-root").className = "wrap player-body player-landing";
   $("player-root").innerHTML = notice
     + '<section class="block"><div class="block-head"><div><h2 class="block-title">Most selected</h2>'
