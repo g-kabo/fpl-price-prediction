@@ -1,6 +1,6 @@
 # Pinned to the versions the model was built and tested with. The saved model
-# is refitted on each deploy (see render.yaml), but unpinned upgrades could
-# still change what it predicts.
+# is refitted on each deploy (see .github/workflows/pages.yml), but unpinned
+# upgrades could still change what it predicts.
 pandas==3.0.3
 numpy==2.4.6
 scikit-learn==1.9.1
@@ -8,15 +8,9 @@ statsmodels==0.15.0
 matplotlib==3.10.9
 requests==2.34.2
 
-# app/ -- the interactive price-prediction front end
-dash==4.2.0
-dash-bootstrap-components==2.0.4
+# The saved model (models/), and the HTML reports in explore/
 joblib==1.6.0
 plotly==6.7.0
-
-# Production web server for the hosted app. Linux/macOS only; locally on
-# Windows, run `python app/app.py` instead.
-gunicorn==23.0.0; sys_platform != "win32"
 
 # tests/
 pytest>=8.0.0

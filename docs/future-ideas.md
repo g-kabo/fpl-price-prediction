@@ -23,7 +23,7 @@ While an idea is being built on a branch, name the branch in its Status, e.g.
 | 4 | **Download the transfer list as CSV.** | Low | Medium | Low | idea |
 | 5 | **Copy-link button in the player drawer.** Deep links already work (`board-deeplink`). | Low | Medium | Medium | idea |
 | 6 | **Highlight the searched player on the market map**, and label the biggest outliers. | Low | Medium | Low | idea |
-| 7 | **Keep-warm ping for Render**, a cron job (e.g. a GitHub Action) to remove the 30–60s cold start. | Low | Medium | High | idea |
+| 7 | **Keep-warm ping for Render**, a cron job (e.g. a GitHub Action) to remove the 30–60s cold start. | Low | Medium | High | dropped (the site moved to GitHub Pages, which has no cold start) |
 | 18 | **Overnight price changes.** Who actually rose or fell last night, from `price_change_event` or the day-to-day diff in `data/history/`. The question managers check every morning, and a different one from forecast movers (#9). | Low | High | High | idea |
 | 23 | **Rank context in the card**: "#3 predicted riser among midfielders", "top 10% of forecast moves". | Low | Medium | Low | idea |
 | 27 | **Download the predictions**: a `/predictions.csv` route for today's forecasts, plus a link to the history in the repo. | Low | Medium | Medium | idea |
@@ -39,7 +39,7 @@ While an idea is being built on a branch, name the branch in its Status, e.g.
 | 12 | **My team import** by FPL team ID, showing the squad's predicted next-season value. Most engaging, but the appeal is curiosity and pre-season planning more than weekly decisions. | Medium | Medium | High | idea |
 | 13 | **Club summary**: average predicted change by club. | Low–Med | Low | Low | idea |
 | 17 | **Phone layout for the transfer list.** The 7-column grid has no breakpoint below 1100px, so it can't fit on a phone. Collapse to player + forecast + move under ~640px. Most FPL browsing is on phones. | Low–Med | High | High | idea |
-| 19 | **Watchlist.** Star players, kept in the visitor's browser (`dcc.Store` with local storage), with a "My watchlist" filter on the transfer list and movers. No login. | Low–Med | High | High | idea |
+| 19 | **Watchlist.** Star players, kept in the visitor's browser (`localStorage`), with a "My watchlist" filter on the transfer list and movers. No login. | Low–Med | High | High | idea |
 | 20 | **Luck check in the card.** Compare goals and assists with `expected_goals` and `expected_assists`: "his forecast leans on 6 goals from 2.1 xG, so expect it to fall if he cools off". Flags fragile forecasts without changing the model. | Medium | High | High | idea |
 | 21 | **"What it would take."** The model is linear, so each extra goal adds a fixed amount: "each goal from here adds about £0.12m; 3 more puts him in the next price tier". Uses `config.PRICE_TIERS`. | Low–Med | High | Medium | idea |
 | 22 | **Price-tier moves.** Players forecast to move up or down one of the user's tiers next season (e.g. "£5.5m → premium mid"). | Low–Med | Medium | Medium | idea |
@@ -47,7 +47,7 @@ While an idea is being built on a branch, name the branch in its Status, e.g.
 | 25 | **Filters in the URL.** Search, position, club and sort in the address, so a view can be bookmarked or shared. Builds on the existing `?player=` deep link. | Low–Med | Medium | Medium | idea |
 | 26 | **Earlier seasons in What if.** Data goes back to 2017-18 but What if only loads 2025-26. Picking an old season and seeing the model against what FPL actually charged builds credibility, per player rather than as accuracy tables. | Medium | Medium | Medium | done |
 | 28 | **Player search in the nav bar**, opening any player's card from any page. | Low–Med | Medium | Low | idea |
-| 29 | **RSS feed of forecast movers** ("after GW6: biggest forecast moves"). Only worth it once #9 is merged. | Low–Med | Low | Low | idea |
+| 29 | **RSS feed of forecast movers** ("after GW6: biggest forecast moves"). Builds on #9, now live. | Low–Med | Low | Low | idea |
 | 30 | **What moved the forecast.** Split the *change* in a player's forecast between two days into its causes, e.g. "£8.20m on 29 Sep → +£0.31m goals → +£0.08m points per game → −£0.04m price → £8.55m". Exact, because the model is linear. Group the terms into Price (start, end and both squared terms combined, since they offset each other), Performance (points, minutes, goals, assists, points per game, points per £m) and Popularity (selected by %); position and club never change within a season. Show it as a small waterfall under the forecast trend (only when the forecast moved ≥ £0.05m), and as a one-word driver tag on each forecast mover. Every input is already in `data/history/`, so nothing new needs recording. Guard: recompute each day with today's model and drop the breakdown if it misses the stored `pred_next_start` by more than £0.01m. Builds on #8 and #9. | Low–Med | Med–High | Medium | idea |
 
 ## Bigger or longer-term
@@ -84,15 +84,13 @@ it's docs only, commit straight to `main` after a `git pull`.
 | Where | Ideas | Why |
 |---|---|---|
 | **Straight to `main`** | 1, 2, 3, 4, 5, 6, 13, 18, 21, 22, 23, 27, 28 | Small, self-contained additions to an existing page or card, using data already in the snapshot. |
-| **Straight to `main`** | 7 | A scheduled workflow only runs from the default branch, so a branch can't test it. Check it with a manual run from the Actions tab after pushing. |
-| **Straight to `main`, once #9 is merged** | 29 | Small, but has nothing to report until forecast movers are live. |
-| **Branch** | 8, 9 | On `price-history`, held back until a gameweek gives the trend something to show. |
+| **Straight to `main`** | 29 | Small, and forecast movers are live. |
 | **Branch** | 10, 11, 26 | Multi-sitting work on What if or a new view. |
-| **Branch** | 12 | New page plus calls to the FPL API from the server, which hosting providers aren't always allowed to make (see `app/live.py`). Needs proving on Render before it ships. |
+| **Branch** | 12 | New page plus per-visitor calls to the FPL API. The static site has no server, and a browser can't call the API directly, so it needs a proxy or another route proven first. |
 | **Branch** | 14, 20, 24 | Experiments: #14 changes every interval (and shows as a step in forecast trends), #20 needs care to word fairly, #24 needs the `price_change_proj*` fields understood first. |
 | **Branch** | 15, 16 | New page, or new image-rendering dependencies; #15 also can't be finished before August 2027. |
-| **Branch** | 17, 25 | Touch every filter or every page's layout, and need checking at several widths or across callbacks. |
-| **Branch** | 19 | State shared across the list and movers; best built after `price-history` is merged. |
+| **Branch** | 17, 25 | Touch every filter or every page's layout, and need checking at several widths and on every page. |
+| **Branch** | 19 | State shared across the list and movers. |
 | **Branch** | 30 | Builds on #8 and #9: branch from `price-history`, or from `main` after it's merged. |
 
 ## Out of scope (already decided)

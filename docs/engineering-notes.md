@@ -73,10 +73,10 @@ season (`/lab?season=<year>&player=<code>`).
 ### Model caching
 
 `train_and_save.py` fits once and caches to `models/`, because loading ten
-seasons takes ~17s against a 0.1s fit. The app refits automatically if that
-cache is older than the code or data it was built from. A stale pickle still
+seasons takes ~17s against a 0.1s fit. `model_store.py` refits automatically if
+that cache is older than the code or data it was built from. A stale pickle still
 loads and still predicts, just wrongly, so this is checked rather than assumed.
-`tests/test_app_parity.py` asserts the app and `run_pipeline.py` price all 841
+`tests/test_model_parity.py` asserts the saved model and `run_pipeline.py` price all 841
 players identically.
 
 ### Projecting a part-played season
@@ -188,7 +188,8 @@ changes. The banner describes the projection run, not the selection, so it is
 left alone too.
 
 **Position colours** are the R's Set1, defined once in `config.POSITION_COLOURS`
-and read by both `plots.py` (matplotlib) and `app/charts.py` (Plotly):
+and read by `plots.py` (matplotlib). The site has its own palette, in
+`web/js/theme.js`. The R's:
 
 | | GK | DEF | MID | FWD |
 |---|---|---|---|---|
@@ -314,9 +315,8 @@ git history. It needs the full history, so run it locally, not in the Action.
 
 ### Forecast trend and forecast movers
 
-The app reads the history back through `app/forecast_history.py`, which loads
-only the seven columns it draws and reloads when a day's file is added. Two
-features use it:
+The export reads the history back through `forecast_history.py`, which loads
+only the seven columns it draws. Two features use it:
 
 - **Forecast trend** (player card): the forecast each morning, with its 95% band,
   against the price that day as a step line (FPL prices jump overnight, they don't
@@ -334,8 +334,8 @@ Decisions worth keeping:
 - **Changes are shown to £0.01m, not on the £0.1m move threshold.** Between
   gameweeks a forecast only shifts with price changes, by hundredths (the first
   three recorded days, all after GW5, moved by at most £0.04m). On the
-  `delta_chip` threshold every mover would read "Holds", so movers use
-  `ui.change_chip`.
+  `deltaChip` threshold every mover would read "Holds", so movers use
+  `changeChip` (`web/js/ui.js`).
 - **A window reaching back before the record starts falls back to the first
   day**, and the note names the day actually used rather than claiming "a week".
 - The history is what the page showed *with the model of that day*. A refit

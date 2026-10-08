@@ -18,13 +18,8 @@ forms from drifting apart as fields are added.
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-import config  # noqa: E402
-import features  # noqa: E402
+import config
+import features
 
 #: ``(field, label, step, integer?)`` for every numeric input, in the order
 #: they appear on the form. The names are the raw inputs behind
@@ -164,3 +159,39 @@ def with_ratios(values: dict) -> dict:
     out["points_per_game"] = _fpl_round(points / games) if games > 0 else 0.0
     out["value_season"] = _fpl_round(points / price) if price > 0 else 0.0
     return out
+
+
+#: Design-matrix columns as a manager would say them.
+_TERM_LABELS = {
+    "start_cost": "Start price this season",
+    "final_cost": "End price this season",
+    "start_cost_sq": "Start price, squared",
+    "final_cost_sq": "End price, squared",
+    "selected_by_percent": "Selected by %",
+    "cost_change_start": "Price movement this season",
+    "total_points": "Total points",
+    "minutes": "Minutes",
+    "transfers_in": "Transfers in",
+    "transfers_out": "Transfers out",
+    "goals_scored": "Goals",
+    "assists": "Assists",
+    "bps": "BPS",
+    "clean_sheets": "Clean sheets",
+    "points_per_game": "Points per game",
+    "value_season": "Points per £m",
+    "goals_per_min": "Goals per 90",
+    "assists_per_min": "Assists per 90",
+    "bps_per_min": "BPS per 90",
+    "points_per_mins": "Points per 90",
+    "cleansheets_per_min": "Clean sheets per 90",
+    "no_mins": "Never played",
+}
+
+
+def term_label(column: str) -> str:
+    """A design-matrix column name, as a person would say it."""
+    if column.startswith("team_name_"):
+        return "Plays for " + column[len("team_name_"):].replace("_", " ")
+    if column.startswith("element_type_"):
+        return "Plays as " + column[len("element_type_"):]
+    return _TERM_LABELS.get(column, column.replace("_", " "))

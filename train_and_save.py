@@ -1,20 +1,20 @@
-"""Fit the price model once and save it for the app to load.
+"""Fit the price model once and save it for the site export to load.
 
     python train_and_save.py [--force]
 
 ``run_pipeline.py`` refits on every run, which is right for a batch job but
-not for a web app: loading and cleaning ten seasons takes ~17s against a
+not for the site export and daily history: loading and cleaning ten seasons takes ~17s against a
 0.1s fit, so the expensive half is the data, not the regression. This
 script pays that cost once and writes three artifacts to ``models/``:
 
     price_model.joblib   the fitted PriceModel (lumper + columns + OLS)
-    score_2025.csv       the cleaned scoring season, for the prefill list
+    score_2025.csv       the cleaned scoring season, for the parity tests
     price_history.csv    every player's start/final price, every season
     meta.json            training ranges, team levels and source mtimes
 
-The fitting steps mirror ``run_pipeline.py`` exactly so the app and the
+The fitting steps mirror ``run_pipeline.py`` exactly so the site and the
 batch pipeline cannot produce different numbers for the same player;
-``tests/test_app_parity.py`` asserts that they don't.
+``tests/test_model_parity.py`` asserts that they don't.
 """
 
 from __future__ import annotations

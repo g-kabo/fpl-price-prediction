@@ -1,18 +1,18 @@
 """Today's current-season table, from the daily FPL snapshot.
 
-The projection page needs current numbers: prices move daily and the GitHub
+Price Watch needs current numbers: prices move daily and the GitHub
 mirror the pipeline reads is refreshed on someone else's schedule, so its
 current-season CSV can be weeks behind. ``snapshot.py`` saves the official
 API's table once a day, just after the overnight price changes; this module
 reads that file and runs it through the pipeline's own
 :func:`clean.clean_season`.
 
-Reading a saved file rather than the API means the app never has to reach
+Reading a saved file rather than the API means the site build never has to reach
 ``fantasy.premierleague.com`` -- which hosting providers' addresses are not
 always allowed to -- and every visitor on a given day sees the same prices.
 Prices only change once a day, so nothing is lost by it.
 
-With no snapshot at all, the page falls back to the mirror's cached CSV and
+With no snapshot at all, this falls back to the mirror's cached CSV and
 says so, rather than failing.
 
 How far into the season each club is comes back with the players, as a
@@ -22,19 +22,15 @@ the league are not at the same point and the projection needs to know it.
 
 from __future__ import annotations
 
-import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from pathlib import Path
 
 import pandas as pd
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-import clean  # noqa: E402
-import config  # noqa: E402
-import fpl_data  # noqa: E402
-import snapshot  # noqa: E402
+import clean
+import config
+import fpl_data
+import snapshot
 
 TOTAL_GAMEWEEKS = 38
 
@@ -137,7 +133,7 @@ def get_live_season() -> LiveSeason:
     """The current-season frame, reloaded only when the snapshot changes.
 
     Keyed on the snapshot file's modification time, so a fresh
-    ``python snapshot.py`` is picked up by a running app without a restart.
+    ``python snapshot.py`` is picked up by a long-running process without a restart.
     """
     global _cache, _cache_mtime
 

@@ -38,14 +38,11 @@ from pathlib import Path
 import pandas as pd
 
 import config
+import live
+import model_store
+import projection
+import schema
 import snapshot
-
-sys.path.insert(0, str(config.PROJECT_DIR / "app"))
-
-import live  # noqa: E402
-import model_store  # noqa: E402
-import projection  # noqa: E402
-import schema  # noqa: E402
 
 HISTORY_DIR = config.DATA_DIR / "history"
 
