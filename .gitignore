@@ -34,5 +34,8 @@ desktop.ini
 # Local notes for Claude Code
 CLAUDE.md
 
+# Personal guide to running the site in VS Code (goes with .vscode/)
+docs/running-locally.md
+
 # Playwright MCP browser screenshots and logs
 .playwright-mcp/
