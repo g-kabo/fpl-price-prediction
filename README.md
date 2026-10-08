@@ -7,11 +7,11 @@ A transparent, backtested linear model rather than a black-box number. Each
 prediction comes with a 95% prediction interval and breaks down exactly into
 per-term contributions, so you can see *why* a player is priced the way he is.
 
-**Live app:** <https://fpl-price-prediction.onrender.com>
-(free hosting; the first visit after a quiet spell takes 30–60 seconds to wake it)
+**Live app:** <https://g-kabo.github.io/fpl-price-prediction/>
+(a static site on GitHub Pages: it loads straight away and refreshes every day)
 
 ![Python](https://img.shields.io/badge/python-3.14-blue)
-![Dash](https://img.shields.io/badge/app-Dash-informational)
+![Site](https://img.shields.io/badge/site-GitHub%20Pages-informational)
 ![statsmodels](https://img.shields.io/badge/model-OLS%20(statsmodels)-lightgrey)
 
 ---
@@ -148,23 +148,22 @@ runs work offline. Pass `--refresh` to download it again.
 | `run_pipeline.py` / `backtest.py` | Batch predictions and scoring against actual prices |
 | `train_and_save.py` | Fit once and cache the model to `models/` for the app |
 | `snapshot.py` / `record_predictions.py` | Daily API snapshot and prediction history |
-| `app/` | The Dash web app |
+| `app/` | The original Dash web app, kept as a reference (no longer hosted) |
 | `web/` / `export_static.py` | The static site (plain HTML and JavaScript) and the export that feeds it |
 | `explore/` | Builds the full model report (`output/model_report.html`) |
 | `tests/` | App vs pipeline parity tests |
 
 ## Deployment
 
-- **[Render](https://render.com)** hosts the app from `render.yaml`. Each deploy
-  installs the requirements, refits the model and serves it with gunicorn.
 - **[GitHub Pages](https://pages.github.com)** serves the static site in `web/`,
   which has no server to wake up. `.github/workflows/pages.yml` refits the model,
   exports it and the day's projection to JSON, checks the JavaScript model against
   Python, and publishes. Settings > Pages > Source must be "GitHub Actions".
+  The earlier Render host (`render.yaml`, the Dash app in `app/`) is suspended and
+  kept only as a reference for the Python version.
 - **GitHub Actions** (`.github/workflows/snapshot.yml`) runs at 03:00 UTC daily.
   It snapshots the FPL API, records that day's predictions, commits both, then
-  rebuilds the Pages site. That commit also triggers a Render redeploy. If a run
-  fails, the site keeps showing the last good snapshot, marked with its date.
+  rebuilds the Pages site. If a run fails, the site keeps showing the last good snapshot, marked with its date.
 
 ## Rolling forward a season
 
