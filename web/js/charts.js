@@ -77,6 +77,51 @@ export function drawPriceHistory(el, seasons, forecastSeason, forecastPrice) {
   }));
 }
 
+/** Every season a player was in FPL, with the model's call for each start
+ *  price beside the price FPL set: the player page's track record.
+ *
+ *  `groups` is one {season, start, end, endLabel, call, callKind, callNote}
+ *  per season, oldest first; any price can be null. The call is the start
+ *  price the model predicted from the season before, so it comes first in
+ *  each group: it was made before the season began. Calls from seasons the
+ *  model learned from (`callKind` "learned") are drawn faint, because
+ *  matching its own training data proves nothing. */
+export function drawTrackRecord(el, groups) {
+  const labels = groups.map((g) => seasonLabel(g.season));
+  const roomy = el.clientWidth / Math.max(groups.length, 1) >= 84;
+  const label = (v) => (roomy && v !== null && v !== undefined ? v.toFixed(1) : "");
+  const bar = (name, values, colour, hover, extra = {}) => ({
+    type: "bar", name, x: labels, y: values,
+    marker: { color: colour, line: { width: 0 } },
+    text: values.map(label), textposition: "outside",
+    textfont: { size: 12, color: INK_SOFT, family: FONT_FIGURES }, cliponaxis: false,
+    hovertemplate: hover, ...extra,
+  });
+
+  const calls = groups.map((g) => g.call ?? null);
+  const callColours = groups.map((g) => (g.callKind === "learned" ? faint(PRICE_FORECAST, 0.35) : PRICE_FORECAST));
+  const traces = [
+    bar("Model's call", calls, callColours, "<b>%{x}</b><br>Model's call £%{y:.1f}m<br>%{customdata}<extra></extra>",
+      { customdata: groups.map((g) => g.callNote || "") }),
+    bar("Start (FPL)", groups.map((g) => g.start ?? null), PRICE_START, "<b>%{x}</b><br>FPL's start price £%{y:.1f}m<extra></extra>"),
+    bar("End", groups.map((g) => g.end ?? null), PRICE_FINAL, "<b>%{x}</b><br>%{customdata} £%{y:.1f}m<extra></extra>",
+      { customdata: groups.map((g) => g.endLabel || "End price") }),
+  ];
+
+  draw(el, traces, baseLayout({
+    barmode: "group", bargap: 0.24, bargroupgap: 0.06, hovermode: "closest",
+    margin: { l: 8, r: 8, t: 34, b: 8 }, height: 290, showlegend: true,
+    legend: { orientation: "h", yanchor: "bottom", y: 1.02, xanchor: "left", x: 0,
+      font: { size: 12, color: INK_SOFT }, itemsizing: "constant", traceorder: "normal" },
+    xaxis: { tickfont: { size: 12, color: INK_SOFT }, showgrid: false, showline: true,
+      linecolor: LINE, automargin: true },
+    yaxis: roomy
+      ? { visible: false, rangemode: "tozero" }
+      : { rangemode: "tozero", tickprefix: "£", ticksuffix: "m", tickfont: { size: 12, color: INK_SOFT },
+          gridcolor: LINE, zeroline: false, automargin: true },
+  }));
+}
+
 /** PRICE_FORECAST at a given opacity, for the forecast's likely range. */
 function faint(hex, alpha) {
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));

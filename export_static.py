@@ -13,6 +13,8 @@ used to work out per request is computed here, once, and shipped as JSON:
     history.json  start and finishing prices per season for today's players
     forecasts.json  each earlier morning's price and forecast, from
                   data/history/, for the forecast trend and movers
+    players.json  one line per player since the first season, current or
+                  departed, for the search in every page's header
 
 The browser re-does the model's one line of arithmetic itself (``web/js/
 model.js``), because What if needs it on every keystroke. ``--parity`` writes
@@ -262,6 +264,38 @@ def seasons_payload(projected: pd.DataFrame, meta: dict) -> dict:
     }
 
 
+# ---------------------------------------------------------------- player search
+
+
+#: Per-row fields of ``players.json``, in order.
+PLAYER_FIELDS = ["code", "web_name", "team_name", "element_type", "last_season", "other_names"]
+
+
+def players_payload(seasons: dict) -> dict:
+    """Everyone in ``seasons.json``, one row each, as of his latest season.
+
+    Kept apart from ``seasons.json`` (680 KB) so every page can offer search
+    without loading it. Players are joined on ``code``, never on name: FPL
+    renames players (Salah became M.Salah), so ``other_names`` keeps his
+    earlier ones searchable.
+    """
+    at = {f: i for i, f in enumerate(seasons["fields"])}
+    latest: dict[int, list] = {}
+    names: dict[int, list[str]] = {}
+    for row in sorted(seasons["rows"], key=lambda r: r[at["season"]]):
+        code = row[at["code"]]
+        latest[code] = row
+        names.setdefault(code, [])
+        if row[at["web_name"]] not in names[code]:
+            names[code].append(row[at["web_name"]])
+    rows = []
+    for code, row in latest.items():
+        name = row[at["web_name"]]
+        rows.append([code, name, row[at["team_name"]], row[at["element_type"]],
+                     row[at["season"]], [n for n in names[code] if n != name]])
+    return {"fields": PLAYER_FIELDS, "rows": rows}
+
+
 # ---------------------------------------------------------------- parity
 
 
@@ -337,7 +371,9 @@ def main(argv: list[str] | None = None) -> None:
     print("Writing the static site's data:")
     _write("model.json", model_payload())
     _write("board.json", board_payload(season, projected))
-    _write("seasons.json", seasons_payload(projected, meta))
+    seasons = seasons_payload(projected, meta)
+    _write("seasons.json", seasons)
+    _write("players.json", players_payload(seasons))
     _write("history.json", history_payload(set(projected["code"].astype(int)),
                                            meta["predict_season"]))
     _write("forecasts.json", forecasts_payload(season, set(projected["code"].astype(int))))

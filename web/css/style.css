@@ -241,7 +241,6 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
   background: var(--surface);
 }
 .btn-ghost:hover { background: var(--tint); border-color: var(--aubergine-3); }
-.card-link { margin-top: 12px; text-decoration: none; }
 
 /* ---------- settings drawer --------------------------------------------- */
 
@@ -1443,4 +1442,246 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
   .shirt-pitch { width: 46px; height: 46px; }
   .sheet-head, .sheet-grid, .sheet-why { padding-left: 18px; padding-right: 18px; }
   .answer-price { font-size: 2.8rem; }
+}
+
+/* ---------- player search (every page's header) ------------------------- */
+
+.nav-search { position: relative; margin-left: auto; display: flex; align-items: center; }
+
+.nav-search-toggle {
+  display: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--on-dark-soft);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+.nav-search-toggle:hover, .nav-search.is-open .nav-search-toggle { color: var(--on-dark); background: rgba(255, 255, 255, 0.1); }
+
+.nav-search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 280px;
+  height: 40px;
+  padding: 0 10px 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--on-dark-soft);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.nav-search-box:focus-within { background: var(--surface); border-color: var(--surface); color: var(--ink-soft); }
+
+.nav-search-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--on-dark);
+  font: inherit;
+  font-size: 0.95rem;
+}
+.nav-search-input:focus { outline: none; box-shadow: none; color: var(--ink); }
+.nav-search-input::placeholder { color: var(--on-dark-soft); }
+.nav-search-input:focus::placeholder { color: var(--ink-soft); }
+.nav-search-input::-webkit-search-cancel-button { display: none; }
+
+.nav-search-key {
+  padding: 0 6px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+  background: none;
+  color: var(--on-dark-soft);
+  font-family: var(--font);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+.nav-search-box:focus-within .nav-search-key { display: none; }
+
+/* The results, shared by the header box and the player page's own. */
+.search-results {
+  position: absolute;
+  z-index: 1040;
+  top: calc(100% + 6px);
+  right: 0;
+  width: min(380px, calc(100vw - 32px));
+  max-height: min(440px, 70vh);
+  overflow-y: auto;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 32px rgba(43, 0, 51, 0.22);
+  color: var(--ink);
+  text-align: left;
+}
+.search-results[hidden] { display: none; }
+
+.sr-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.sr-option:hover, .sr-option.is-active { background: var(--tint); color: var(--ink); }
+.sr-option.is-active { box-shadow: inset 3px 0 0 var(--aubergine-3); }
+.sr-who { display: flex; flex-direction: column; min-width: 0; }
+.sr-name { font-weight: 700; line-height: 1.2; }
+.sr-sub { display: flex; align-items: center; gap: 8px; font-size: 0.86rem; color: var(--ink-soft); flex-wrap: wrap; }
+.sr-when { font-style: italic; }
+.sr-none { margin: 0; padding: 14px 10px; color: var(--ink-soft); }
+
+/* ---------- player page ------------------------------------------------- */
+
+.shirt-xl { width: 112px; height: 112px; flex: none; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.3)); }
+.shirt-xs { width: 24px; height: 24px; flex: none; }
+
+.player-meta a { color: var(--cyan); }
+
+.player-hero { padding: 30px 0 28px; }
+.player-hero-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px 32px;
+  flex-wrap: wrap;
+}
+.player-id { display: flex; align-items: center; gap: 22px; min-width: 0; }
+.hero h1.player-title { margin: 0 0 10px; overflow-wrap: anywhere; }
+.player-hero .strip { margin-top: 14px; }
+
+.player-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  padding-top: 28px;
+}
+.player-panel { min-width: 0; }
+.player-panel > :last-child, .player-panel .answer, .player-panel .why,
+.player-panel .history, .player-panel .trend { margin-bottom: 0; }
+.player-wide, .player-body > .loading, .player-body > .load-error { grid-column: 1 / -1; }
+.player-departed > .player-panel:first-child { grid-column: 1 / -1; }
+.player-departed > .player-panel:first-child .answer { max-width: 760px; }
+.player-panel .answer-head .tag::before { background: var(--surface); }
+
+.card-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+.table-scroll { overflow-x: auto; margin-top: 4px; }
+.seasons-table { min-width: 520px; }
+.seasons-table td { vertical-align: middle; }
+.st-season { font-weight: 600; white-space: nowrap; }
+.st-club { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.st-now { margin-left: 6px; font-size: 0.78rem; font-weight: 500; color: var(--ink-soft); }
+.seasons-table td.num { font-family: var(--font-fig); font-size: 1.02rem; }
+
+/* Without a player: search, then somewhere to start. */
+.player-landing { display: block; padding-top: 0; }
+.landing-search {
+  position: relative;
+  max-width: 520px;
+  margin-top: 20px;
+  height: 48px;
+}
+.landing-search .search-input { color: var(--ink); font-size: 1.05rem; }
+.landing-search .search-results { left: 0; right: auto; width: 100%; }
+/* A code nobody has: said plainly, not as a load error. */
+.player-missing {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 28px;
+  padding: 14px 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--ink);
+}
+.player-missing i { font-size: 1.3rem; color: var(--ink-soft); }
+.player-missing p { margin: 0; }
+
+.tile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+.player-tile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--ink);
+  text-decoration: none;
+  transition: border-color 0.15s ease, transform 0.15s var(--ease-out);
+}
+.player-tile:hover { border-color: var(--aubergine-3); color: var(--ink); transform: translateY(-2px); }
+.tile-side {
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-family: var(--font-fig);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--aubergine);
+  font-variant-numeric: tabular-nums;
+}
+.tile-when { font-family: var(--font); font-size: 0.78rem; font-weight: 500; color: var(--ink-soft); }
+
+@media (max-width: 1100px) {
+  .nav-search-box { width: 220px; }
+}
+
+@media (max-width: 900px) {
+  .player-body { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 720px) {
+  .nav-search { position: static; }
+  .nav-search-toggle { display: grid; }
+  .nav-search-box { display: none; }
+  .nav-search.is-open .nav-search-box {
+    display: flex;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    width: auto;
+    height: 52px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 0;
+    background: var(--surface);
+    box-shadow: 0 10px 24px rgba(43, 0, 51, 0.2);
+  }
+  .nav-search-key { display: none; }
+  .nav-search .search-results { left: 8px; right: 8px; width: auto; }
+  .shirt-xl { width: 76px; height: 76px; }
+  .player-id { gap: 14px; }
+  .player-hero .hero-side { align-items: flex-start; }
+  .player-hero .chips { justify-content: flex-start; }
+  .seasons-table .st-mins { display: none; }
+  .seasons-table { min-width: 0; }
+}
+
+/* Phones: four tabs don't fit beside the brand and the search icon, so the
+   tabs take a row of their own under them. */
+@media (max-width: 560px) {
+  .header-inner { flex-wrap: wrap; gap: 0 8px; min-height: 0; padding-top: 8px; }
+  .brand { min-height: 44px; }
+  .brand span:last-child { display: inline; font-size: 1.15rem; }
+  .nav-tabs-row { order: 3; flex: 1 0 100%; justify-content: space-between; margin: 0 -6px; }
+  .nav-tabs-row .nav-tab { padding: 0 6px; min-height: 42px; font-size: 0.9rem; }
 }

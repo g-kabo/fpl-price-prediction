@@ -6,6 +6,7 @@
 
 import { loadModel, showError } from "./data.js";
 import { esc, fixed, seasonLabel, sig4, signed } from "./format.js";
+import { initNavSearch } from "./nav.js";
 import { money } from "./theme.js";
 
 const SUB = "₀₁₂₃₄₅₆₇₈₉";
@@ -83,6 +84,7 @@ function reading(params, numeric) {
 }
 
 async function main() {
+  initNavSearch();
   const root = document.getElementById("how-root");
   let model;
   try {

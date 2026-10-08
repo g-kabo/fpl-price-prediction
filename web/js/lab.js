@@ -15,6 +15,8 @@
 
 import { loadJson, loadModel, showError } from "./data.js";
 import { asFloat, esc, fixed, fmt, pyRound, seasonLabel } from "./format.js";
+import { initNavSearch } from "./nav.js";
+import { seasonRows, seasonValues, withRatios as ratios } from "./records.js";
 import * as ui from "./ui.js";
 
 const $ = (id) => document.getElementById(id);
@@ -27,17 +29,14 @@ let SCORE_SEASON;
 let TRAIN_THROUGH;
 let SEASONS = [];
 let byseason = new Map(); // season -> [player row, ...]
-let fieldIndex = {};
 
 const state = { season: null, code: null, values: {} };
 
 // ---------------------------------------------------------------- data
 
 function loadSeasons(data) {
-  fieldIndex = Object.fromEntries(data.fields.map((f, i) => [f, i]));
   byseason = new Map();
-  for (const raw of data.rows) {
-    const row = Object.fromEntries(data.fields.map((f, i) => [f, raw[i]]));
+  for (const row of seasonRows(data)) {
     if (!byseason.has(row.season)) byseason.set(row.season, []);
     byseason.get(row.season).push(row);
   }
@@ -67,31 +66,12 @@ function medians() {
 
 function valuesFor(season, code) {
   const player = row(season, code);
-  if (!player) return medians();
-  const values = {};
-  for (const name of form.form_names) values[name] = player[name];
-  values[form.position_field] = player.element_type;
-  values[form.team_field] = player.form_team;
-  return values;
+  return player ? seasonValues(form, player) : medians();
 }
 
 // ---------------------------------------------------------------- ratios
 
-/** FPL publishes both ratios to one decimal place. */
-const fplRound = (value) => pyRound(value, 1);
-
-/** The form's values plus the two ratios, worked out as FPL does: points per
- *  game is points over games played, points per £m over the end price. */
-function withRatios(values) {
-  const points = asFloat(values.total_points);
-  const games = asFloat(values[form.appearances_field]);
-  const price = asFloat(values.final_cost);
-  return {
-    ...values,
-    points_per_game: games > 0 ? fplRound(points / games) : 0,
-    value_season: price > 0 ? fplRound(points / price) : 0,
-  };
-}
+const withRatios = (values) => ratios(form, values);
 
 /** Hold every projected value inside the fitted range, in place. Also how
  *  Price Watch prices the season in progress. Returns the fields it moved. */
@@ -292,7 +272,7 @@ function update() {
       ? `${seasonLabel(season)} so far, projected from ${fmt(player.games_played)} gameweeks to 38`
       : `${seasonLabel(season)} season`;
     who = ui.playerHeader(player.web_name, player.team_name, player.element_type,
-      `<div class="player-meta">${esc(meta)}</div>`);
+      `<div class="player-meta">${esc(meta)} · <a href="player.html?code=${player.code}">Player page</a></div>`);
   } else {
     who = ui.playerHeader("An average player", null, values[form.position_field],
       `<div class="player-meta">Every figure starts at the median of the `
@@ -400,6 +380,7 @@ function wire() {
 }
 
 async function main() {
+  initNavSearch();
   const target = $("lab-root");
   let data;
   try {
