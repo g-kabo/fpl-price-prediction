@@ -3,7 +3,7 @@
 // Colours and type come from theme.js, so a chart is drawn in the same
 // vocabulary as the page around it. Plotly is loaded by the page as a global.
 
-import { fixed, seasonLabel } from "./format.js";
+import { dayMonth, fixed, seasonLabel } from "./format.js";
 import {
   AUBERGINE, FALL, FONT, FONT_FIGURES, INK, INK_SOFT, LINE, POSITION_COLOURS,
   POSITION_SYMBOLS, RISE, SURFACE, money,
@@ -74,6 +74,71 @@ export function drawPriceHistory(el, seasons, forecastSeason, forecastPrice) {
     xaxis: { tickfont: { size: 12, color: INK_SOFT }, showgrid: false, showline: true,
       linecolor: LINE, automargin: true },
     yaxis: { visible: false, rangemode: "tozero" },
+  }));
+}
+
+/** PRICE_FORECAST at a given opacity, for the forecast's likely range. */
+function faint(hex, alpha) {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+/** One player's forecast as it stood each morning, against his price.
+ *
+ *  `days` is one {date, gw, price, pred, lower, upper} per day, today last.
+ *  The forecast is drawn in the price history's forecast hue, with its 95%
+ *  range as a faint band; the price that day is a step line, because FPL
+ *  prices jump overnight rather than drift. Both are £m, so one axis. */
+export function drawForecastTrend(el, days, targetSeason) {
+  const x = days.map((d) => d.date);
+  const when = days.map((d) => `${dayMonth(d.date)} · after GW${d.gw}`);
+  const marker = days.length <= 14 ? { size: 8, line: { width: MARK_RING, color: SURFACE } } : null;
+  const mode = marker ? "lines+markers" : "lines";
+
+  const traces = [
+    { type: "scatter", x, y: days.map((d) => d.upper), mode: "lines", line: { width: 0 },
+      hoverinfo: "skip", showlegend: false },
+    { type: "scatter", x, y: days.map((d) => d.lower), mode: "lines", line: { width: 0 },
+      fill: "tonexty", fillcolor: faint(PRICE_FORECAST, 0.16), name: "95% likely range",
+      hoverinfo: "skip" },
+    { type: "scatter", x, y: days.map((d) => d.price), mode,
+      line: { color: PRICE_FINAL, width: 2, shape: "hv" },
+      marker: marker ? { color: PRICE_FINAL, ...marker } : undefined,
+      name: "Price that day", customdata: when,
+      hovertemplate: "<b>%{customdata}</b><br>Price £%{y:.1f}m<extra></extra>" },
+    { type: "scatter", x, y: days.map((d) => d.pred), mode,
+      line: { color: PRICE_FORECAST, width: 2 },
+      marker: marker ? { color: PRICE_FORECAST, ...marker } : undefined,
+      name: `${seasonLabel(targetSeason)} forecast`,
+      customdata: days.map((d, i) => [when[i], d.lower, d.upper]),
+      hovertemplate: "<b>%{customdata[0]}</b><br>Forecast £%{y:.2f}m"
+        + "<br>Likely £%{customdata[1]:.1f}m – £%{customdata[2]:.1f}m<extra></extra>" },
+  ];
+
+  // The latest value of each line, labelled at its end, so the two read
+  // without a trip to the legend.
+  const last = days[days.length - 1];
+  const annotations = [[last.pred, 2], [last.price, 1]].map(([value, places]) => ({
+    x: last.date, y: value, text: `£${fixed(value, places)}m`, showarrow: false,
+    xanchor: "left", xshift: 8, font: { size: 13, family: FONT_FIGURES, color: INK },
+  }));
+
+  const low = Math.min(...days.map((d) => Math.min(d.lower, d.price)));
+  const high = Math.max(...days.map((d) => Math.max(d.upper, d.price)));
+  const pad = Math.max((high - low) * 0.08, 0.1);
+  // Half a day either side, so the end markers aren't clipped and no tick
+  // lands on a day that hasn't happened.
+  const halfDay = (iso, sign) => new Date(Date.parse(`${iso}T00:00:00Z`) + sign * 43_200_000).toISOString();
+  draw(el, traces, baseLayout({
+    margin: { l: 8, r: 64, t: 30, b: 8 }, height: 250, showlegend: true, hovermode: "closest",
+    annotations,
+    legend: { orientation: "h", yanchor: "bottom", y: 1.02, xanchor: "left", x: 0,
+      font: { size: 12, color: INK_SOFT }, itemsizing: "constant" },
+    xaxis: { type: "date", tickformat: "%-d %b", range: [halfDay(x[0], -1), halfDay(last.date, 1)], tickfont: { size: 12, color: INK_SOFT },
+      showgrid: false, showline: true, linecolor: LINE, automargin: true,
+      dtick: days.length <= 10 ? 86_400_000 : undefined },
+    yaxis: { range: [low - pad, high + pad], tickprefix: "£", ticksuffix: "m",
+      tickfont: { size: 12, color: INK_SOFT }, gridcolor: LINE, zeroline: false, automargin: true },
   }));
 }
 

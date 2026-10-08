@@ -312,6 +312,47 @@ history.pivot(index="date", columns="web_name", values="price")
 `python record_predictions.py --backfill` also records every earlier snapshot in
 git history. It needs the full history, so run it locally, not in the Action.
 
+### Forecast trend and forecast movers
+
+The app reads the history back through `app/forecast_history.py`, which loads
+only the seven columns it draws and reloads when a day's file is added. Two
+features use it:
+
+- **Forecast trend** (player card): the forecast each morning, with its 95% band,
+  against the price that day as a step line (FPL prices jump overnight, they don't
+  drift). Both are £m, so one axis.
+- **Forecast movers** (Price Watch, under the XI): the biggest changes in forecast
+  since yesterday, the past week or the first recorded day. League-wide, like the
+  XI; the filters belong to the list and the map.
+
+Decisions worth keeping:
+
+- **Today always comes from the live frame, never from today's history file.**
+  The history is only used for earlier days. So the trend ends on the number the
+  card shows above it, and a machine that never ran `record_predictions.py`
+  (local dev) still works.
+- **Changes are shown to £0.01m, not on the £0.1m move threshold.** Between
+  gameweeks a forecast only shifts with price changes, by hundredths (the first
+  three recorded days, all after GW5, moved by at most £0.04m). On the
+  `delta_chip` threshold every mover would read "Holds", so movers use
+  `ui.change_chip`.
+- **A window reaching back before the record starts falls back to the first
+  day**, and the note names the day actually used rather than claiming "a week".
+- The history is what the page showed *with the model of that day*. A refit
+  mid-season shows up as a step in every forecast trend. That's accurate, not
+  a bug, but it will look like a gameweek effect.
+
+On the static site (`web/`), `export_static.py` writes the history as
+`forecasts.json`: every recorded morning *before* the snapshot's date, so the
+rule above (today from the live frame) holds there too, with today taken from
+`board.json` and the card's own interval. The file keeps **change points only**
+per player (`[day, price, pred, lower, upper]` when anything moved, `[day]` from
+a day he was missing). One row per player per day was ~16 KB a day, heading for
+~5 MB by May; between gameweeks most forecasts hold for days, so change points
+were 28 KB for the first nine days. `recordedOn()` in `web/js/board.js` carries
+the last point forward. On a phone the movers drop the earlier forecast and keep
+the new one and the change chip, which imply it.
+
 ---
 
 ## Differences from the R

@@ -32,8 +32,8 @@ While an idea is being built on a branch, name the branch in its Status, e.g.
 
 | # | Idea | Effort | Usefulness | Impact | Status |
 |---|---|---|---|---|---|
-| 8 | **Prediction trend per player.** Sparkline in the drawer built from `data/history/` ("predicted £7.9m → £8.6m over 3 weeks"). | Medium | High | High | in progress (branch `price-history`: built and pushed, merging after the next gameweek so the trend has data to show) |
-| 9 | **"Movers this week" section.** Biggest changes in predicted price since the last snapshot(s). Same history data as #8. | Medium | High | High | in progress (branch `price-history`: built and pushed, merging after the next gameweek so the trend has data to show) |
+| 8 | **Prediction trend per player.** Sparkline in the drawer built from `data/history/` ("predicted £7.9m → £8.6m over 3 weeks"). | Medium | High | High | done |
+| 9 | **"Movers this week" section.** Biggest changes in predicted price since the last snapshot(s). Same history data as #8. | Medium | High | High | done |
 | 10 | **Send a current player to What if.** A "tweak this projection" button in the Price Watch drawer; What if currently only loads 2025-26 seasons. | Medium | High | Medium | done |
 | 11 | **Compare two players side by side** (prediction, interval, top drivers). | Medium | Medium | Medium | idea |
 | 12 | **My team import** by FPL team ID, showing the squad's predicted next-season value. Most engaging, but the appeal is curiosity and pre-season planning more than weekly decisions. | Medium | Medium | High | idea |
@@ -61,7 +61,7 @@ While an idea is being built on a branch, name the branch in its Status, e.g.
 ## Suggested order
 
 1. #1 and #7: cheap fixes for the two weakest first impressions.
-2. #8 and #9 (on branch `price-history`): the daily history is already being collected, and these give people a reason to come back.
+2. #8 and #9: the daily history is already being collected, and these give people a reason to come back.
 3. #10: links the two pages together.
 4. #18, #17 and #20: overnight changes is cheap with data already recorded; the
    phone layout is the biggest real-world gap; the luck check is the most

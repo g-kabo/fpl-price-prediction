@@ -3,7 +3,7 @@
 // Each function returns an HTML string. Anything that came from the data
 // (names, clubs) goes through esc(); everything else is built here.
 
-import { esc, fmt, pyRound } from "./format.js";
+import { dayMonth, esc, fmt, pyRound } from "./format.js";
 import { direction, money, shirtUri } from "./theme.js";
 import { drawContributionBars } from "./charts.js";
 
@@ -26,6 +26,17 @@ export function deltaChip(delta, size = "md") {
   const way = direction(delta);
   const text = way === "hold" ? "Holds" : money(delta, true);
   return `<span class="delta delta-${way} delta-${size}"><i class="bi ${ICONS[way]}"></i>${text}</span>`;
+}
+
+/** A change in a forecast, to the penny of a £m: +£0.04m.
+ *
+ *  Not deltaChip, whose £0.1m threshold is about whether a price is moving
+ *  at all. Day to day a forecast shifts by hundredths, and a forecast movers
+ *  list of "Holds" would say nothing. */
+export function changeChip(change, size = "sm") {
+  const way = pyRound(change, 2) === 0 ? "hold" : change > 0 ? "rise" : "fall";
+  return `<span class="delta delta-${way} delta-${size}"><i class="bi ${ICONS[way]}"></i>`
+    + `${money(change, true, 2)}</span>`;
 }
 
 export function empty(message, icon = "bi-search") {
@@ -251,6 +262,35 @@ export function outOfRange(model, values, asFloat) {
 export function priceHistory(note) {
   return '<div class="history"><h3 class="section-title">Price history</h3>'
     + `<div class="history-chart"></div><p class="fine">${esc(note)}</p></div>`;
+}
+
+/** The player's forecast as it stood each morning, and how far it has come.
+ *  `days` is one {date, gw, price, pred, lower, upper} per day, today last.
+ *  The chart goes in `.trend-chart`; null `days` means just the note. */
+export function forecastTrend(days) {
+  const title = '<h3 class="section-title">Forecast trend</h3>';
+  if (days.length < 2) {
+    return `<div class="trend">${title}<p class="fine">The forecast is recorded every morning; `
+      + "its trend appears from the second day.</p></div>";
+  }
+  const first = days[0];
+  const last = days[days.length - 1];
+  const moved = last.pred - first.pred;
+  const priceMoved = last.price - first.price;
+  let lede;
+  if (pyRound(moved, 2) === 0) {
+    lede = `The forecast has held at ${money(last.pred, false, 2)} since ${dayMonth(first.date)}.`;
+  } else {
+    lede = `The forecast is ${moved > 0 ? "up" : "down"} <strong>${money(Math.abs(moved), false, 2)}</strong>`
+      + ` since ${dayMonth(first.date)}, from ${money(first.pred, false, 2)} to ${money(last.pred, false, 2)}.`;
+  }
+  if (pyRound(priceMoved, 1) !== 0) {
+    lede += ` His price has ${priceMoved > 0 ? "risen" : "fallen"} ${money(Math.abs(priceMoved))}`
+      + " over the same days.";
+  }
+  return `<div class="trend">${title}<p class="why-lede">${lede}</p><div class="trend-chart"></div>`
+    + '<p class="fine">Each point is what Price Watch predicted that morning. Forecasts move most '
+    + "after a gameweek, as points and minutes come in, and a little with each price change.</p></div>";
 }
 
 /** Shirt, name plate, club and position: the top of a player card. */

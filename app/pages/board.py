@@ -27,6 +27,7 @@ from dash import ALL, Input, Output, State, callback, ctx, dcc, html, no_update
 
 import charts
 import config
+import forecast_history
 import form
 import live
 import model_store
@@ -71,6 +72,22 @@ _COLUMN = {key: (column, numeric) for key, column, numeric in COLUMNS}
 DEFAULT_SORT = {"col": "move", "desc": True}
 
 REFERENCE_WORDS = {"price_now": "today's price", "start_cost": "his August price"}
+
+#: Forecast movers' comparison windows: ``key: (label, days back)``. None
+#: means the first recorded day. A window reaching back before the record
+#: starts falls back to that first day, and the note names the day used.
+MOVER_WINDOWS = {
+    "day": ("Since yesterday", 1),
+    "week": ("Past week", 7),
+    "all": ("Since tracking began", None),
+}
+DEFAULT_WINDOW = "week"
+
+#: Players shown on each side of the forecast movers.
+MOVERS_EACH = 5
+
+#: Smallest forecast change worth listing: anything less rounds to £0.00m.
+MOVER_FLOOR = 0.005
 
 #: Columns the page keeps per player, in the browser-side store.
 _KEEP = (schema.NUMERIC_NAMES
@@ -148,6 +165,28 @@ def layout(player=None, **_query) -> html.Div:
                     className="wrap",
                 ),
                 className="block block-pitch",
+            ),
+            html.Section(
+                html.Div(
+                    [
+                        html.Div(
+                            [
+                                html.Div([html.H2("Forecast movers", className="block-title"),
+                                          html.P(id="board-movers-note", className="block-note")]),
+                                dbc.RadioItems(
+                                    id="board-movers-window",
+                                    options=[{"label": label, "value": key}
+                                             for key, (label, _) in MOVER_WINDOWS.items()],
+                                    value=DEFAULT_WINDOW, inline=True, className="segmented",
+                                ),
+                            ],
+                            className="block-head",
+                        ),
+                        html.Div(id="board-movers", className="movers"),
+                    ],
+                    className="wrap",
+                ),
+                className="block",
             ),
             html.Section(
                 html.Div(
@@ -426,6 +465,83 @@ def pitch(data, xi, xref):
     return [*chalk, *rows], note
 
 
+def _mover(row) -> html.Button:
+    """One forecast mover: who, his forecast then and now, and the change."""
+    return _pick_button(
+        row, "movers",
+        [
+            html.Span([ui.shirt(row.team_name, size="sm"),
+                       html.Span([html.Span(row.web_name, className="tl-name"),
+                                  html.Span([ui.position_pill(row.element_type),
+                                             html.Span(row.team_name, className="tl-club")],
+                                            className="tl-sub")],
+                                 className="tl-who")],
+                      className="tl-player"),
+            html.Span([theme.money(row.then, places=2), html.I(className="bi bi-arrow-right"),
+                       html.Strong(theme.money(row.pred, places=2))],
+                      className="num mv-path"),
+            html.Span(ui.change_chip(row.change), className="num"),
+        ],
+        "mv-row",
+    )
+
+
+def _movers_side(title: str, icon: str, rows: pd.DataFrame, none: str) -> html.Div:
+    body = ([_mover(r) for r in rows.itertuples()] if not rows.empty
+            else [html.P(none, className="mv-none")])
+    return html.Div([html.Div([html.I(className=f"bi {icon}"), title], className="mv-head"),
+                     *body],
+                    className="mv-side")
+
+
+@callback(
+    Output("board-movers", "children"),
+    Output("board-movers-note", "children"),
+    Input("board-data", "data"),
+    Input("board-movers-window", "value"),
+)
+def movers(data, window):
+    """Whose forecast has moved most since an earlier recorded morning.
+
+    Today's side is the live frame the rest of the page shows; the earlier
+    side is the forecast recorded that morning. League-wide, like the XI:
+    the filters belong to the list and the map.
+    """
+    frame = _frame(data)
+    if frame.empty:
+        return ui.empty("Waiting for the live data.", icon="bi-hourglass-split"), ""
+    season = live.get_live_season()
+    if not season.is_live:
+        return ui.empty("Forecast movers need the daily FPL snapshot, which could not be read.",
+                        icon="bi-cloud-slash"), ""
+
+    _label, days = MOVER_WINDOWS.get(window, MOVER_WINDOWS[DEFAULT_WINDOW])
+    today = season.fetched_at.date()
+    day = forecast_history.baseline_day(today, days)
+    if day is None:
+        return ui.empty("Forecasts are recorded every morning. Movers appear from the "
+                        "second day.", icon="bi-calendar-plus"), ""
+
+    then = forecast_history.predictions_on(day)
+    frame = frame.assign(then=frame["code"].map(then)).dropna(subset=["then"])
+    frame["change"] = frame["pred"] - frame["then"]
+    ups = frame[frame["change"] >= MOVER_FLOOR].nlargest(MOVERS_EACH, "change")
+    downs = frame[frame["change"] <= -MOVER_FLOOR].nsmallest(MOVERS_EACH, "change")
+
+    since = f"{day.day} {day:%b}"
+    note = (f"Whose {config.season_label(TARGET)} forecast has moved most since the morning "
+            f"of {since}. Forecasts move most after a gameweek, as points and minutes come "
+            "in, and a little with each price change.")
+    if ups.empty and downs.empty:
+        return ui.empty(f"No forecast has moved by £0.01m or more since {since}. Expect movement "
+                        "after the next gameweek.", icon="bi-pause-circle"), note
+    return [
+        _movers_side("Forecast up", "bi-graph-up-arrow", ups, f"No forecast up since {since}."),
+        _movers_side("Forecast down", "bi-graph-down-arrow", downs,
+                     f"No forecast down since {since}."),
+    ], note
+
+
 def _fold(text: str) -> str:
     """Case- and accent-insensitive, so "joao" finds João and "gross" Groß."""
     text = unicodedata.normalize("NFKD", str(text)).encode("ascii", "ignore").decode()
@@ -602,6 +718,29 @@ def _player_seasons(record: dict) -> pd.DataFrame:
     return pd.concat([past, now], ignore_index=True)
 
 
+def _trend_days(record: dict, interval: pd.DataFrame) -> pd.DataFrame:
+    """This player's recorded mornings, with today taken from the live card.
+
+    Today comes from the frame the card is drawn from rather than from the
+    history file, so the trend always ends on the number shown above it.
+    """
+    season = live.get_live_season()
+    today = season.fetched_at.date() if season.is_live else None
+    past = forecast_history.player(record["code"], before=today).rename(columns={
+        "pred_next_start": "pred", "pred_next_lower": "lower", "pred_next_upper": "upper"})
+    columns = ["date", "gameweeks_finished", "price", "pred", "lower", "upper"]
+    past = past[columns]
+    if today is None:
+        return past
+    now = pd.DataFrame([{
+        "date": today, "gameweeks_finished": season.progress.gameweeks_finished,
+        "price": record.get("price_now"), "pred": float(interval["pred"].iloc[0]),
+        "lower": float(interval["pred_lower"].iloc[0]),
+        "upper": float(interval["pred_upper"].iloc[0]),
+    }])
+    return pd.concat([past, now], ignore_index=True) if not past.empty else now
+
+
 @callback(
     Output("board-card-body", "children"),
     Output("board-card", "is_open"),
@@ -670,6 +809,7 @@ def card(selected, xref, data, deeplink, is_open):
                                className="btn-ghost card-link"),
                   ])),
         ui.why_this_price(values, reference=(short, reference)),
+        ui.forecast_trend(_trend_days(record, interval), TARGET),
         ui.price_history(_player_seasons(record), TARGET, float(interval["pred"].iloc[0]),
                          f"The {config.season_label(SEASON)} season is still running, so its "
                          "end price is today's."),

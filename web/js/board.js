@@ -3,6 +3,8 @@
 // Reads data/board.json -- every current player, already projected to 38
 // gameweeks and priced by the daily build -- and does the rest in the
 // browser: filters, sort, search, the XI, the map and the player card.
+// data/forecasts.json -- each earlier morning's forecast, from the daily
+// history -- adds the forecast movers and the card's forecast trend.
 //
 // The filters scope the transfer list *and* the market map together, and
 // narrow what is displayed, never what is computed: the projection always
@@ -10,8 +12,8 @@
 // league-wide quantity.
 
 import { loadJson, loadModel, showError } from "./data.js";
-import { esc, fixed, fmt, fold, seasonLabel } from "./format.js";
-import { DEFAULT_X, X_FIELDS, drawPriceHistory, drawPriceScatter } from "./charts.js";
+import { dayMonth, esc, fixed, fmt, fold, seasonLabel } from "./format.js";
+import { DEFAULT_X, X_FIELDS, drawForecastTrend, drawPriceHistory, drawPriceScatter } from "./charts.js";
 import { direction, money } from "./theme.js";
 import * as ui from "./ui.js";
 
@@ -39,10 +41,22 @@ const DEFAULT_SORT = { col: "move", desc: true };
 
 const REFERENCE_WORDS = { price_now: "today's price", start_cost: "his August price" };
 
+/** Forecast movers' comparison windows, in days back; null is the first
+ *  recorded day. A window reaching back before the record starts falls back
+ *  to that first day, and the note names the day used. */
+const MOVER_WINDOWS = { day: 1, week: 7, all: null };
+
+/** Players shown on each side of the forecast movers. */
+const MOVERS_EACH = 5;
+
+/** Smallest forecast change worth listing: anything less rounds to £0.00m. */
+const MOVER_FLOOR = 0.005;
+
 const $ = (id) => document.getElementById(id);
 
 const state = {
   xi: "rise",
+  window: "week",
   xref: DEFAULT_X,
   search: "",
   pos: [],
@@ -55,6 +69,7 @@ const state = {
 let model;
 let board;
 let history;
+let forecasts;
 let SEASON;
 let TARGET;
 let players = [];
@@ -137,6 +152,96 @@ function renderPitch() {
     + `${state.xref === "price_now" ? "today" : "August"} → ${seasonLabel(TARGET)}.`;
   $("board-pitch").innerHTML = '<div class="pitch-lines"></div><div class="pitch-six"></div>'
     + `<div class="pitch-halfway"></div>${lines.join("")}`;
+}
+
+// ---------------------------------------------------------------- forecast movers
+
+/** Today's date as the snapshot has it, "2026-10-08". */
+function today() {
+  return board.fetched_at ? board.fetched_at.slice(0, 10) : null;
+}
+
+/** Index into forecasts.dates of the day to measure a change from: the
+ *  latest day at least `days` before today, or the first day when there is
+ *  none that far back (or `days` is null). -1 when nothing was recorded. */
+function baselineDay(days) {
+  const dates = forecasts.dates;
+  if (!dates.length) return -1;
+  if (days !== null) {
+    const cutoff = new Date(`${today()}T00:00:00Z`);
+    cutoff.setUTCDate(cutoff.getUTCDate() - days);
+    const limit = cutoff.toISOString().slice(0, 10);
+    for (let i = dates.length - 1; i >= 0; i--) if (dates[i] <= limit) return i;
+  }
+  return 0;
+}
+
+/** A player's recorded [price, pred, lower, upper] on day `day`, or null.
+ *  forecasts.json keeps change points only, so this is the last one at or
+ *  before that day; a bare [day] marks him missing from it. */
+function recordedOn(points, day) {
+  let found = null;
+  for (const point of points || []) {
+    if (point[0] > day) break;
+    found = point.length > 1 ? point.slice(1) : null;
+  }
+  return found;
+}
+
+function mover(p) {
+  return `<button type="button" class="mv-row" data-code="${p.code}">`
+    + `<span class="tl-player">${ui.shirt(p.team_name, "sm")}<span class="tl-who">`
+    + `<span class="tl-name">${esc(p.web_name)}</span><span class="tl-sub">${ui.positionPill(p.element_type)}`
+    + `<span class="tl-club">${esc(p.team_name)}</span></span></span></span>`
+    + `<span class="num mv-path"><span class="mv-then">${money(p.then, false, 2)}<i class="bi bi-arrow-right"></i></span>`
+    + `<strong>${money(p.pred, false, 2)}</strong></span>`
+    + `<span class="num">${ui.changeChip(p.change)}</span></button>`;
+}
+
+function moversSide(title, icon, rows, none) {
+  const body = rows.length ? rows.map(mover).join("") : `<p class="mv-none">${esc(none)}</p>`;
+  return `<div class="mv-side"><div class="mv-head"><i class="bi ${icon}"></i>${title}</div>${body}</div>`;
+}
+
+/** Whose forecast has moved most since an earlier recorded morning. Today's
+ *  side is the board the rest of the page shows; the earlier side is the
+ *  forecast recorded that morning. League-wide, like the XI: the filters
+ *  belong to the list and the map. */
+function renderMovers() {
+  const note = $("board-movers-note");
+  const out = $("board-movers");
+  note.textContent = "";
+  if (!board.is_live) {
+    out.innerHTML = ui.empty("Forecast movers need the daily FPL snapshot, which could not be read.",
+      "bi-cloud-slash");
+    return;
+  }
+  const day = baselineDay(MOVER_WINDOWS[state.window] ?? null);
+  if (day < 0) {
+    out.innerHTML = ui.empty("Forecasts are recorded every morning. Movers appear from the second day.",
+      "bi-calendar-plus");
+    return;
+  }
+
+  const rows = [];
+  for (const p of players) {
+    const then = recordedOn(forecasts.players[String(p.code)], day);
+    if (then && Number.isFinite(p.pred)) rows.push({ ...p, then: then[1], change: p.pred - then[1] });
+  }
+  const ups = rows.filter((r) => r.change >= MOVER_FLOOR).sort((a, b) => b.change - a.change).slice(0, MOVERS_EACH);
+  const downs = rows.filter((r) => r.change <= -MOVER_FLOOR).sort((a, b) => a.change - b.change).slice(0, MOVERS_EACH);
+
+  const since = dayMonth(forecasts.dates[day]);
+  note.textContent = `Whose ${seasonLabel(TARGET)} forecast has moved most since the morning of ${since}. `
+    + "Forecasts move most after a gameweek, as points and minutes come in, and a little with each "
+    + "price change.";
+  if (!ups.length && !downs.length) {
+    out.innerHTML = ui.empty(`No forecast has moved by £0.01m or more since ${since}. Expect movement `
+      + "after the next gameweek.", "bi-pause-circle");
+    return;
+  }
+  out.innerHTML = moversSide("Forecast up", "bi-graph-up-arrow", ups, `No forecast up since ${since}.`)
+    + moversSide("Forecast down", "bi-graph-down-arrow", downs, `No forecast down since ${since}.`);
 }
 
 // ---------------------------------------------------------------- the list
@@ -222,6 +327,26 @@ function playerSeasons(record) {
   return [...past, [SEASON, record.start_cost, record.price_now]];
 }
 
+/** This player's recorded mornings, with today taken from the card itself,
+ *  so the trend always ends on the number shown above it. */
+function trendDays(record, interval) {
+  const days = [];
+  const points = forecasts.players[String(record.code)];
+  if (points && points.length) {
+    for (let day = points[0][0]; day < forecasts.dates.length; day++) {
+      if (forecasts.dates[day] >= today()) break;
+      const values = recordedOn(points, day);
+      if (!values) continue;
+      const [price, pred, lower, upper] = values;
+      days.push({ date: forecasts.dates[day], gw: forecasts.gameweeks[day], price, pred, lower, upper });
+    }
+  }
+  if (!board.is_live) return days;
+  days.push({ date: today(), gw: board.gameweeks_finished, price: record.price_now,
+    pred: interval.pred, lower: interval.lower, upper: interval.upper });
+  return days;
+}
+
 function cardHtml(record) {
   const values = {};
   for (const name of model.spec.form.numeric_names) values[name] = record[name];
@@ -249,12 +374,16 @@ function cardHtml(record) {
   const answer = ui.answer(model, interval, reference, REFERENCE_WORDS[xref], short,
     `Predicted ${seasonLabel(TARGET)} price`, `<div>${note}${link}</div>`);
   const why = ui.whyThisPrice(model, values, [short, reference]);
+  const days = trendDays(record, interval);
+  const trend = ui.forecastTrend(days);
   const past = ui.priceHistory(`The ${seasonLabel(SEASON)} season is still running, so its end price is today's.`);
 
   return {
-    html: header + answer + why.html + past,
+    html: header + answer + why.html + trend + past,
     mount(root) {
       why.mount(root);
+      const trendEl = root.querySelector(".trend-chart");
+      if (trendEl) drawForecastTrend(trendEl, days, TARGET);
       drawPriceHistory(root.querySelector(".history-chart"), playerSeasons(record), TARGET, interval.pred);
     },
   };
@@ -295,6 +424,7 @@ function refreshCard() {
 function renderAll() {
   renderStatus();
   renderPitch();
+  renderMovers();
   renderList();
   renderMap();
   refreshCard();
@@ -331,6 +461,12 @@ function wire() {
     input.addEventListener("change", () => { state.xref = input.value; state.pages = 1; renderAll(); }));
   document.querySelectorAll('input[name="board-xi"]').forEach((input) =>
     input.addEventListener("change", () => { state.xi = input.value; renderPitch(); }));
+  document.querySelectorAll('input[name="board-window"]').forEach((input) =>
+    input.addEventListener("change", () => { state.window = input.value; renderMovers(); }));
+  $("board-movers").addEventListener("click", (event) => {
+    const row = event.target.closest("[data-code]");
+    if (row) openCard(row.dataset.code);
+  });
 
   let timer;
   $("board-search").addEventListener("input", (event) => {
@@ -383,6 +519,7 @@ function poll() {
     try {
       const fresh = await loadJson("board", true);
       if (fresh.fetched_at === board.fetched_at) return;
+      forecasts = await loadJson("forecasts", true);
       board = fresh;
       players = board.players;
       renderFilters();
@@ -395,7 +532,8 @@ function poll() {
 
 async function main() {
   try {
-    [model, board, history] = await Promise.all([loadModel(), loadJson("board"), loadJson("history")]);
+    [model, board, history, forecasts] = await Promise.all([
+      loadModel(), loadJson("board"), loadJson("history"), loadJson("forecasts")]);
   } catch (error) {
     showError($("board-pitch"), error);
     return;

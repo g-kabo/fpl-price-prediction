@@ -80,3 +80,11 @@ export function fold(text) {
 export function seasonLabel(season) {
   return `${season}-${String((season + 1) % 100).padStart(2, "0")}`;
 }
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "2026-10-08" -> "8 Oct". Spelled out here because en-GB has "Sept". */
+export function dayMonth(iso) {
+  const [, month, day] = iso.split("-").map(Number);
+  return `${day} ${MONTHS[month - 1]}`;
+}

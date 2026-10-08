@@ -159,6 +159,82 @@ def price_history_bars(
     return figure
 
 
+def _faint(hex_colour: str, alpha: float) -> str:
+    red, green, blue = (int(hex_colour[i:i + 2], 16) for i in (1, 3, 5))
+    return f"rgba({red}, {green}, {blue}, {alpha})"
+
+
+def forecast_trend(days: pd.DataFrame, target_season: int) -> go.Figure:
+    """One player's forecast as it stood each morning, against his price.
+
+    ``days`` holds one row per day: ``date``, ``price``, ``pred``, ``lower``,
+    ``upper`` and ``gameweeks_finished``. The forecast is drawn in the same
+    hue as the price history's forecast bar, with its 95% range as a faint
+    band; the price that day is a step line, because FPL prices jump
+    overnight rather than drift. Both are prices in £m, so one axis serves.
+    """
+    dates = pd.to_datetime(days["date"])
+    gameweeks = days["gameweeks_finished"].fillna(0).astype(int)
+    when = [f"{d.day} {d:%b} · after GW{gw}" for d, gw in zip(dates, gameweeks)]
+    marker = dict(size=8, line=dict(width=MARK_RING, color=SURFACE)) if len(days) <= 14 else None
+    target = config.season_label(target_season)
+
+    figure = go.Figure()
+    figure.add_trace(go.Scatter(
+        x=dates, y=days["upper"], mode="lines", line=dict(width=0),
+        hoverinfo="skip", showlegend=False,
+    ))
+    figure.add_trace(go.Scatter(
+        x=dates, y=days["lower"], mode="lines", line=dict(width=0),
+        fill="tonexty", fillcolor=_faint(PRICE_FORECAST, 0.16),
+        name="95% likely range", hoverinfo="skip",
+    ))
+    figure.add_trace(go.Scatter(
+        x=dates, y=days["price"], mode="lines+markers" if marker else "lines",
+        line=dict(color=PRICE_FINAL, width=2, shape="hv"),
+        marker=dict(color=PRICE_FINAL, **marker) if marker else None,
+        name="Price that day", customdata=when,
+        hovertemplate="<b>%{customdata}</b><br>Price £%{y:.1f}m<extra></extra>",
+    ))
+    figure.add_trace(go.Scatter(
+        x=dates, y=days["pred"], mode="lines+markers" if marker else "lines",
+        line=dict(color=PRICE_FORECAST, width=2),
+        marker=dict(color=PRICE_FORECAST, **marker) if marker else None,
+        name=f"{target} forecast",
+        customdata=list(zip(when, days["lower"], days["upper"])),
+        hovertemplate=("<b>%{customdata[0]}</b><br>Forecast £%{y:.2f}m"
+                       "<br>Likely £%{customdata[1]:.1f}m – £%{customdata[2]:.1f}m"
+                       "<extra></extra>"),
+    ))
+
+    # The latest value of each line, labelled at its end, so the two read
+    # without a trip to the legend.
+    last = days.iloc[-1]
+    for value, places in ((last["pred"], 2), (last["price"], 1)):
+        figure.add_annotation(
+            x=dates.iloc[-1], y=float(value), text=f"£{float(value):.{places}f}m",
+            showarrow=False, xanchor="left", xshift=8,
+            font=dict(size=13, family=theme.FONT_FIGURES, color=INK),
+        )
+
+    low = float(min(days["lower"].min(), days["price"].min()))
+    high = float(max(days["upper"].max(), days["price"].max()))
+    pad = max((high - low) * 0.08, 0.1)
+    figure.update_layout(**_base_layout(
+        margin=dict(l=8, r=64, t=30, b=8), height=250, showlegend=True,
+        hovermode="closest",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0,
+                    font=dict(size=12, color=INK_SOFT), itemsizing="constant"),
+        xaxis=dict(tickformat="%-d %b", tickfont=dict(size=12, color=INK_SOFT),
+                   showgrid=False, showline=True, linecolor=LINE, automargin=True,
+                   dtick=86_400_000 if len(days) <= 10 else None),
+        yaxis=dict(range=[low - pad, high + pad], tickprefix="£", ticksuffix="m",
+                   tickfont=dict(size=12, color=INK_SOFT), gridcolor=LINE,
+                   zeroline=False, automargin=True),
+    ))
+    return figure
+
+
 def contribution_bars(
     steps: list[tuple[str, float, str]],
     reference: tuple[str, float] | None = None,

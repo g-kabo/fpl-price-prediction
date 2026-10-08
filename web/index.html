@@ -15,6 +15,7 @@
   <link rel="modulepreload" href="js/board.js">
   <link rel="preload" href="data/board.json" as="fetch" crossorigin>
   <link rel="preload" href="data/model.json" as="fetch" crossorigin>
+  <link rel="preload" href="data/forecasts.json" as="fetch" crossorigin>
 </head>
 <body>
 <div class="app-shell">
@@ -68,6 +69,20 @@
             <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="board-xi" id="xi-fall" value="fall"><label class="form-check-label" for="xi-fall">Fallers</label></div>
           </div>
         </div>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="wrap">
+        <div class="block-head">
+          <div><h2 class="block-title">Forecast movers</h2><p class="block-note" id="board-movers-note"></p></div>
+          <div class="segmented" role="radiogroup" aria-label="Compare with" id="board-window">
+            <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="board-window" id="window-day" value="day"><label class="form-check-label" for="window-day">Since yesterday</label></div>
+            <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="board-window" id="window-week" value="week" checked><label class="form-check-label" for="window-week">Past week</label></div>
+            <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="board-window" id="window-all" value="all"><label class="form-check-label" for="window-all">Since tracking began</label></div>
+          </div>
+        </div>
+        <div id="board-movers" class="movers"></div>
       </div>
     </section>
 

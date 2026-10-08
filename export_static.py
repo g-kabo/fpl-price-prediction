@@ -11,6 +11,8 @@ used to work out per request is computed here, once, and shipped as JSON:
     board.json    every current player, projected to 38 gameweeks and priced
     seasons.json  every player-season What if can load, as form values
     history.json  start and finishing prices per season for today's players
+    forecasts.json  each earlier morning's price and forecast, from
+                  data/history/, for the forecast trend and movers
 
 The browser re-does the model's one line of arithmetic itself (``web/js/
 model.js``), because What if needs it on every keystroke. ``--parity`` writes
@@ -36,6 +38,7 @@ APP_DIR = config.PROJECT_DIR / "app"
 sys.path.insert(0, str(APP_DIR))
 
 import charts  # noqa: E402
+import forecast_history  # noqa: E402
 import form  # noqa: E402
 import live  # noqa: E402
 import model_store  # noqa: E402
@@ -163,6 +166,7 @@ def board_payload(season: live.LiveSeason, projected: pd.DataFrame) -> dict:
         "is_live": bool(season.is_live),
         "error": season.error,
         "gameweek_label": season.gameweek_label,
+        "gameweeks_finished": int(season.progress.gameweeks_finished),
         "stale_after_hours": live.STALE_AFTER_HOURS,
         "players": records,
     }
@@ -176,6 +180,49 @@ def history_payload(codes: set[int], predict_season: int) -> dict:
         out.setdefault(str(int(row.code)), []).append(
             [int(row.season), _clean(row.start_cost), _clean(row.final_cost)])
     return out
+
+
+def forecasts_payload(season: live.LiveSeason, codes: set[int]) -> dict:
+    """Each recorded morning before today: price and forecast per player.
+
+    Today is left out: the page takes it from board.json, the same frame it
+    shows, so the trend ends on the number above it (see the engineering
+    notes).
+
+    ``players`` maps a code to his change points only: ``[day, price, pred,
+    lower, upper]`` on the first day and on each day any of those moved,
+    with ``day`` an index into ``dates``, and ``[day]`` alone from a day he
+    was missing. Between gameweeks most forecasts hold for days on end, so
+    this keeps a full season's file to a fraction of one row per day.
+    """
+    history = forecast_history.load()
+    if season.is_live and season.fetched_at:
+        history = history[history["date"] < season.fetched_at.date()]
+    history = history[history["code"].isin(codes)]
+    dates = sorted(history["date"].unique())
+    index = {d: i for i, d in enumerate(dates)}
+    gameweeks = history.groupby("date")["gameweeks_finished"].max()
+
+    by_day: dict[int, dict[int, list]] = {}
+    for row in history.itertuples():
+        by_day.setdefault(int(row.code), {})[index[row.date]] = [
+            _clean(round(float(v), 3)) for v in
+            (row.price, row.pred_next_start, row.pred_next_lower, row.pred_next_upper)]
+
+    players: dict[str, list] = {}
+    for code, days in by_day.items():
+        points, last = [], None
+        for day in range(min(days), len(dates)):
+            values = days.get(day)
+            if values != last:
+                points.append([day, *values] if values else [day])
+                last = values
+        players[str(code)] = points
+    return {
+        "dates": [d.isoformat() for d in dates],
+        "gameweeks": [int(gameweeks[d]) for d in dates],
+        "players": players,
+    }
 
 
 # ---------------------------------------------------------------- What if
@@ -299,6 +346,7 @@ def main(argv: list[str] | None = None) -> None:
     _write("seasons.json", seasons_payload(projected, meta))
     _write("history.json", history_payload(set(projected["code"].astype(int)),
                                            meta["predict_season"]))
+    _write("forecasts.json", forecasts_payload(season, set(projected["code"].astype(int))))
     if args.parity:
         _write("parity.json", parity_payload(projected, meta), TESTS_DIR)
 

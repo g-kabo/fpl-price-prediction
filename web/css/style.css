@@ -662,6 +662,83 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
 
 .more { display: flex; justify-content: center; padding: 16px 0 0; }
 
+/* ---------- forecast movers --------------------------------------------- */
+
+.movers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.movers > .empty {
+  grid-column: 1 / -1;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.mv-side {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.mv-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 20px;
+  background: var(--aubergine);
+  color: var(--on-dark);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.mv-head i { color: var(--cyan); }
+
+.mv-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 104px;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 60px;
+  padding: 0 20px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  text-align: left;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+.mv-head + .mv-row { border-top: 0; }
+.mv-row:hover { background: var(--tint); }
+.mv-row:focus-visible { box-shadow: inset var(--focus); }
+
+.mv-path {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-fig);
+  font-size: 1.05rem;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.mv-path strong { color: var(--aubergine); font-weight: 800; }
+.mv-then { display: inline-flex; align-items: center; gap: 6px; }
+.mv-path i { font-size: 0.8rem; }
+
+.mv-none { margin: 0; padding: 20px; color: var(--ink-soft); }
+
+@media (max-width: 900px) {
+  .movers { grid-template-columns: 1fr; }
+}
+
+/* On a phone, the forecast now and the change; the earlier forecast is
+   implied by the two. */
+@media (max-width: 560px) {
+  .mv-row { grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; padding: 0 14px; }
+  .mv-then { display: none; }
+}
+
 .empty {
   display: flex;
   flex-direction: column;
@@ -934,6 +1011,7 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
 .why-lede { font-size: 1.05rem; max-width: 70ch; margin-bottom: 8px; }
 .why-lede strong { color: var(--aubergine); }
 .history { margin-bottom: 28px; }
+.trend { margin-bottom: 28px; }
 
 .details {
   border-top: 1px solid var(--line);
