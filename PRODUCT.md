@@ -37,16 +37,18 @@ fixtures played and clamped to the range the model was fitted on.
 
 ## Operating Context
 
-- Dash + dash-bootstrap-components app in `app/`, served on port 8051 so it
-  can run beside the sibling FPL dashboard on 8050.
+- A static site in `web/` (plain HTML and JavaScript), served by GitHub Pages
+  at <https://g-kabo.github.io/fpl-price-prediction/>. Python fits the model and
+  exports it with the day's projection as JSON (`export_static.py`); the browser
+  redoes the model's arithmetic.
 - Three pages:
-  - `/` (Player): prefill from any completed 2025-26 season, then edit.
-  - `/manual`: a hypothetical season typed from scratch, seeded at training medians.
-  - `/projected`: live 2026-27 form from the FPL API, projected to 38 gameweeks, predicting 2027-28.
-- `/projected` includes a repricing scatter, a club filter, a price-history
-  chart and a player table.
-- Hosting for the public is intended but not yet set up; the deploy target is
-  undecided.
+  - Price Watch (`index.html`): live 2026-27 form, projected to 38 gameweeks,
+    predicting 2027-28. The model's XI, forecast movers, a transfer list with
+    club and position filters, a market map, and a player card with the
+    forecast trend and price history.
+  - What if (`lab.html`): load any season since 2017-18, this season as
+    projected, or a typical player, then edit.
+  - How it works (`how-it-works.html`): the fitted model as one equation.
 
 ## Capabilities and Constraints
 
@@ -68,8 +70,9 @@ fixtures played and clamped to the range the model was fitted on.
 
 - Season data from vaastav/Fantasy-Premier-League, snapshots under `data/`.
 - Backtest against the prices FPL actually set (`backtest.py`); test parity
-  across all 841 players between the app and the pipeline
-  (`tests/test_app_parity.py`).
+  across all 841 players between the saved model and the pipeline
+  (`tests/test_model_parity.py`); the JavaScript model is checked against
+  Python on every deploy (`web/tests/parity.mjs`).
 - Model metadata (predictor count, training rows, adj R²) comes from
   `models/`; quote those values, never invented ones.
 - No user testimonials, usage figures or accuracy claims beyond the backtest

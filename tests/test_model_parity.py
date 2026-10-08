@@ -1,6 +1,6 @@
-"""The app and the batch pipeline must price every player identically.
+"""The saved model and the batch pipeline must price every player identically.
 
-The app scores from a saved artifact while ``run_pipeline.py`` refits from
+The site is built from a saved artifact while ``run_pipeline.py`` refits from
 scratch, so the two can silently diverge: a change to ``features.py`` or
 ``clean.py`` leaves an old pickle that still loads and still predicts, just
 wrongly. Nothing in either code path would complain. This test is what
@@ -24,7 +24,6 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-sys.path.insert(0, str(ROOT / "app"))
 
 import config  # noqa: E402
 import train_and_save  # noqa: E402
@@ -92,14 +91,14 @@ def test_intervals_survived_serialisation(artifacts):
     assert width.mean() == pytest.approx(1.177, abs=0.05)
 
 
-def test_app_row_assembly_matches_cleaned_frame(artifacts):
+def test_form_row_assembly_matches_cleaned_frame(artifacts):
     """A row built from form values must score like the cleaned row it came from.
 
-    This is the join between the app's hand-assembled input and the
+    This is the join between What if's hand-assembled input and the
     pipeline's frame: if ``schema.MODEL_INPUT_COLUMNS`` ever drifts from
     what ``build_design_matrix`` reads, the two diverge here first.
     """
-    import form  # imported late: needs app/ on the path
+    import form
     import schema
 
     fitted, scores = artifacts

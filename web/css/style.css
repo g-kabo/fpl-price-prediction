@@ -585,8 +585,6 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
 .pos-filter .form-check:nth-child(3) .form-check-input:checked + .form-check-label { background: var(--mid); border-color: var(--mid); color: #fff; }
 .pos-filter .form-check:nth-child(4) .form-check-input:checked + .form-check-label { background: var(--fwd); border-color: var(--fwd); color: var(--ink); }
 
-.dash-dropdown { font-size: 1rem; }
-
 .list-count { color: var(--ink-soft); font-size: 0.9rem; margin: 0 0 8px; }
 
 /* ---------- transfer list ----------------------------------------------- */

@@ -107,17 +107,11 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-**Run the app**
+**Run the site**
 
 ```bash
-python train_and_save.py        # fit and cache the model (~20s)
-python snapshot.py              # save today's prices from the FPL API
-python app/app.py               # open http://127.0.0.1:8051
-```
-
-**Run the static site** (the GitHub Pages version in `web/`)
-
-```bash
+python train_and_save.py           # fit and cache the model (~20s)
+python snapshot.py                 # save today's prices from the FPL API
 python export_static.py --parity   # write web/data/*.json and the parity fixtures
 node web/tests/parity.mjs          # the JavaScript model matches Python
 python -m http.server 8052 -d web  # open http://localhost:8052
@@ -129,7 +123,7 @@ python -m http.server 8052 -d web  # open http://localhost:8052
 python run_pipeline.py          # predict every player, write output/
 python backtest.py              # score against the prices FPL actually set
 python feature_experiments.py   # re-run the feature-selection comparison
-pytest                          # the app and pipeline agree on every player
+pytest                          # the saved model and pipeline agree on every player
 ```
 
 Season data is downloaded on the first run and cached under `data/`, so later
@@ -146,12 +140,14 @@ runs work offline. Pass `--refresh` to download it again.
 | `feature_experiments.py` | Temporal backtest of alternative feature sets |
 | `price_analysis.py` | Accuracy by price band, tier and position |
 | `run_pipeline.py` / `backtest.py` | Batch predictions and scoring against actual prices |
-| `train_and_save.py` | Fit once and cache the model to `models/` for the app |
+| `train_and_save.py` | Fit once and cache the model to `models/` for the site |
 | `snapshot.py` / `record_predictions.py` | Daily API snapshot and prediction history |
-| `app/` | The original Dash web app, kept as a reference (no longer hosted) |
 | `web/` / `export_static.py` | The static site (plain HTML and JavaScript) and the export that feeds it |
+| `live.py` / `projection.py` | Today's season from the snapshot, projected to 38 gameweeks |
+| `model_store.py` / `schema.py` / `form.py` | Load the cached model; the inputs and What if form it is exported with |
+| `forecast_history.py` / `kits.py` | Prediction history and club shirt colours, read by the export |
 | `explore/` | Builds the full model report (`output/model_report.html`) |
-| `tests/` | App vs pipeline parity tests |
+| `tests/` | Saved model vs pipeline parity tests |
 
 ## Deployment
 
@@ -159,8 +155,6 @@ runs work offline. Pass `--refresh` to download it again.
   which has no server to wake up. `.github/workflows/pages.yml` refits the model,
   exports it and the day's projection to JSON, checks the JavaScript model against
   Python, and publishes. Settings > Pages > Source must be "GitHub Actions".
-  The earlier Render host (`render.yaml`, the Dash app in `app/`) is suspended and
-  kept only as a reference for the Python version.
 - **GitHub Actions** (`.github/workflows/snapshot.yml`) runs at 03:00 UTC daily.
   It snapshots the FPL API, records that day's predictions, commits both, then
   rebuilds the Pages site. If a run fails, the site keeps showing the last good snapshot, marked with its date.

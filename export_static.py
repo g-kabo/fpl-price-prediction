@@ -25,7 +25,6 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import sys
 from pathlib import Path
 
 import numpy as np
@@ -33,18 +32,13 @@ import pandas as pd
 from scipy import stats
 
 import config
-
-APP_DIR = config.PROJECT_DIR / "app"
-sys.path.insert(0, str(APP_DIR))
-
-import charts  # noqa: E402
-import forecast_history  # noqa: E402
-import form  # noqa: E402
-import live  # noqa: E402
-import model_store  # noqa: E402
-import projection  # noqa: E402
-import schema  # noqa: E402
-import theme  # noqa: E402
+import forecast_history
+import form
+import kits
+import live
+import model_store
+import projection
+import schema
 
 WEB_DIR = config.PROJECT_DIR / "web"
 DATA_DIR = WEB_DIR / "data"
@@ -115,9 +109,9 @@ def model_payload() -> dict:
         "team_lump_threshold": config.TEAM_LUMP_THRESHOLD,
         "price_grid": form.PRICE_GRID,
         "material_contribution": form.MATERIAL_CONTRIBUTION,
-        "term_labels": {c: charts.term_label(c) for c in fitted.columns},
-        "kits": {team: list(kit) for team, kit in theme.KITS.items()},
-        "neutral_kit": list(theme.NEUTRAL_KIT),
+        "term_labels": {c: schema.term_label(c) for c in fitted.columns},
+        "kits": {team: list(kit) for team, kit in kits.KITS.items()},
+        "neutral_kit": list(kits.NEUTRAL_KIT),
         "form": {
             "fields": [list(f) for f in schema.FORM_FIELDS],
             "numeric_fields": [list(f) for f in schema.NUMERIC_FIELDS],
