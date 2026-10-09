@@ -15,6 +15,7 @@
 
 import { loadJson, loadModel, showError } from "./data.js";
 import { asFloat, esc, fixed, fmt, pyRound, seasonLabel } from "./format.js";
+import { applyLinks, impossible, rateCaps } from "./linked.js";
 import { initNavSearch } from "./nav.js";
 import { seasonRows, seasonValues, withRatios as ratios } from "./records.js";
 import * as ui from "./ui.js";
@@ -29,8 +30,9 @@ let SCORE_SEASON;
 let TRAIN_THROUGH;
 let SEASONS = [];
 let byseason = new Map(); // season -> [player row, ...]
+let caps; // the highest per-90 rates in the completed seasons
 
-const state = { season: null, code: null, values: {} };
+const state = { season: null, code: null, values: {}, link: { anchor: null, field: null } };
 
 // ---------------------------------------------------------------- data
 
@@ -199,6 +201,19 @@ function heldNote(held, values) {
     + "Price Watch does, rather than extrapolated.</p></div>";
 }
 
+function impossibleNote(values) {
+  const found = impossible(values, caps);
+  if (!found.length) return "";
+  return '<div class="flag"><div class="flag-title"><i class="bi bi-exclamation-triangle-fill"></i> '
+    + `A season nobody has had</div><ul>${found.map((f) => `<li>${esc(f)}</li>`).join("")}</ul>`
+    + '<p class="fine">The price below still follows from these figures, but the model has never seen '
+    + "a player like this.</p></div>";
+}
+
+function showNotes(notes) {
+  $("lab-linked").innerHTML = notes.map((n) => `<span class="linked-note"><i class="bi bi-link-45deg"></i>${esc(n)}</span>`).join("");
+}
+
 function projectedReality(player, predicted) {
   const lines = [`<p class="fine">FPL sets his ${seasonLabel(CURRENT + 1)} price in August ${CURRENT + 1}. `
     + "Until then, this is the forecast Price Watch shows from his form so far.</p>"];
@@ -296,7 +311,8 @@ function update() {
     extra: reality(values, predicted), actual, referenceOnBar: false, cards: ui.priceCards(cards),
   });
   const why = ui.whyThisPrice(model, values, ["Start price", start]);
-  const flags = season === CURRENT ? heldNote(held, values) : ui.outOfRange(model, values, asFloat);
+  const flags = (season === CURRENT ? heldNote(held, values) : ui.outOfRange(model, values, asFloat))
+    + impossibleNote(state.values);
 
   $("lab-head").innerHTML = who + tag;
   $("lab-tag").innerHTML = "";
@@ -313,6 +329,8 @@ function load(season, code, values = null) {
   state.season = season;
   state.code = code;
   state.values = values || valuesFor(season, code);
+  state.link = { anchor: null, field: null };
+  showNotes([]);
   fillForm(state.values);
   update();
   showPlayerLabel();
@@ -338,7 +356,21 @@ function step(name, direction) {
 }
 
 function edit() {
-  state.values = readForm();
+  const next = readForm();
+  if ($("lab-only").checked) {
+    state.link = { anchor: null, field: null };
+    showNotes([]);
+    state.values = next;
+  } else {
+    const linked = applyLinks(state.values, next, state.link);
+    state.link = linked.link;
+    state.values = linked.values;
+    showNotes(linked.notes);
+    // Only the figures the link moved, so a half-typed "5." elsewhere survives.
+    for (const name of form.form_names) {
+      if (linked.values[name] !== next[name]) $(inputId(name)).value = String(linked.values[name]);
+    }
+  }
   update();
 }
 
@@ -361,6 +393,7 @@ function wire() {
   picker.addEventListener("change", pickPlayer);
   picker.addEventListener("blur", () => { if (!pickPlayer()) showPlayerLabel(); });
 
+  $("lab-only").addEventListener("change", () => { state.link = { anchor: null, field: null }; showNotes([]); });
   $("lab-blank").addEventListener("click", () => load(state.season, null, medians()));
   $("lab-reset").addEventListener("click", () => {
     load(state.season, state.code, state.code === null ? medians() : valuesFor(state.season, state.code));
@@ -395,6 +428,7 @@ async function main() {
   SCORE_SEASON = spec.meta.score_season;
   TRAIN_THROUGH = spec.meta.train_through;
   loadSeasons(data);
+  caps = rateCaps(seasonRows(data).filter((r) => r.season !== CURRENT));
   buildForm();
 
   // ?season=<year>&player=<code> opens that season, as Price Watch links.

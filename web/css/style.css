@@ -1878,3 +1878,10 @@ a.tl-row:hover { color: var(--ink); }
   .tlist-value .tlist-head > :nth-child(n+2):nth-child(-n+6),
   .tlist-value .tl-row > :nth-child(n+2):nth-child(-n+6) { display: none; }
 }
+
+/* What if: linked edits */
+.linked-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 10px 0 4px; }
+.linked-only { font-size: 0.9rem; color: var(--ink-soft); display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+.linked-notes { display: flex; flex-wrap: wrap; gap: 6px; }
+.linked-note { font-size: 0.85rem; font-weight: 600; color: var(--aubergine); background: var(--tint); border-radius: 999px; padding: 2px 10px; }
+.linked-note i { margin-right: 4px; }
