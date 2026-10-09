@@ -291,6 +291,29 @@ it with no server and no cold start (Render's free tier sleeps after 15 minutes)
 
 ---
 
+### What if links the figures that move together
+
+Editing one figure used to hold every other fixed, which describes players who
+can't exist: on Cherki's 2025-26, a full season of minutes alone moved his
+price by −£0.16m (the model reads the same points from more minutes as a less
+efficient player), while scaling goals, assists and points with the minutes
+gave about +£1.07m. It is a form problem, so the model is untouched
+(`web/js/linked.js`):
+
+- Goals and assists add their FPL points to total points (goal 6 GK/DEF, 5 MID,
+  4 FWD; assist 3), with no bonus added. The data runs a little above the rules
+  (about 6.2 per midfielder goal).
+- Minutes scale goals, assists and points; games scale minutes as well. Repeated
+  edits of one field scale from the figures before the first, so typing
+  1, 12, 123 does not compound rounding.
+- "Edit this figure only" switches the links off; every knock-on is shown as a
+  note, never silent.
+- A flag appears for seasons nobody has had: a per-90 rate above the highest in
+  the completed seasons (players with 270+ minutes), points below what the goals
+  and assists alone earn, or more than 90 minutes a game.
+
+`node web/tests/linked.mjs` checks these against the Cherki case.
+
 ## Daily history
 
 After each snapshot, the GitHub Action runs `record_predictions.py`, which writes
