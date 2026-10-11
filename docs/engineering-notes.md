@@ -314,6 +314,31 @@ gave about +£1.07m. It is a form problem, so the model is untouched
 
 `node web/tests/linked.mjs` checks these against the Cherki case.
 
+### What changed in a forecast
+
+The forecast is linear in its inputs, so the move in one player's forecast
+between two mornings splits exactly into the move in each term. The card's
+"What changed" chart does that (`model.changeSteps`, `ui.whatChanged`),
+using `data/drivers.json`: the model's inputs, held inside the training
+range, on each recorded morning (`export_static.drivers_payload`). The
+earlier morning is the Forecast movers window, so the two always agree.
+
+Three things the first look at the history (29 Sep to 11 Oct 2026) found:
+
+- A forecast only moves when his team's games-played count does, apart from
+  ownership drifting by pennies. 393 of 667 players got a new count when GW6
+  began on 11 Oct (average move £0.072m); the rest moved £0.0016m.
+- The big jumps are projected returns, not price: points per £m, goals and
+  minutes lead. One goal scaled to a full season is worth about £0.38m.
+- Small samples do amplify (Hadjam: 2 minutes and a goal, projected to 6
+  goals, £4.27m to £5.18m), but they are not where most of the movement
+  is: players under 270 minutes were 69% of the league and 35% of the
+  absolute movement, and 6 of the 23 moves of £0.3m or more.
+
+Both waterfalls ("Why this price" and "What changed") draw the start price,
+end price and their squares as one bar, "Overall price contribution", in
+`model.steps`. Tables and the narration keep the four terms apart.
+
 ## Daily history
 
 After each snapshot, the GitHub Action runs `record_predictions.py`, which writes
