@@ -24,14 +24,24 @@ from record_predictions import HISTORY_DIR
 COLUMNS = ["date", "gameweeks_finished", "code", "price",
            "pred_next_start", "pred_next_lower", "pred_next_upper"]
 
+#: What the model was given that morning, for "what changed" (see
+#: ``export_static.drivers_payload``). Read only when asked for.
+INPUT_COLUMNS = ["start_price", "proj_minutes", "proj_total_points", "proj_points_per_game",
+                 "proj_value_season", "proj_goals_scored", "proj_assists",
+                 "selected_by_percent", "element_type", "team_name"]
 
-def load(season: int = config.PREDICT_SEASON) -> pd.DataFrame:
-    """Every recorded day of ``season``, oldest first. Empty if none."""
+
+def load(season: int = config.PREDICT_SEASON, inputs: bool = False) -> pd.DataFrame:
+    """Every recorded day of ``season``, oldest first. Empty if none.
+
+    With ``inputs``, also the figures the model was given each morning.
+    """
+    columns = COLUMNS + INPUT_COLUMNS if inputs else COLUMNS
     paths = sorted((HISTORY_DIR / str(season)).glob("*.csv"))
     if not paths:
-        return pd.DataFrame(columns=COLUMNS)
+        return pd.DataFrame(columns=columns)
     frame = pd.concat(
-        [pd.read_csv(p, usecols=lambda c: c in COLUMNS, encoding="utf-8") for p in paths],
+        [pd.read_csv(p, usecols=lambda c: c in columns, encoding="utf-8") for p in paths],
         ignore_index=True,
     )
     frame["date"] = pd.to_datetime(frame["date"]).dt.date

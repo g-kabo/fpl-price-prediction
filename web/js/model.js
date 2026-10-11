@@ -8,6 +8,9 @@
 
 import { asFloat } from "./format.js";
 
+const PRICE_COLUMNS = new Set(["start_cost", "final_cost", "start_cost_sq", "final_cost_sq"]);
+const PRICE_LABEL = "Overall price contribution";
+
 /** Build the model from model.json. */
 export function makeModel(spec) {
   const { columns, params, cov, scale, tcrit, other_team: other } = spec;
@@ -54,10 +57,10 @@ export function makeModel(spec) {
     return { pred, lower: pred - half, upper: pred + half };
   }
 
-  /** One price decomposed into its terms; see form.contributions. */
-  function contributions(values, topN = 12) {
+  /** Every term of one price as {column, value, beta, contribution}, and the
+   *  intercept. Terms with no effect are left out. */
+  function termList(values) {
     const x = design(values);
-    const intercept = beta[0];
     const terms = [];
     columns.forEach((column, i) => {
       const value = x[i + 1];
@@ -66,29 +69,76 @@ export function makeModel(spec) {
       if (Math.abs(contribution) < 1e-9) return;
       terms.push({ column, value, beta: b, contribution });
     });
+    return { intercept: beta[0], terms };
+  }
+
+  /** One price decomposed into its terms; see form.contributions. */
+  function contributions(values, topN = 12) {
+    const { intercept, terms } = termList(values);
     terms.sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution));
 
     const material = terms.filter((t) => Math.abs(t.contribution) >= spec.material_contribution);
     const shown = material.slice(0, topN);
     const drawn = new Set(shown.map((t) => t.column));
     const pooled = terms.filter((t) => !drawn.has(t.column));
+    const pooledPrice = pooled.filter((t) => PRICE_COLUMNS.has(t.column));
     return {
       intercept,
       shown,
       rest: pooled.reduce((sum, t) => sum + t.contribution, 0),
       nRest: pooled.length,
+      // All four price terms together, wherever they fell; the waterfall
+      // draws them as one bar (see steps).
+      price: terms.filter((t) => PRICE_COLUMNS.has(t.column)).reduce((sum, t) => sum + t.contribution, 0),
+      pricePooled: { amount: pooledPrice.reduce((sum, t) => sum + t.contribution, 0), count: pooledPrice.length },
       total: intercept + terms.reduce((sum, t) => sum + t.contribution, 0),
     };
   }
 
-  /** Contributions as ordered waterfall steps: [label, amount, measure]. */
+  /** Contributions as ordered waterfall steps: [label, amount, measure].
+   *  The start and end price, and their squares, are one "Overall price
+   *  contribution" here: the chart is about how much his price matters, not
+   *  which of its four terms carries it. Tables and the narration keep the
+   *  terms apart. */
   function steps(parts) {
-    const out = [["Model baseline", parts.intercept, "absolute"]];
-    for (const t of parts.shown) out.push([spec.term_labels[t.column] || t.column, t.contribution, "relative"]);
-    if (parts.nRest) out.push([`${parts.nRest} smaller terms`, parts.rest, "relative"]);
+    const rows = parts.shown.filter((t) => !PRICE_COLUMNS.has(t.column))
+      .map((t) => [spec.term_labels[t.column] || t.column, t.contribution, "relative"]);
+    rows.push([PRICE_LABEL, parts.price, "relative"]);
+    rows.sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+    const out = [["Model baseline", parts.intercept, "absolute"], ...rows];
+    const nRest = parts.nRest - parts.pricePooled.count;
+    if (nRest) out.push([`${nRest} smaller terms`, parts.rest - parts.pricePooled.amount, "relative"]);
     out.push(["Predicted price", parts.total, "total"]);
     return out;
   }
 
-  return { spec, design, predict, contributions, steps, termLabel: (c) => spec.term_labels[c] || c.replace(/_/g, " ") };
+  /** The move from one set of inputs to another as waterfall steps, price
+   *  terms combined as in `steps`: [label, amount, measure]. Linear, so the
+   *  steps add up to the change exactly. Smaller terms past `topN` are pooled. */
+  function changeSteps(thenValues, nowValues, topN = 8) {
+    const before = termList(thenValues);
+    const after = termList(nowValues);
+    const delta = new Map();
+    for (const t of before.terms) delta.set(t.column, -t.contribution);
+    for (const t of after.terms) delta.set(t.column, (delta.get(t.column) || 0) + t.contribution);
+
+    let price = 0;
+    const rows = [];
+    for (const [column, amount] of delta) {
+      if (PRICE_COLUMNS.has(column)) price += amount;
+      else rows.push([spec.term_labels[column] || column, amount, "relative"]);
+    }
+    rows.push([PRICE_LABEL, price, "relative"]);
+    const moved = rows.filter((r) => Math.abs(r[1]) >= 0.0005).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+    const shown = moved.slice(0, topN);
+    const rest = moved.slice(topN);
+
+    const total = (side) => side.intercept + side.terms.reduce((sum, t) => sum + t.contribution, 0);
+    const out = [["Forecast then", total(before), "absolute"], ...shown];
+    if (rest.length) out.push([`${rest.length} smaller terms`, rest.reduce((sum, r) => sum + r[1], 0), "relative"]);
+    out.push(["Forecast now", total(after), "total"]);
+    return out;
+  }
+
+  return { spec, design, predict, contributions, steps, changeSteps, termLabel: (c) => spec.term_labels[c] || c.replace(/_/g, " ") };
 }

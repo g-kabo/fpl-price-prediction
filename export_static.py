@@ -13,6 +13,8 @@ used to work out per request is computed here, once, and shipped as JSON:
     history.json  start and finishing prices per season for today's players
     forecasts.json  each earlier morning's price and forecast, from
                   data/history/, for the forecast trend and movers
+    drivers.json  the model's inputs on each of those mornings, so the card
+                  can show what moved a forecast (the "What changed" chart)
     players.json  one line per player since the first season, current or
                   departed, for the search in every page's header
 
@@ -55,6 +57,11 @@ BOARD_KEEP = list(dict.fromkeys(
 #: Per-row fields of ``seasons.json``, in order.
 SEASON_FIELDS = (["season", "code", "web_name", "team_name", "element_type", "form_team"]
                  + schema.FORM_NAMES + ["next_cost", "games_played", "pred"])
+
+
+#: The model's numeric inputs, in the order ``drivers.json`` stores them.
+DRIVER_FIELDS = ["start_cost", "final_cost", "minutes", "total_points", "points_per_game",
+                 "value_season", "goals_scored", "assists", "selected_by_percent"]
 
 
 def _clean(value):
@@ -221,6 +228,56 @@ def forecasts_payload(season: live.LiveSeason, codes: set[int]) -> dict:
     }
 
 
+def drivers_payload(season: live.LiveSeason, codes: set[int], ranges: dict) -> dict:
+    """The model's inputs each recorded morning before today, per player.
+
+    What "what changed" on the player card needs: with the inputs from an
+    earlier morning the page can price him again and split the difference
+    between then and now term by term. They are the figures the model was
+    actually given, held inside the training range as Price Watch does.
+
+    Same shape as ``forecasts_payload``: ``players`` maps a code to change
+    points ``[day, start_cost, final_cost, minutes, total_points,
+    points_per_game, value_season, goals_scored, assists,
+    selected_by_percent]``, ``[day]`` alone from a day he was missing, with
+    ``day`` an index into this file's ``dates``.
+    """
+    history = forecast_history.load(inputs=True)
+    if season.is_live and season.fetched_at:
+        history = history[history["date"] < season.fetched_at.date()]
+    history = history[history["code"].isin(codes)]
+    dates = sorted(history["date"].unique())
+    index = {d: i for i, d in enumerate(dates)}
+
+    frame = pd.DataFrame({
+        "start_cost": history["start_price"], "final_cost": history["price"],
+        "minutes": history["proj_minutes"], "total_points": history["proj_total_points"],
+        "points_per_game": history["proj_points_per_game"],
+        "value_season": history["proj_value_season"],
+        "goals_scored": history["proj_goals_scored"], "assists": history["proj_assists"],
+        "selected_by_percent": history["selected_by_percent"]})
+    for name in DRIVER_FIELDS:
+        bounds = ranges.get(name)
+        if bounds:
+            frame[name] = frame[name].clip(bounds["min"], bounds["max"])
+    frame = frame[DRIVER_FIELDS].round(4)
+
+    by_day: dict[int, dict[int, list]] = {}
+    for day, code, row in zip(history["date"], history["code"], frame.to_numpy().tolist()):
+        by_day.setdefault(int(code), {})[index[day]] = [_clean(v) for v in row]
+
+    players: dict[str, list] = {}
+    for code, days in by_day.items():
+        points, last = [], None
+        for day in range(min(days), len(dates)):
+            values = days.get(day)
+            if values != last:
+                points.append([day, *values] if values else [day])
+                last = values
+        players[str(code)] = points
+    return {"fields": DRIVER_FIELDS, "dates": [d.isoformat() for d in dates], "players": players}
+
+
 # ---------------------------------------------------------------- What if
 
 
@@ -377,6 +434,7 @@ def main(argv: list[str] | None = None) -> None:
     _write("history.json", history_payload(set(projected["code"].astype(int)),
                                            meta["predict_season"]))
     _write("forecasts.json", forecasts_payload(season, set(projected["code"].astype(int))))
+    _write("drivers.json", drivers_payload(season, set(projected["code"].astype(int)), meta["ranges"]))
     if args.parity:
         _write("parity.json", parity_payload(projected, meta), TESTS_DIR)
 
