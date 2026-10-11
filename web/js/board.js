@@ -310,22 +310,6 @@ function playerSeasons(record) {
   return [...past, [SEASON, record.start_cost, record.price_now]];
 }
 
-/** "What changed" for this player: his inputs on the morning the movers
- *  window reaches back to, against today's. Null when that morning has none. */
-function whatChangedFor(record, values) {
-  if (!drivers) return null;
-  const day = baselineDay(MOVER_WINDOWS[state.window] ?? null);
-  if (day < 0) return null;
-  const date = forecasts.dates[day];
-  const earlier = recordedOn(drivers.players[String(record.code)], drivers.dates.indexOf(date));
-  if (!earlier) return null;
-  const then = { ...values };
-  drivers.fields.forEach((name, i) => { then[name] = earlier[i]; });
-  return ui.whatChanged(model, {
-    since: dayMonth(date), then, now: values, minutes: Number(record.minutes_now || 0),
-  });
-}
-
 function cardHtml(record) {
   const values = boardValues(model.spec, record);
   const interval = model.predict(values);
@@ -353,18 +337,16 @@ function cardHtml(record) {
     `Predicted ${seasonLabel(TARGET)} price`, `<div>${note}${ui.pooledNote(model, record.team_name)}${link}</div>`);
   const why = ui.whyThisPrice(model, values, [short, reference]);
   const days = trendDays(forecasts, board, record, interval);
-  const change = whatChangedFor(record, values);
   const daily = drivers ? ui.dailyChange(model, driverDays(drivers, record, values, snapshotDay(board))) : null;
   const trend = ui.forecastTrend(days);
   const past = ui.priceHistory(`The ${seasonLabel(SEASON)} season is still running, so its end price is today's.`);
 
   return {
-    html: header + answer + why.html + trend + (change ? change.html : "") + (daily ? daily.html : "") + past,
+    html: header + answer + why.html + trend + (daily ? daily.html : "") + past,
     mount(root) {
       why.mount(root);
       const trendEl = root.querySelector(".trend-chart");
       if (trendEl) drawForecastTrend(trendEl, days, TARGET);
-      if (change) change.mount(root);
       if (daily) daily.mount(root);
       drawPriceHistory(root.querySelector(".history-chart"), playerSeasons(record), TARGET, interval.pred);
     },

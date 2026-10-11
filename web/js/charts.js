@@ -272,11 +272,8 @@ export function drawForecastTrend(el, days, targetSeason) {
  *  line, so the gap between it and the final bar is the predicted move.
  *  Drawn as floating bars (a `base` per bar) rather than Plotly's waterfall
  *  trace, which the lighter Plotly build the site loads does not include.
- *
- *  `zoom` fits the axis to where the bars actually run, for a bridge between
- *  two nearby prices (what changed), where starting at £0 would flatten
- *  every movement into a sliver. */
-export function drawContributionBars(el, steps, reference = null, { zoom = false } = {}) {
+ */
+export function drawContributionBars(el, steps, reference = null) {
   const labels = steps.map(([label]) => label);
   const amounts = steps.map(([, amount]) => amount);
   const measures = steps.map(([, , measure]) => measure);
@@ -352,8 +349,7 @@ export function drawContributionBars(el, steps, reference = null, { zoom = false
     yaxis: { autorange: "reversed", tickfont: { size: 13, color: INK }, showgrid: false,
       automargin: true, ticksuffix: "  " },
     xaxis: { tickprefix: "£", ticksuffix: "m", tickfont: { size: 12, color: INK_SOFT },
-      gridcolor: LINE, zeroline: true, zerolinecolor: "#cbbfd2", automargin: true,
-      ...(zoom ? { range: zoomRange(ends, bases, lengths) } : {}) },
+      gridcolor: LINE, zeroline: true, zerolinecolor: "#cbbfd2", automargin: true },
   }));
 }
 
@@ -407,15 +403,6 @@ export function drawDailyContributions(el, days) {
     yaxis: { tickprefix: "£", ticksuffix: "m", tickfont: { size: 12, color: INK_SOFT }, gridcolor: LINE,
       zeroline: true, zerolinecolor: "#cbbfd2", automargin: true },
   }));
-}
-
-/** The span of a bridge's running total, with room either side. */
-function zoomRange(ends, bases, lengths) {
-  const points = [...ends, ...bases.map((b, i) => b + lengths[i])].filter((v) => v > 0);
-  const low = Math.min(...points);
-  const high = Math.max(...points);
-  const pad = Math.max((high - low) * 0.3, 0.05);
-  return [low - pad, high + pad];
 }
 
 function axis(title, bounds) {

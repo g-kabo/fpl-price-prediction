@@ -1,5 +1,4 @@
-// Checks the waterfall steps: price terms combined, and the "what changed"
-// bridge adding up exactly.
+// Checks the waterfall steps: price terms combined and adding up exactly.
 //
 //     node web/tests/waterfall.mjs
 
@@ -29,13 +28,6 @@ for (const p of board.players.slice(0, 200)) {
   const sum = steps.filter((s) => s[2] === "relative").reduce((t, s) => t + s[1], steps[0][1]);
   check(`${p.web_name} waterfall adds up`, Math.abs(sum - parts.total) < 1e-9, `${sum} vs ${parts.total}`);
 
-  const then = { ...now, goals_scored: now.goals_scored + 2, total_points: now.total_points + 9,
-    final_cost: now.final_cost + 0.1, selected_by_percent: now.selected_by_percent + 1 };
-  const change = model.changeSteps(then, now);
-  const bridge = change.filter((s) => s[2] === "relative").reduce((t, s) => t + s[1], change[0][1]);
-  const last = change[change.length - 1][1];
-  check(`${p.web_name} bridge adds up`, Math.abs(bridge - last) < 1e-9, `${bridge} vs ${last}`);
-  check(`${p.web_name} bridge ends on the price`, Math.abs(last - parts.total) < 1e-9);
 }
 
 if (failures) { console.error(`${failures} failure(s)`); process.exit(1); }

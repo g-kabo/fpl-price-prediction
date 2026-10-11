@@ -134,17 +134,5 @@ export function makeModel(spec) {
     return { terms, before: total(before), after: total(after) };
   }
 
-  /** The move from one set of inputs to another as waterfall steps:
-   *  [label, amount, measure]. Smaller terms past `topN` are pooled. */
-  function changeSteps(thenValues, nowValues, topN = 8) {
-    const { terms, before, after } = changeTerms(thenValues, nowValues);
-    const shown = terms.slice(0, topN).map(([label, amount]) => [label, amount, "relative"]);
-    const rest = terms.slice(topN);
-    const out = [["Forecast then", before, "absolute"], ...shown];
-    if (rest.length) out.push([`${rest.length} smaller terms`, rest.reduce((sum, r) => sum + r[1], 0), "relative"]);
-    out.push(["Forecast now", after, "total"]);
-    return out;
-  }
-
-  return { spec, design, predict, contributions, steps, changeTerms, changeSteps, termLabel: (c) => spec.term_labels[c] || c.replace(/_/g, " ") };
+  return { spec, design, predict, contributions, steps, changeTerms, termLabel: (c) => spec.term_labels[c] || c.replace(/_/g, " ") };
 }

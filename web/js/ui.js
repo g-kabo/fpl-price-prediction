@@ -241,46 +241,6 @@ export function whyThisPrice(model, values, reference) {
   return { html, mount };
 }
 
-/** Below this many minutes, a goal or assist scaled to a full season moves a
- *  forecast a lot (one goal is worth about £0.4m): said on the card. */
-const THIN_MINUTES = 270;
-
-/** What moved a forecast between an earlier morning and now: the same terms
- *  as "Why this price", but each bar is how much that term changed. `then`
- *  and `now` are the model's inputs on each day; `since` is the earlier
- *  day's label. Returns null when there is nothing to compare. */
-export function whatChanged(model, { since, then, now, minutes }) {
-  if (!then) return null;
-  const steps = model.changeSteps(then, now);
-  const before = steps[0][1];
-  const after = steps[steps.length - 1][1];
-  const moved = after - before;
-  const title = '<h3 class="section-title">What changed</h3>';
-  if (Math.abs(moved) < 0.005) {
-    return { html: `<div class="why change">${title}<p class="why-lede">The forecast is unchanged since `
-      + `${esc(since)}: £${fixed(after, 2)}m.</p></div>`, mount() {} };
-  }
-
-  const drivers = steps.slice(1, -1).filter((r) => !r[0].endsWith("smaller terms"));
-  const named = (rows) => rows.slice(0, 2)
-    .map(([label, amount]) => `${esc(label.toLowerCase())} (${money(amount, true, 2)})`).join(", ");
-  const ups = drivers.filter((r) => r[1] > 0);
-  const downs = drivers.filter((r) => r[1] < 0);
-  let lede = `${moved > 0 ? "Up" : "Down"} <strong>${money(Math.abs(moved), false, 2)}</strong> since ${esc(since)}, `
-    + `from ${money(before, false, 2)} to ${money(after, false, 2)}. `;
-  if (ups.length) lede += `Pushing it up: ${named(ups)}. `;
-  if (downs.length) lede += `Pulling it down: ${named(downs)}.`;
-  let note = "Each bar is how much one ingredient of the price moved, and they add up exactly to the change.";
-  if (minutes < THIN_MINUTES && Math.abs(moved) >= 0.1) {
-    note += ` He has played only ${fmt(minutes)} minutes, so each goal or assist is scaled up to a full season. `
-      + "Expect the forecast to settle as he plays more.";
-  }
-  const html = `<div class="why change">${title}<p class="why-lede">${lede}</p><div class="change-chart"></div>`
-    + `<p class="fine">${note}</p></div>`;
-  const mount = (root) => drawContributionBars(root.querySelector(".change-chart"), steps, null, { zoom: true });
-  return { html, mount };
-}
-
 /** Day by day, what moved the forecast, as stacked bars. `series` is
  *  [{date, values}] oldest first, today last (see `driverDays`). A day with
  *  no movement is left empty; null when there is nothing to draw. */

@@ -314,14 +314,16 @@ gave about +£1.07m. It is a form problem, so the model is untouched
 
 `node web/tests/linked.mjs` checks these against the Cherki case.
 
-### What changed in a forecast
+### What moves a forecast, day by day
 
 The forecast is linear in its inputs, so the move in one player's forecast
 between two mornings splits exactly into the move in each term. The card's
-"What changed" chart does that (`model.changeSteps`, `ui.whatChanged`),
-using `data/drivers.json`: the model's inputs, held inside the training
-range, on each recorded morning (`export_static.drivers_payload`). The
-earlier morning is the Forecast movers window, so the two always agree.
+"Day by day" chart does that for every morning (`model.changeTerms`,
+`ui.dailyChange`), stacking each term's change above or below zero, using
+`data/drivers.json`: the model's inputs, held inside the training range, on
+each recorded morning (`export_static.drivers_payload`). A single
+then-versus-now waterfall ("What changed") was built first and dropped in
+favour of this.
 
 Three things the first look at the history (29 Sep to 11 Oct 2026) found:
 
@@ -335,9 +337,10 @@ Three things the first look at the history (29 Sep to 11 Oct 2026) found:
   is: players under 270 minutes were 69% of the league and 35% of the
   absolute movement, and 6 of the 23 moves of £0.3m or more.
 
-Both waterfalls ("Why this price" and "What changed") draw the start price,
-end price and their squares as one bar, "Overall price contribution", in
-`model.steps`. Tables and the narration keep the four terms apart.
+The "Why this price" waterfall draws the start price, end price and their
+squares as one bar, "Overall price contribution", in `model.steps`, and the
+day-by-day chart does the same. Tables and the narration keep the four terms
+apart.
 
 ## Daily history
 

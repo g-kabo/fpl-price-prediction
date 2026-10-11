@@ -14,7 +14,7 @@ used to work out per request is computed here, once, and shipped as JSON:
     forecasts.json  each earlier morning's price and forecast, from
                   data/history/, for the forecast trend and movers
     drivers.json  the model's inputs on each of those mornings, so the card
-                  can show what moved a forecast (the "What changed" chart)
+                  can show what moved a forecast (the "Day by day" chart)
     players.json  one line per player since the first season, current or
                   departed, for the search in every page's header
 
@@ -231,7 +231,7 @@ def forecasts_payload(season: live.LiveSeason, codes: set[int]) -> dict:
 def drivers_payload(season: live.LiveSeason, codes: set[int], ranges: dict) -> dict:
     """The model's inputs each recorded morning before today, per player.
 
-    What "what changed" on the player card needs: with the inputs from an
+    What the player card's "Day by day" chart needs: with the inputs from an
     earlier morning the page can price him again and split the difference
     between then and now term by term. They are the figures the model was
     actually given, held inside the training range as Price Watch does.
