@@ -139,6 +139,13 @@ const changeCell = (value) => (value === null
 
 const MOVER_WINDOWS = { day: 1, week: 7, month: 30, all: null };
 
+/** Up or down, to the penny, never "holds": every club is on one side or the other. */
+function moveChip(change) {
+  const way = change >= 0 ? "rise" : "fall";
+  return `<span class="delta delta-${way} delta-md"><i class="bi ${way === "rise" ? "bi-caret-up-fill" : "bi-caret-down-fill"}"></i>`
+    + `${money(change, true, 2)}</span>`;
+}
+
 function mover(row) {
   const href = `club.html?team=${encodeURIComponent(row.club.team)}${shared.count === "all" ? "&count=all" : ""}`;
   return `<a class="mv-row" href="${href}">`
@@ -146,7 +153,7 @@ function mover(row) {
     + `<span class="tl-name">${esc(row.club.team)}</span><span class="tl-sub"><span class="tl-club">${row.n} players</span></span></span></span>`
     + `<span class="num mv-path"><span class="mv-then">${money(row.then, false, 2)}<i class="bi bi-arrow-right"></i></span>`
     + `<strong>${money(row.now, false, 2)}</strong></span>`
-    + `<span class="num">${ui.deltaChip(row.change)}</span></a>`;
+    + `<span class="num">${moveChip(row.change)}</span></a>`;
 }
 
 function moversSide(title, icon, rows, none) {
@@ -175,8 +182,7 @@ function renderMoves() {
     const move = forecastMove(club, day);
     if (move) rows.push({ club, ...move });
   }
-  // Every club, on the side its forecast moved to; a club that has barely
-  // moved shows "holds" at the foot of its list.
+  // Every club, on the side its forecast moved to.
   const ups = rows.filter((r) => r.change >= 0).sort((a, b) => b.change - a.change);
   const downs = rows.filter((r) => r.change < 0).sort((a, b) => a.change - b.change);
 
