@@ -138,9 +138,6 @@ const changeCell = (value) => (value === null
   : `<td class="num"><span class="move move-${Math.abs(value) < 0.005 ? "hold" : value > 0 ? "rise" : "fall"}">${money(value, true, 2)}</span></td>`);
 
 const MOVER_WINDOWS = { day: 1, week: 7, month: 30, all: null };
-const MOVERS_EACH = 5;
-/** The chip calls anything under £0.1m "holds", so a club has to clear that to be listed. */
-const MOVER_FLOOR = 0.1;
 
 function mover(row) {
   const href = `club.html?team=${encodeURIComponent(row.club.team)}${shared.count === "all" ? "&count=all" : ""}`;
@@ -178,18 +175,15 @@ function renderMoves() {
     const move = forecastMove(club, day);
     if (move) rows.push({ club, ...move });
   }
-  const ups = rows.filter((r) => r.change >= MOVER_FLOOR).sort((a, b) => b.change - a.change).slice(0, MOVERS_EACH);
-  const downs = rows.filter((r) => r.change <= -MOVER_FLOOR).sort((a, b) => a.change - b.change).slice(0, MOVERS_EACH);
+  // Every club, on the side its forecast moved to; a club that has barely
+  // moved shows "holds" at the foot of its list.
+  const ups = rows.filter((r) => r.change >= 0).sort((a, b) => b.change - a.change);
+  const downs = rows.filter((r) => r.change < 0).sort((a, b) => a.change - b.change);
 
   const since = dayMonth(day.date);
   const who = shared.count === "played" ? "players who have played" : "squad";
-  note.textContent = `Whose combined ${seasonLabel(TARGET)} forecast, over its ${who}, has moved most since the morning of ${since}.`
+  note.textContent = `Whose combined ${seasonLabel(TARGET)} forecast, over its ${who}, has moved since the morning of ${since}, every club listed.`
     + (day.short ? ` There is not yet that much history, so this measures from ${since}.` : "");
-  if (!ups.length && !downs.length) {
-    out.innerHTML = ui.empty(`No club's forecast has moved by £0.1m or more since ${since}. Expect movement after the next gameweek.`,
-      "bi-pause-circle");
-    return;
-  }
   out.innerHTML = moversSide("Forecast up", "bi-graph-up-arrow", ups, `No club's forecast up since ${since}.`)
     + moversSide("Forecast down", "bi-graph-down-arrow", downs, `No club's forecast down since ${since}.`);
 }
