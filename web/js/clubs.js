@@ -6,7 +6,7 @@
 
 import { loadJson, loadModel, showError } from "./data.js";
 import { dayMonth, esc, fixed, seasonLabel } from "./format.js";
-import { drawClubBars } from "./charts.js";
+import { drawClubBars, drawClubScatter } from "./charts.js";
 import { initNavSearch } from "./nav.js";
 import { POSITIONS, baselineDay, clubs, forecastMove, measureOf, readCount, setData, shared, summariseAll, writeCount }
   from "./clubdata.js";
@@ -166,25 +166,53 @@ function renderMoves() {
   $("club-moves").innerHTML = `<table class="terms club-table" data-table="moves">${head}<tbody>${body}</tbody></table>`;
 }
 
+/** One row per club for the club table and the scatter beside it. A player
+ *  is up or down by whether his forecast is above or below his start price;
+ *  the two totals add up to the change. */
+function tableRows() {
+  return clubs.map((club) => {
+    const deltas = club.players.map((p) => p.pred - p.start_cost);
+    const ups = deltas.filter((d) => d > 0);
+    const downs = deltas.filter((d) => d < 0);
+    const sum = (list) => list.reduce((t, d) => t + d, 0);
+    return {
+      club, team: club.team, picked: club.picked, started: club.started, predicted: club.predicted,
+      change: club.predicted - club.started,
+      up: ups.length, down: downs.length, upTotal: sum(ups), downTotal: sum(downs),
+    };
+  });
+}
+
+/** Start price against predicted price for every club's squad. */
+function renderScatter() {
+  const rows = tableRows();
+  $("club-scatter-note").textContent = `Each mark is a club: its squad's combined start-of-season price against its `
+    + `combined ${seasonLabel(TARGET)} forecast. Above the dashed line the model wants the squad dearer, below it cheaper. `
+    + "Click a club to open it.";
+  drawClubScatter($("club-scatter"), rows, TARGET, openClub);
+}
+
 /** Every club's squad in one table: how many picks it has, what it cost in
  *  August, what the model predicts for next season, and the difference. */
 function renderTable() {
-  const rows = clubs.map((club) => ({
-    club, team: club.team, picked: club.picked, started: club.started, predicted: club.predicted,
-    change: club.predicted - club.started,
-  }));
+  const rows = tableRows();
   rows.sort(byKey(state.tableSort));
   const who = shared.count === "played" ? "players who have played this season" : "every player in the squad";
   $("club-table-note").textContent = `Counting ${who}. Selected picks is how many of an average manager's fifteen `
     + "players come from the club. Prices are the squad's combined start-of-season price and its combined "
-    + `${seasonLabel(TARGET)} forecast, so the change is like for like; the chart below compares with today's prices.`;
+    + `${seasonLabel(TARGET)} forecast, so the change is like for like; the bars further down compare with today's prices. `
+    + "Players up and down count those forecast above or below their start price, and the two totals add up to the change.";
   const head = "<thead><tr>" + header("Club", "team", state.tableSort, { num: false })
     + header("Selected picks", "picked", state.tableSort)
     + header("Start price", "started", state.tableSort, { sub: seasonLabel(TARGET - 1) })
     + header("Predicted price", "predicted", state.tableSort, { sub: seasonLabel(TARGET) })
-    + header("Change", "change", state.tableSort) + "</tr></thead>";
+    + header("Change", "change", state.tableSort)
+    + header("Players up", "up", state.tableSort) + header("Players down", "down", state.tableSort)
+    + header("Total up", "upTotal", state.tableSort) + header("Total down", "downTotal", state.tableSort)
+    + "</tr></thead>";
   const body = rows.map((r) => `<tr>${clubCell(r.club)}<td class="num">${fixed(r.picked, 1)}</td>`
-    + `<td class="num">${money(r.started)}</td><td class="num">${money(r.predicted)}</td>${changeCell(r.change)}</tr>`).join("");
+    + `<td class="num">${money(r.started)}</td><td class="num">${money(r.predicted)}</td>${changeCell(r.change)}`
+    + `<td class="num">${r.up}</td><td class="num">${r.down}</td>${changeCell(r.upTotal)}${changeCell(r.downTotal)}</tr>`).join("");
   $("club-table").innerHTML = `<table class="terms club-table" data-table="table">${head}<tbody>${body}</tbody></table>`;
 }
 
@@ -194,6 +222,7 @@ function renderAll() {
   summariseAll();
   renderMoves();
   renderTable();
+  renderScatter();
   renderBars();
   renderGrid();
 }
