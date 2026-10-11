@@ -66,6 +66,21 @@
 
     <section class="block">
       <div class="wrap">
+        <div class="block-head">
+          <div><h2 class="block-title">Forecast price over time</h2>
+            <p class="block-note" id="club-forecast-note"></p></div>
+          <div class="segmented" role="radiogroup" aria-label="Weighting" id="club-forecast-weight">
+            <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="club-forecast" id="forecast-squad" value="squad" checked><label class="form-check-label" for="forecast-squad">Squad total</label></div>
+            <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="club-forecast" id="forecast-minutes" value="minutes"><label class="form-check-label" for="forecast-minutes">Playing time</label></div>
+            <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="club-forecast" id="forecast-owned" value="owned"><label class="form-check-label" for="forecast-owned">Managers' money</label></div>
+          </div>
+        </div>
+        <div class="panel"><div id="club-forecast"></div></div>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="wrap">
         <div class="block-head"><div><h2 class="block-title">Club table</h2>
           <p class="block-note" id="club-table-note"></p></div></div>
         <div class="panel"><div class="table-scroll" id="club-table"></div></div>

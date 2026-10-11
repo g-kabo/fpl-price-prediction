@@ -6,9 +6,9 @@
 
 import { loadJson, loadModel, showError } from "./data.js";
 import { dayMonth, esc, fixed, seasonLabel } from "./format.js";
-import { drawClubBars, drawClubScatter } from "./charts.js";
+import { drawClubBars, drawClubForecasts, drawClubScatter } from "./charts.js";
 import { initNavSearch } from "./nav.js";
-import { POSITIONS, baselineDay, clubs, forecastMove, measureOf, minuteShare, ownedShare, readCount, setData, shared,
+import { POSITIONS, baselineDay, clubs, forecastMove, forecastSeries, measureOf, minuteShare, ownedShare, readCount, setData, shared,
   summariseAll, writeCount }
   from "./clubdata.js";
 import { snapshotDay } from "./records.js";
@@ -24,7 +24,7 @@ const MEASURES = {
   minutes: { label: "Playing time", note: "each player's predicted change weighted by his share of the club's minutes so far, so the shares add up to about eleven: the change in the side that actually plays" },
 };
 
-const state = { sort: "total", scatter: "squad", window: "week", tableSort: { key: "change", dir: -1 } };
+const state = { sort: "total", scatter: "squad", forecast: "squad", window: "week", tableSort: { key: "change", dir: -1 } };
 
 let board;
 
@@ -219,6 +219,22 @@ const SCATTER = {
   owned: { weight: ownedShare, label: "Managers' money", note: "each player's price weighted by the share of managers who own him: how much of the average manager's squad the club's players cost" },
 };
 
+/** Every club's forecast price, morning by morning, added up the way the
+ *  scatter adds a squad's prices up. */
+function renderForecasts() {
+  const { weight, label, note } = SCATTER[state.forecast];
+  const series = Object.fromEntries(clubs.map((club) => [club.team, forecastSeries(club, weight)]));
+  const note_ = $("club-forecast-note");
+  if (Math.max(...Object.values(series).map((days) => days.length)) < 2) {
+    note_.textContent = "Forecasts are recorded every morning; the lines appear from the second day.";
+    $("club-forecast").innerHTML = "";
+    return;
+  }
+  note_.textContent = `Each line is a club: ${note}, as its ${seasonLabel(TARGET)} forecast stood each morning. `
+    + "Weights are today's, since minutes and ownership are not recorded daily. Hover a line to pick it out, click to open the club.";
+  drawClubForecasts($("club-forecast"), series, TARGET, label, openClub);
+}
+
 /** Start price against predicted price for every club's squad. */
 function renderScatter() {
   const { weight, label, note } = SCATTER[state.scatter];
@@ -263,6 +279,7 @@ function renderTable() {
 function renderAll() {
   summariseAll();
   renderMoves();
+  renderForecasts();
   renderTable();
   renderScatter();
   renderBars();
@@ -276,6 +293,8 @@ function sortBy(sort, key) {
 }
 
 function wire() {
+  document.querySelectorAll('input[name="club-forecast"]').forEach((input) =>
+    input.addEventListener("change", () => { state.forecast = input.value; renderForecasts(); }));
   document.querySelectorAll('input[name="club-scatter"]').forEach((input) =>
     input.addEventListener("change", () => { state.scatter = input.value; renderScatter(); }));
   document.querySelectorAll('input[name="club-window"]').forEach((input) =>

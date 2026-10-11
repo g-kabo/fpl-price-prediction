@@ -281,6 +281,52 @@ export function drawClubScatter(el, rows, targetSeason, onPick, label = "Squad")
   }
 }
 
+/** Every club's forecast over time, one line each. `series` maps a club to
+ *  [{date, value}], oldest first. Twenty lines are only readable one at a
+ *  time, so all start as quiet lines and the one under the pointer is drawn
+ *  bold with its name; a click calls `onPick(team)`. */
+export function drawClubForecasts(el, series, targetSeason, label, onPick) {
+  const teams = Object.keys(series).filter((team) => series[team].length);
+  const calm = { color: "#b7a9be", width: 1.6 };
+  const traces = teams.map((team) => ({
+    type: "scatter", mode: series[team].length <= 14 ? "lines+markers" : "lines", name: team,
+    x: series[team].map((d) => d.date), y: series[team].map((d) => d.value),
+    // A line of its own per trace: Plotly restyles write into the object they are given.
+    line: { ...calm }, marker: { size: 5, color: calm.color },
+    customdata: series[team].map((d) => dayMonth(d.date)),
+    hovertemplate: `<b>${team}</b> · %{customdata}<br>£%{y:.2f}m<extra></extra>`,
+  }));
+  const all = teams.flatMap((team) => series[team]);
+  const values = all.map((d) => d.value);
+  const dates = all.map((d) => d.date).sort();
+  const low = Math.min(...values);
+  const high = Math.max(...values);
+  const pad = Math.max((high - low) * 0.06, 0.1);
+  const halfDay = (iso, sign) => new Date(Date.parse(`${iso}T00:00:00Z`) + sign * 43_200_000).toISOString();
+  draw(el, traces, baseLayout({
+    margin: { l: 8, r: 16, t: 12, b: 8 }, height: 440, hovermode: "closest",
+    xaxis: { type: "date", tickformat: "%-d %b", tickfont: { size: 12, color: INK_SOFT },
+      range: [halfDay(dates[0], -1), halfDay(dates[dates.length - 1], 1)],
+      showgrid: false, showline: true, linecolor: LINE, automargin: true },
+    yaxis: { range: [Math.max(low - pad, 0), high + pad], tickprefix: "£", ticksuffix: "m",
+      tickfont: { size: 12, color: INK_SOFT }, gridcolor: LINE, zeroline: false, automargin: true,
+      title: { text: `${label} forecast ${seasonLabel(targetSeason)} price`, font: { size: 12, color: INK_SOFT } } },
+  }));
+
+  const pick = (index) => {
+    const bold = { "line.color": traces.map((_, i) => (i === index ? AUBERGINE : calm.color)),
+      "line.width": traces.map((_, i) => (i === index ? 3.5 : 1.2)),
+      "marker.color": traces.map((_, i) => (i === index ? AUBERGINE : calm.color)) };
+    Plotly.restyle(el, bold);
+  };
+  if (!el.dataset.hoverBound) {
+    el.dataset.hoverBound = "1";
+    el.on("plotly_hover", (event) => { if (event.points?.[0]) pick(event.points[0].curveNumber); });
+    el.on("plotly_unhover", () => Plotly.restyle(el, { "line.color": calm.color, "line.width": calm.width, "marker.color": calm.color }));
+    el.on("plotly_click", (event) => { const name = event.points?.[0]?.data?.name; if (name) onPick(name); });
+  }
+}
+
 /** PRICE_FORECAST at a given opacity, for the forecast's likely range. */
 function faint(hex, alpha) {
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
