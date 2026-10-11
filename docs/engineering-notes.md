@@ -439,7 +439,8 @@ club-by-position grid) and `club.html?team=<club>` is one club. A club opens
 its own page from a bar, a grid row or a cell (a cell adds `&pos=` to cut the
 squad list), carrying the whole-squad choice as `&count=all`. `club.html`
 keeps the single-club job so `clubUrl` links from the cards and player pages
-still work; with no club in the address it redirects to `clubs.html`.
+still work; with no club in the address (the nav's Club tab) it opens the top club
+of the league chart. The nav has two tabs, League (`clubs.html`) and Club.
 Every change is the forecast against today's price, Price Watch's default.
 
 The club page's "Every player's forecast" chart draws each counted player's

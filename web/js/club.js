@@ -1,8 +1,9 @@
 // One club: its summary, squad on a pitch, squad list, value history and
 // forecast trend, and every player's forecast over time.
 //
-// Opened from the Every club page (clubs.html) or from a club name anywhere
-// on the site: club.html?team=<club>, with ?pos=<position> to open the squad
+// Opened from the League page (clubs.html), the nav's Club tab (the top club
+// of the league chart) or a club name anywhere on the site:
+// club.html?team=<club>, with ?pos=<position> to open the squad
 // list cut to one position and ?count=all for the whole squad. The data both
 // pages read, and the calls it forces, are in clubdata.js.
 
@@ -324,16 +325,19 @@ async function main() {
   readCount();
   summariseAll();
 
-  // No club (or one that is not in the league this season): the list of them.
-  const asked = params.get("team");
+  // No club in the address (the nav's "Club" tab), or one that is not in the
+  // league this season: the club at the top of the league chart.
+  let asked = params.get("team");
   if (!clubs.some((c) => c.team === asked)) {
-    location.replace("clubs.html");
-    return;
+    asked = [...clubs].sort((a, b) => b.total - a.total)[0]?.team;
+    const url = new URL(location.href);
+    url.searchParams.set("team", asked);
+    history.replaceState(null, "", url);
   }
   state.team = asked;
   const pos = params.get("pos");
   state.listPos = POSITIONS.includes(pos) ? pos : null;
-  document.title = `${asked} · Clubs · FPL Price Prediction`;
+  document.title = `${asked} · Club · FPL Price Prediction`;
   $("club-select").innerHTML = clubs.map((c) => `<option value="${esc(c.team)}">${esc(c.team)}</option>`).join("");
   $("club-select").value = asked;
   wire();
