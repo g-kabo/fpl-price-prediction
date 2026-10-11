@@ -112,10 +112,10 @@ export function makeModel(spec) {
     return out;
   }
 
-  /** The move from one set of inputs to another as waterfall steps, price
-   *  terms combined as in `steps`: [label, amount, measure]. Linear, so the
-   *  steps add up to the change exactly. Smaller terms past `topN` are pooled. */
-  function changeSteps(thenValues, nowValues, topN = 8) {
+  /** How much each term moved between two sets of inputs, price terms
+   *  combined as in `steps`: [[label, amount], ...], biggest first. Linear,
+   *  so the amounts add up to the change in the prediction exactly. */
+  function changeTerms(thenValues, nowValues) {
     const before = termList(thenValues);
     const after = termList(nowValues);
     const delta = new Map();
@@ -126,19 +126,25 @@ export function makeModel(spec) {
     const rows = [];
     for (const [column, amount] of delta) {
       if (PRICE_COLUMNS.has(column)) price += amount;
-      else rows.push([spec.term_labels[column] || column, amount, "relative"]);
+      else rows.push([spec.term_labels[column] || column, amount]);
     }
-    rows.push([PRICE_LABEL, price, "relative"]);
-    const moved = rows.filter((r) => Math.abs(r[1]) >= 0.0005).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
-    const shown = moved.slice(0, topN);
-    const rest = moved.slice(topN);
-
+    rows.push([PRICE_LABEL, price]);
     const total = (side) => side.intercept + side.terms.reduce((sum, t) => sum + t.contribution, 0);
-    const out = [["Forecast then", total(before), "absolute"], ...shown];
+    const terms = rows.filter((r) => Math.abs(r[1]) >= 0.0005).sort((x, y) => Math.abs(y[1]) - Math.abs(x[1]));
+    return { terms, before: total(before), after: total(after) };
+  }
+
+  /** The move from one set of inputs to another as waterfall steps:
+   *  [label, amount, measure]. Smaller terms past `topN` are pooled. */
+  function changeSteps(thenValues, nowValues, topN = 8) {
+    const { terms, before, after } = changeTerms(thenValues, nowValues);
+    const shown = terms.slice(0, topN).map(([label, amount]) => [label, amount, "relative"]);
+    const rest = terms.slice(topN);
+    const out = [["Forecast then", before, "absolute"], ...shown];
     if (rest.length) out.push([`${rest.length} smaller terms`, rest.reduce((sum, r) => sum + r[1], 0), "relative"]);
-    out.push(["Forecast now", total(after), "total"]);
+    out.push(["Forecast now", after, "total"]);
     return out;
   }
 
-  return { spec, design, predict, contributions, steps, changeSteps, termLabel: (c) => spec.term_labels[c] || c.replace(/_/g, " ") };
+  return { spec, design, predict, contributions, steps, changeTerms, changeSteps, termLabel: (c) => spec.term_labels[c] || c.replace(/_/g, " ") };
 }

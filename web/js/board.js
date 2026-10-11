@@ -16,7 +16,7 @@ import { dayMonth, esc, fixed, fmt, fold, seasonLabel } from "./format.js";
 import { DEFAULT_X, X_FIELDS, drawForecastTrend, drawPriceHistory, drawPriceScatter } from "./charts.js";
 import { clubUrl, initNavSearch } from "./nav.js";
 import { DEFAULT_SORT, listHtml, nextSort, sortRows } from "./tlist.js";
-import { boardValues, recordedOn, snapshotDay, trendDays } from "./records.js";
+import { boardValues, driverDays, recordedOn, snapshotDay, trendDays } from "./records.js";
 import { direction, money } from "./theme.js";
 import * as ui from "./ui.js";
 
@@ -354,16 +354,18 @@ function cardHtml(record) {
   const why = ui.whyThisPrice(model, values, [short, reference]);
   const days = trendDays(forecasts, board, record, interval);
   const change = whatChangedFor(record, values);
+  const daily = drivers ? ui.dailyChange(model, driverDays(drivers, record, values, snapshotDay(board))) : null;
   const trend = ui.forecastTrend(days);
   const past = ui.priceHistory(`The ${seasonLabel(SEASON)} season is still running, so its end price is today's.`);
 
   return {
-    html: header + answer + why.html + (change ? change.html : "") + trend + past,
+    html: header + answer + why.html + trend + (change ? change.html : "") + (daily ? daily.html : "") + past,
     mount(root) {
       why.mount(root);
-      if (change) change.mount(root);
       const trendEl = root.querySelector(".trend-chart");
       if (trendEl) drawForecastTrend(trendEl, days, TARGET);
+      if (change) change.mount(root);
+      if (daily) daily.mount(root);
       drawPriceHistory(root.querySelector(".history-chart"), playerSeasons(record), TARGET, interval.pred);
     },
   };
