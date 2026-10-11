@@ -433,8 +433,22 @@ route a path without a file per player. Decisions worth keeping:
 
 ### Clubs page
 
-`club.html?team=<club>` groups `board.json` by club (ideas #13, #62, #63, #64).
+Two pages share `web/js/clubdata.js`, which groups `board.json` by club
+(ideas #13, #62, #63, #64): `clubs.html` is every club (the bars and the
+club-by-position grid) and `club.html?team=<club>` is one club. A club opens
+its own page from a bar, a grid row or a cell (a cell adds `&pos=` to cut the
+squad list), carrying the whole-squad choice as `&count=all`. `club.html`
+keeps the single-club job so `clubUrl` links from the cards and player pages
+still work; with no club in the address (the nav's Club tab) it opens the top club
+of the league chart. The nav has two tabs, League (`clubs.html`) and Club.
 Every change is the forecast against today's price, Price Watch's default.
+
+The club page's "Every player's forecast" chart draws each counted player's
+forecast per morning (`forecasts.json`, today from the board). Four lines
+colours can't tell a squad's 25 players apart, so the default is a 2x2 grid of
+position panels with their own y axes (goalkeepers and defenders sit near
+£4-6m, forwards much higher; one shared axis would squash the cheap ones), and
+"All together" is the same lines on one chart with a position legend.
 Decisions worth keeping:
 
 - **Players who have played count by default**, with a whole-squad toggle.

@@ -198,6 +198,89 @@ export function drawClubTrend(el, series, selected, targetSeason) {
   }));
 }
 
+/** Every player's forecast over time, one line each, in his position's hue.
+ *  `players` is [{code, name, position, days: [{date, value}]}], oldest day
+ *  first. With `legend` the four positions are listed (and can be toggled);
+ *  without, the position is named by the panel around the chart. The player
+ *  is named on hover rather than at the line's end, where a squad's lines
+ *  would lie on top of one another. */
+export function drawPlayerForecasts(el, players, { legend = false } = {}) {
+  const seen = new Set();
+  const traces = players.map((p) => {
+    const colour = POSITION_COLOURS[p.position] || INK_SOFT;
+    const first = !seen.has(p.position);
+    seen.add(p.position);
+    const marker = p.days.length <= 14 ? { size: 6, color: colour, line: { width: 1, color: SURFACE } } : undefined;
+    return {
+      type: "scatter", mode: marker ? "lines+markers" : "lines", name: legend ? p.position : p.name,
+      legendgroup: p.position, showlegend: legend && first,
+      x: p.days.map((d) => d.date), y: p.days.map((d) => d.value),
+      line: { color: colour, width: 2 }, marker, opacity: 0.85,
+      customdata: p.days.map((d) => dayMonth(d.date)),
+      hovertemplate: `<b>${p.name}</b> · ${p.position}<br>%{customdata}: £%{y:.2f}m<extra></extra>`,
+    };
+  });
+  const all = players.flatMap((p) => p.days);
+  const values = all.map((d) => d.value);
+  const dates = all.map((d) => d.date).sort();
+  const low = Math.min(...values);
+  const high = Math.max(...values);
+  const pad = Math.max((high - low) * 0.12, 0.1);
+  const halfDay = (iso, sign) => new Date(Date.parse(`${iso}T00:00:00Z`) + sign * 43_200_000).toISOString();
+  draw(el, traces, baseLayout({
+    margin: { l: 8, r: 12, t: 12, b: 8 }, height: legend ? 360 : 240, hovermode: "closest", showlegend: legend,
+    legend: { orientation: "h", yanchor: "bottom", y: 1.02, xanchor: "left", x: 0, font: { size: 12, color: INK_SOFT } },
+    xaxis: { type: "date", tickformat: "%-d %b", tickfont: { size: 12, color: INK_SOFT },
+      range: [halfDay(dates[0], -1), halfDay(dates[dates.length - 1], 1)],
+      showgrid: false, showline: true, linecolor: LINE, automargin: true },
+    yaxis: { range: [low - pad, high + pad], tickprefix: "£", ticksuffix: "m", tickformat: high - low < 1 ? ".2f" : ".1f",
+      tickfont: { size: 12, color: INK_SOFT }, gridcolor: LINE, zeroline: false, automargin: true },
+  }));
+}
+
+/** Every club's squad: its combined start price against its combined forecast.
+ *
+ *  Like the Price Watch map, with the dashed no-change diagonal; here a mark is
+ *  a club, a plain point labelled with its name. `rows` is
+ *  [{team, started, predicted, change}]; a click calls `onPick(team)`. */
+export function drawClubScatter(el, rows, targetSeason, onPick, label = "Squad") {
+  const values = rows.flatMap((r) => [r.started, r.predicted]);
+  const pad = Math.max((Math.max(...values) - Math.min(...values)) * 0.07, 0.1);
+  const bounds = [Math.max(Math.min(...values) - pad, 0), Math.max(...values) + pad];
+
+  const traces = [{
+    type: "scatter", mode: "lines", x: bounds, y: bounds, hoverinfo: "skip", showlegend: false,
+    name: "no change", line: { color: INK_SOFT, width: 1.2, dash: "dash" },
+  }];
+  traces.push({
+    type: "scatter", mode: "markers+text", name: "Club",
+    x: rows.map((r) => r.started), y: rows.map((r) => r.predicted),
+    text: rows.map((r) => r.team), textposition: "top center",
+    textfont: { size: 11, color: INK_SOFT }, cliponaxis: false,
+    marker: { color: AUBERGINE, symbol: "circle", size: 12, opacity: 0.85, line: { width: MARK_RING, color: SURFACE } },
+    customdata: rows.map((r) => [r.team, money(r.change, true, 1)]),
+    hovertemplate: "<b>%{customdata[0]}</b><br>Start £%{x:.1f}m → forecast £%{y:.1f}m"
+      + "<br>Change %{customdata[1]}<br><i>click to open</i><extra></extra>",
+  });
+
+  const corner = bounds[1] - (bounds[1] - bounds[0]) * 0.02;
+  draw(el, traces, baseLayout({
+    margin: { l: 8, r: 16, t: 16, b: 8 }, height: 520, hovermode: "closest", showlegend: false,
+    xaxis: axis(`${label} start price`, bounds),
+    yaxis: axis(`${label} forecast ${seasonLabel(targetSeason)} price`, bounds),
+    annotations: [{ x: corner, y: corner, text: "no change", showarrow: false, xanchor: "right",
+      yanchor: "top", yshift: -12, xshift: -4, font: { size: 12, color: INK_SOFT } }],
+  }));
+
+  if (!el.dataset.clickBound) {
+    el.dataset.clickBound = "1";
+    el.on("plotly_click", (event) => {
+      const custom = event.points?.[0]?.customdata;
+      if (custom) onPick(custom[0]);
+    });
+  }
+}
+
 /** PRICE_FORECAST at a given opacity, for the forecast's likely range. */
 function faint(hex, alpha) {
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));

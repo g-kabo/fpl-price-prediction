@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Clubs · FPL Price Prediction</title>
-  <meta name="description" content="How the model prices each Premier League club's squad for next season in Fantasy Premier League: every club's predicted change, and each squad on a pitch.">
+  <title>Club · FPL Price Prediction</title>
+  <meta name="description" content="One Premier League club in Fantasy Premier League: how the model prices its squad for next season, each player's forecast over time, and its squad value by season.">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="css/style.css">
   <link rel="modulepreload" href="js/club.js">
+  <link rel="preload" href="data/seasons.json" as="fetch" crossorigin>
   <link rel="preload" href="data/model.json" as="fetch" crossorigin>
   <link rel="preload" href="data/board.json" as="fetch" crossorigin>
   <link rel="preload" href="data/forecasts.json" as="fetch" crossorigin>
@@ -26,7 +27,8 @@
         <a class="nav-link nav-tab" href="./">Price Watch</a>
         <a class="nav-link nav-tab" href="lab.html">What if</a>
         <a class="nav-link nav-tab" href="player.html">Players</a>
-        <a class="nav-link nav-tab active" href="club.html" aria-current="page">Clubs</a>
+        <a class="nav-link nav-tab" href="clubs.html">League</a>
+        <a class="nav-link nav-tab active" href="club.html" aria-current="page">Club</a>
         <a class="nav-link nav-tab" href="how-it-works.html">How it works</a>
       </nav>
     </div>
@@ -36,8 +38,8 @@
     <section class="hero">
       <div class="wrap hero-inner">
         <div>
-          <h1>Clubs <span class="h1-season" id="club-season"></span></h1>
-          <p class="lede" id="club-lede">How the model would reprice each club's squad next season.</p>
+          <h1>Club <span class="h1-season" id="club-season"></span></h1>
+          <p class="lede" id="club-lede">One club in detail: its squad, every player's forecast and how its value has moved.</p>
         </div>
         <div class="hero-side">
           <div class="segmented segmented-light" role="radiogroup" aria-label="Which players count" id="club-count">
@@ -48,32 +50,9 @@
       </div>
     </section>
 
-    <section class="block">
-      <div class="wrap">
-        <div class="block-head">
-          <div><h2 class="block-title">Every club</h2><p class="block-note" id="club-bars-note"></p></div>
-          <div class="segmented" role="radiogroup" aria-label="Measure" id="club-sort">
-            <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="club-sort" id="sort-total" value="total" checked><label class="form-check-label" for="sort-total">Squad total</label></div>
-            <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="club-sort" id="sort-average" value="average"><label class="form-check-label" for="sort-average">Per player</label></div>
-            <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="club-sort" id="sort-minutes" value="minutes"><label class="form-check-label" for="sort-minutes">Playing time</label></div>
-            <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="club-sort" id="sort-owned" value="owned"><label class="form-check-label" for="sort-owned">Managers' money</label></div>
-          </div>
-        </div>
-        <div class="panel"><div id="club-bars"><div class="loading">Loading the clubs.</div></div></div>
-      </div>
-    </section>
-
-    <section class="block">
-      <div class="wrap">
-        <div class="block-head"><div><h2 class="block-title">Club by position</h2>
-          <p class="block-note">Where each club's change comes from: the same measure as the chart above, split by position. Read down a column to compare one position across clubs, or across a row to see where a club's total comes from.</p></div></div>
-        <div class="club-grid" id="club-grid" role="group" aria-label="Predicted change by club and position"></div>
-        <div class="grid-legend" id="club-grid-legend"></div>
-      </div>
-    </section>
-
     <section class="block" id="club-detail">
       <div class="wrap">
+        <p class="back-link"><a href="clubs.html"><i class="bi bi-arrow-left"></i> The league</a></p>
         <div class="block-head club-head">
           <div class="club-title" id="club-title"></div>
           <div class="club-pick"><label class="field-label" for="club-select">Club</label><select id="club-select" class="select"></select></div>
@@ -85,6 +64,17 @@
           <h3 class="section-title">Squad list</h3>
           <p class="block-note" id="club-list-note"></p>
           <div id="club-list" class="tlist tlist-value"></div>
+        </div>
+        <div class="panel club-forecasts">
+          <div class="club-history-head">
+            <h3 class="section-title">Every player's forecast</h3>
+            <div class="segmented" role="radiogroup" aria-label="Layout" id="club-forecast-layout">
+              <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="club-forecast-view" id="view-position" value="position" checked><label class="form-check-label" for="view-position">By position</label></div>
+              <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="club-forecast-view" id="view-together" value="together"><label class="form-check-label" for="view-together">All together</label></div>
+            </div>
+          </div>
+          <p class="why-lede" id="club-forecasts-note"></p>
+          <div id="club-forecasts"></div>
         </div>
         <div class="panel club-history">
           <div class="club-history-head">
