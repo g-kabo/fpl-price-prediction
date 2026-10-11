@@ -172,8 +172,10 @@ function trendSection(days) {
   return `<section class="panel player-panel">${ui.forecastTrend(days)}</section>`;
 }
 
-function whySection(why) {
-  return `<section class="panel player-panel player-wide">${why.html}</section>`;
+/** "Why this price" sits beside "Day by day" in the second row of the grid;
+ *  without the day-by-day chart it takes the whole row. */
+function whySection(why, wide) {
+  return `<section class="panel player-panel${wide ? " player-wide" : ""}">${why.html}</section>`;
 }
 
 function trackSection(record) {
@@ -246,9 +248,8 @@ function renderPlayer(code) {
     days = trendDays(forecasts, board, record, interval);
     why = ui.whyThisPrice(model, values, ["Today", record.price_now]);
     daily = drivers ? ui.dailyChange(model, driverDays(drivers, record, values, snapshotDay(board))) : null;
-    parts.push(forecastSection(record, interval), trendSection(days));
-    if (daily) parts.push(`<section class="panel player-panel player-wide">${daily.html}</section>`);
-    parts.push(whySection(why));
+    parts.push(forecastSection(record, interval), trendSection(days), whySection(why, !daily));
+    if (daily) parts.push(`<section class="panel player-panel">${daily.html}</section>`);
   } else {
     parts.push(leftSection(seasons[seasons.length - 1]));
   }
