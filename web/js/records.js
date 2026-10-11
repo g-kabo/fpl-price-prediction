@@ -102,3 +102,23 @@ export function withRatios(form, values) {
     value_season: price > 0 ? fplRound(points / price) : 0,
   };
 }
+
+// ---------------------------------------------------------------- drivers.json
+
+/** One player's model inputs on each recorded morning, then today's:
+ *  [{date, values}, ...] oldest first. Mornings he was missing are skipped.
+ *  `now` is today's inputs (the card's own), which also carry his position
+ *  and club; `today` is its date. */
+export function driverDays(drivers, record, now, today) {
+  const points = drivers.players[String(record.code)];
+  const days = [];
+  drivers.dates.forEach((date, i) => {
+    const earlier = recordedOn(points, i);
+    if (!earlier) return;
+    const values = { ...now };
+    drivers.fields.forEach((name, k) => { values[name] = earlier[k]; });
+    days.push({ date, values });
+  });
+  if (today) days.push({ date: today, values: now });
+  return days;
+}

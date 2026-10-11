@@ -16,7 +16,7 @@ import { dayMonth, esc, fixed, fmt, fold, seasonLabel } from "./format.js";
 import { DEFAULT_X, X_FIELDS, drawForecastTrend, drawPriceHistory, drawPriceScatter } from "./charts.js";
 import { clubUrl, initNavSearch } from "./nav.js";
 import { DEFAULT_SORT, listHtml, nextSort, sortRows } from "./tlist.js";
-import { boardValues, recordedOn, snapshotDay, trendDays } from "./records.js";
+import { boardValues, driverDays, recordedOn, snapshotDay, trendDays } from "./records.js";
 import { direction, money } from "./theme.js";
 import * as ui from "./ui.js";
 
@@ -67,6 +67,7 @@ let model;
 let board;
 let history;
 let forecasts;
+let drivers; // the model's inputs each earlier morning, or null
 let SEASON;
 let TARGET;
 let players = [];
@@ -336,15 +337,17 @@ function cardHtml(record) {
     `Predicted ${seasonLabel(TARGET)} price`, `<div>${note}${ui.pooledNote(model, record.team_name)}${link}</div>`);
   const why = ui.whyThisPrice(model, values, [short, reference]);
   const days = trendDays(forecasts, board, record, interval);
+  const daily = drivers ? ui.dailyChange(model, driverDays(drivers, record, values, snapshotDay(board))) : null;
   const trend = ui.forecastTrend(days);
   const past = ui.priceHistory(`The ${seasonLabel(SEASON)} season is still running, so its end price is today's.`);
 
   return {
-    html: header + answer + why.html + trend + past,
+    html: header + answer + why.html + trend + (daily ? daily.html : "") + past,
     mount(root) {
       why.mount(root);
       const trendEl = root.querySelector(".trend-chart");
       if (trendEl) drawForecastTrend(trendEl, days, TARGET);
+      if (daily) daily.mount(root);
       drawPriceHistory(root.querySelector(".history-chart"), playerSeasons(record), TARGET, interval.pred);
     },
   };
@@ -486,6 +489,7 @@ function poll() {
       const fresh = await loadJson("board", true);
       if (fresh.fetched_at === board.fetched_at) return;
       forecasts = await loadJson("forecasts", true);
+      drivers = await loadJson("drivers", true).catch(() => null);
       board = fresh;
       players = board.players;
       renderFilters();
@@ -499,8 +503,10 @@ function poll() {
 async function main() {
   initNavSearch();
   try {
-    [model, board, history, forecasts] = await Promise.all([
-      loadModel(), loadJson("board"), loadJson("history"), loadJson("forecasts")]);
+    [model, board, history, forecasts, drivers] = await Promise.all([
+      loadModel(), loadJson("board"), loadJson("history"), loadJson("forecasts"),
+      // The card works without it, only losing "What changed".
+      loadJson("drivers").catch(() => null)]);
   } catch (error) {
     showError($("board-pitch"), error);
     return;

@@ -271,7 +271,8 @@ export function drawForecastTrend(el, days, targetSeason) {
  *  movements -- and `reference` draws the price he is already on as a dashed
  *  line, so the gap between it and the final bar is the predicted move.
  *  Drawn as floating bars (a `base` per bar) rather than Plotly's waterfall
- *  trace, which the lighter Plotly build the site loads does not include. */
+ *  trace, which the lighter Plotly build the site loads does not include.
+ */
 export function drawContributionBars(el, steps, reference = null) {
   const labels = steps.map(([label]) => label);
   const amounts = steps.map(([, amount]) => amount);
@@ -349,6 +350,58 @@ export function drawContributionBars(el, steps, reference = null) {
       automargin: true, ticksuffix: "  " },
     xaxis: { tickprefix: "£", ticksuffix: "m", tickfont: { size: 12, color: INK_SOFT },
       gridcolor: LINE, zeroline: true, zerolinecolor: "#cbbfd2", automargin: true },
+  }));
+}
+
+// Terms need telling apart, not ranking, so the stacks get a categorical
+// palette; the bar's side already says whether a term pushed up or down.
+const TERM_COLOURS = ["#5a1f6b", "#0091a8", "#ff6d00", "#007a3f", "#d6004f", "#f5b400", "#3b6fd4"];
+const TERM_OTHER = "#a99bb1";
+
+/** Day by day, what moved the forecast: each term's change since the morning
+ *  before, stacked up when it pushed the forecast up and down when it pulled
+ *  it down. `days` is [{date, terms: [[label, amount], ...], net}]. Names
+ *  appear on hover rather than in a legend. The seven terms that moved most
+ *  over the whole span get a colour each; the rest share a grey. */
+export function drawDailyContributions(el, days) {
+  const totals = new Map();
+  for (const d of days) for (const [label, amount] of d.terms) {
+    totals.set(label, (totals.get(label) || 0) + Math.abs(amount));
+  }
+  const ranked = [...totals].sort((a, b) => b[1] - a[1]).map(([label]) => label);
+  const named = new Set(ranked.slice(0, TERM_COLOURS.length));
+  const OTHER = "Smaller terms";
+
+  const series = new Map(ranked.filter((l) => named.has(l)).map((l) => [l, days.map(() => null)]));
+  if (ranked.length > named.size) series.set(OTHER, days.map(() => null));
+  days.forEach((d, i) => {
+    for (const [label, amount] of d.terms) {
+      const key = named.has(label) ? label : OTHER;
+      series.get(key)[i] = (series.get(key)[i] || 0) + amount;
+    }
+  });
+
+  const x = days.map((d) => d.date);
+  const traces = [...series].map(([name, y], i) => ({
+    type: "bar", name, x, y, marker: { color: name === OTHER ? TERM_OTHER : TERM_COLOURS[i], line: { width: 0 } },
+    hovertemplate: `<b>%{customdata}</b><br>${name}: %{text}<extra></extra>`,
+    text: y.map((v) => (v === null ? "" : money(v, true, 2))),
+    customdata: days.map((d) => dayMonth(d.date)), textposition: "none",
+  }));
+  traces.push({
+    type: "scatter", mode: "markers", name: "Net change", x, y: days.map((d) => d.net),
+    marker: { symbol: "diamond", size: 9, color: INK, line: { width: 1.5, color: SURFACE } },
+    customdata: days.map((d) => dayMonth(d.date)),
+    text: days.map((d) => money(d.net, true, 2)),
+    hovertemplate: "<b>%{customdata}</b><br>Net change: %{text}<extra></extra>",
+  });
+
+  draw(el, traces, baseLayout({
+    barmode: "relative", bargap: 0.3, height: 280, margin: { l: 8, r: 8, t: 12, b: 8 },
+    xaxis: { type: "date", tickformat: "%-d %b", tickfont: { size: 12, color: INK_SOFT }, showgrid: false,
+      showline: true, linecolor: LINE, automargin: true, dtick: days.length <= 10 ? 86_400_000 : undefined },
+    yaxis: { tickprefix: "£", ticksuffix: "m", tickfont: { size: 12, color: INK_SOFT }, gridcolor: LINE,
+      zeroline: true, zerolinecolor: "#cbbfd2", automargin: true },
   }));
 }
 

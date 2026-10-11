@@ -3,9 +3,9 @@
 // Each function returns an HTML string. Anything that came from the data
 // (names, clubs) goes through esc(); everything else is built here.
 
-import { dayMonth, esc, fmt, pyRound } from "./format.js";
+import { dayMonth, esc, fixed, fmt, pyRound } from "./format.js";
 import { direction, money, shirtUri } from "./theme.js";
-import { drawContributionBars } from "./charts.js";
+import { drawContributionBars, drawDailyContributions } from "./charts.js";
 
 // ---------------------------------------------------------------- atoms
 
@@ -238,6 +238,26 @@ export function whyThisPrice(model, values, reference) {
     + '<p class="fine">Each bar is one ingredient of the price, and they add up exactly: '
     + "the model is linear, so nothing is approximated.</p></div>";
   const mount = (root) => drawContributionBars(root.querySelector(".why-chart"), steps, reference);
+  return { html, mount };
+}
+
+/** Day by day, what moved the forecast, as stacked bars. `series` is
+ *  [{date, values}] oldest first, today last (see `driverDays`). A day with
+ *  no movement is left empty; null when there is nothing to draw. */
+export function dailyChange(model, series) {
+  const days = [];
+  for (let i = 1; i < series.length; i++) {
+    const { terms, before, after } = model.changeTerms(series[i - 1].values, series[i].values);
+    days.push({ date: series[i].date, terms, net: after - before });
+  }
+  if (days.length < 2) return null;
+  const html = '<div class="why change"><h3 class="section-title">Day by day</h3>'
+    + '<p class="why-lede">What moved the forecast each morning, term by term.</p>'
+    + '<div class="daily-chart"></div>'
+    + '<p class="fine">Bars above zero pushed the forecast up that day and bars below pulled it down; '
+    + "the diamond is the day's net change. Hover a bar for its term. Most days are quiet: a forecast "
+    + "mostly moves when his team plays.</p></div>";
+  const mount = (root) => drawDailyContributions(root.querySelector(".daily-chart"), days);
   return { html, mount };
 }
 
