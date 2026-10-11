@@ -93,6 +93,9 @@ function summarise(team) {
     owned: measureOf(players, "owned"),
     minutes: measureOf(players, "minutes"),
     best,
+    started: sum((p) => p.start_cost),
+    // Players per average manager's squad: the club's share of every pick.
+    picked: sum(ownedShare),
     now: sum((p) => p.price_now),
     predicted: sum((p) => p.pred),
     rising: players.filter((p) => direction(p.delta) === "rise").length,
@@ -134,4 +137,40 @@ export function trendSeries() {
     series[club.team] = days;
   }
   return series;
+}
+
+// ---------------------------------------------------------------- change since an earlier morning
+
+/** The recorded morning to measure from: the latest one at least `days`
+ *  before today, or the first when history is shorter (`short`), or the first
+ *  when `days` is null. Null when nothing was recorded. */
+export function baselineDay(days) {
+  const { board, forecasts } = ctx;
+  const dates = forecasts.dates;
+  if (!dates.length) return null;
+  if (days !== null) {
+    const cutoff = new Date(`${snapshotDay(board)}T00:00:00Z`);
+    cutoff.setUTCDate(cutoff.getUTCDate() - days);
+    const limit = cutoff.toISOString().slice(0, 10);
+    for (let i = dates.length - 1; i >= 0; i--) if (dates[i] <= limit) return { index: i, date: dates[i], short: false };
+    return { index: 0, date: dates[0], short: true };
+  }
+  return { index: 0, date: dates[0], short: false };
+}
+
+/** How far a club's forecast has moved since `day` (from `baselineDay`): the
+ *  sum, over the players counted now who were tracked then, of today's
+ *  forecast minus that morning's. Null with nothing to compare. */
+export function forecastMove(club, day) {
+  const { forecasts } = ctx;
+  if (!day) return null;
+  let total = 0;
+  let n = 0;
+  for (const p of club.players) {
+    const then = recordedOn(forecasts.players[String(p.code)], day.index);
+    if (!then || !Number.isFinite(p.pred)) continue;
+    total += p.pred - then[1];
+    n += 1;
+  }
+  return n ? total : null;
 }
