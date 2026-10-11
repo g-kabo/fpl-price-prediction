@@ -67,8 +67,15 @@
 
     <section class="block">
       <div class="wrap">
-        <div class="block-head"><div><h2 class="block-title">Start price against forecast</h2>
-          <p class="block-note" id="club-scatter-note"></p></div></div>
+        <div class="block-head">
+          <div><h2 class="block-title">Start price against forecast</h2>
+            <p class="block-note" id="club-scatter-note"></p></div>
+          <div class="segmented" role="radiogroup" aria-label="Weighting" id="club-scatter-weight">
+            <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="club-scatter" id="scatter-squad" value="squad" checked><label class="form-check-label" for="scatter-squad">Squad total</label></div>
+            <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="club-scatter" id="scatter-minutes" value="minutes"><label class="form-check-label" for="scatter-minutes">Playing time</label></div>
+            <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="club-scatter" id="scatter-owned" value="owned"><label class="form-check-label" for="scatter-owned">Managers' money</label></div>
+          </div>
+        </div>
         <div class="panel"><div id="club-scatter"></div></div>
       </div>
     </section>

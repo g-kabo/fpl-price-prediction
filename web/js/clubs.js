@@ -8,7 +8,8 @@ import { loadJson, loadModel, showError } from "./data.js";
 import { dayMonth, esc, fixed, seasonLabel } from "./format.js";
 import { drawClubBars, drawClubScatter } from "./charts.js";
 import { initNavSearch } from "./nav.js";
-import { POSITIONS, baselineDay, clubs, forecastMove, measureOf, readCount, setData, shared, summariseAll, writeCount }
+import { POSITIONS, baselineDay, clubs, forecastMove, measureOf, minuteShare, ownedShare, readCount, setData, shared,
+  summariseAll, writeCount }
   from "./clubdata.js";
 import { snapshotDay } from "./records.js";
 import { money } from "./theme.js";
@@ -23,7 +24,7 @@ const MEASURES = {
   minutes: { label: "Playing time", note: "each player's predicted change weighted by his share of the club's minutes so far, so the shares add up to about eleven: the change in the side that actually plays" },
 };
 
-const state = { sort: "total", moveSort: { key: "all", dir: -1 }, tableSort: { key: "change", dir: -1 } };
+const state = { sort: "total", scatter: "squad", moveSort: { key: "all", dir: -1 }, tableSort: { key: "change", dir: -1 } };
 
 let board;
 
@@ -183,13 +184,27 @@ function tableRows() {
   });
 }
 
+/** How the scatter adds a squad's prices up: every counted player once, or
+ *  weighted as the bars weight a change. */
+const SCATTER = {
+  squad: { weight: () => 1, label: "Squad", note: "the combined price of every counted player" },
+  minutes: { weight: minuteShare, label: "Playing-time weighted", note: "each player's price weighted by his share of the club's minutes, so it is the value of the side that plays, about eleven players' worth" },
+  owned: { weight: ownedShare, label: "Managers' money", note: "each player's price weighted by the share of managers who own him: how much of the average manager's squad the club's players cost" },
+};
+
 /** Start price against predicted price for every club's squad. */
 function renderScatter() {
-  const rows = tableRows();
-  $("club-scatter-note").textContent = `Each mark is a club: its squad's combined start-of-season price against its `
-    + `combined ${seasonLabel(TARGET)} forecast. Above the dashed line the model wants the squad dearer, below it cheaper. `
+  const { weight, label, note } = SCATTER[state.scatter];
+  const rows = clubs.map((club) => {
+    const total = (price) => club.players.reduce((t, p) => t + weight(p) * price(p), 0);
+    const started = total((p) => p.start_cost);
+    const predicted = total((p) => p.pred);
+    return { team: club.team, started, predicted, change: predicted - started };
+  });
+  $("club-scatter-note").textContent = `Each mark is a club: ${note}, at the start of the season against the model's `
+    + `${seasonLabel(TARGET)} forecast. Above the dashed line the model wants the squad dearer, below it cheaper. `
     + "Click a club to open it.";
-  drawClubScatter($("club-scatter"), rows, TARGET, openClub);
+  drawClubScatter($("club-scatter"), rows, TARGET, openClub, label);
 }
 
 /** Every club's squad in one table: how many picks it has, what it cost in
@@ -234,6 +249,8 @@ function sortBy(sort, key) {
 }
 
 function wire() {
+  document.querySelectorAll('input[name="club-scatter"]').forEach((input) =>
+    input.addEventListener("change", () => { state.scatter = input.value; renderScatter(); }));
   $("club-moves").addEventListener("click", (event) => {
     const button = event.target.closest(".th-sort");
     if (button) { sortBy(state.moveSort, button.dataset.key); renderMoves(); }

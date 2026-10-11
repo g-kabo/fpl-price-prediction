@@ -243,10 +243,10 @@ export function drawPlayerForecasts(el, players, { legend = false } = {}) {
  *  Like the Price Watch map, with the dashed no-change diagonal; here a mark is
  *  a club, a plain point labelled with its name. `rows` is
  *  [{team, started, predicted, change}]; a click calls `onPick(team)`. */
-export function drawClubScatter(el, rows, targetSeason, onPick) {
+export function drawClubScatter(el, rows, targetSeason, onPick, label = "Squad") {
   const values = rows.flatMap((r) => [r.started, r.predicted]);
-  const pad = Math.max((Math.max(...values) - Math.min(...values)) * 0.07, 2);
-  const bounds = [Math.min(...values) - pad, Math.max(...values) + pad];
+  const pad = Math.max((Math.max(...values) - Math.min(...values)) * 0.07, 0.1);
+  const bounds = [Math.max(Math.min(...values) - pad, 0), Math.max(...values) + pad];
 
   const traces = [{
     type: "scatter", mode: "lines", x: bounds, y: bounds, hoverinfo: "skip", showlegend: false,
@@ -266,8 +266,8 @@ export function drawClubScatter(el, rows, targetSeason, onPick) {
   const corner = bounds[1] - (bounds[1] - bounds[0]) * 0.02;
   draw(el, traces, baseLayout({
     margin: { l: 8, r: 16, t: 16, b: 8 }, height: 520, hovermode: "closest", showlegend: false,
-    xaxis: axis("Squad start price", bounds),
-    yaxis: axis(`Squad forecast ${seasonLabel(targetSeason)} price`, bounds),
+    xaxis: axis(`${label} start price`, bounds),
+    yaxis: axis(`${label} forecast ${seasonLabel(targetSeason)} price`, bounds),
     annotations: [{ x: corner, y: corner, text: "no change", showarrow: false, xanchor: "right",
       yanchor: "top", yshift: -12, xshift: -4, font: { size: 12, color: INK_SOFT } }],
   }));
