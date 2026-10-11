@@ -6,7 +6,7 @@
 // name: FPL renames players (Salah became M.Salah).
 //
 // A current player gets what his Price Watch card has -- next season's
-// forecast, why, and the forecast trend -- built from the same board.json
+// forecast, why, the forecast trend and what moved it day by day -- built from the same board.json
 // record, so the two agree to the penny. Every player gets his price in each
 // season since 2017-18, with the start price the model would have called
 // from the season before. Those calls are worked out here from seasons.json,
@@ -20,7 +20,7 @@ import { loadJson, loadModel, showError } from "./data.js";
 import { esc, fixed, fmt, seasonLabel } from "./format.js";
 import { drawForecastTrend, drawTrackRecord } from "./charts.js";
 import { attachSearch, clubUrl, initNavSearch, playerUrl } from "./nav.js";
-import { boardValues, currentClub, seasonRows, seasonValues, trendDays, withRatios } from "./records.js";
+import { boardValues, currentClub, driverDays, seasonRows, seasonValues, snapshotDay, trendDays, withRatios } from "./records.js";
 import { money } from "./theme.js";
 import * as ui from "./ui.js";
 
@@ -34,6 +34,7 @@ let model;
 let spec;
 let board;
 let forecasts;
+let drivers; // the model's inputs each earlier morning, or null
 let rows = [];
 let clubsNow = new Set();
 
@@ -171,8 +172,10 @@ function trendSection(days) {
   return `<section class="panel player-panel">${ui.forecastTrend(days)}</section>`;
 }
 
-function whySection(why) {
-  return `<section class="panel player-panel player-wide">${why.html}</section>`;
+/** "Why this price" sits beside "Day by day" in the second row of the grid;
+ *  without the day-by-day chart it takes the whole row. */
+function whySection(why, wide) {
+  return `<section class="panel player-panel${wide ? " player-wide" : ""}">${why.html}</section>`;
 }
 
 function trackSection(record) {
@@ -236,6 +239,7 @@ function renderPlayer(code) {
 
   let interval = null;
   let why = null;
+  let daily = null;
   let days = [];
   const parts = [];
   if (record) {
@@ -243,7 +247,9 @@ function renderPlayer(code) {
     interval = model.predict(values);
     days = trendDays(forecasts, board, record, interval);
     why = ui.whyThisPrice(model, values, ["Today", record.price_now]);
-    parts.push(forecastSection(record, interval), trendSection(days), whySection(why));
+    daily = drivers ? ui.dailyChange(model, driverDays(drivers, record, values, snapshotDay(board))) : null;
+    parts.push(forecastSection(record, interval), trendSection(days), whySection(why, !daily));
+    if (daily) parts.push(`<section class="panel player-panel">${daily.html}</section>`);
   } else {
     parts.push(leftSection(seasons[seasons.length - 1]));
   }
@@ -253,6 +259,7 @@ function renderPlayer(code) {
   root.className = `wrap player-body${record ? "" : " player-departed"}`;
   root.innerHTML = parts.join("");
   if (why) why.mount(root);
+  if (daily) daily.mount(root);
   const trendEl = root.querySelector(".trend-chart");
   if (trendEl) drawForecastTrend(trendEl, days, TARGET);
   drawTrackRecord(root.querySelector(".track-chart"), trackGroups(seasons, record, interval));
@@ -327,8 +334,10 @@ async function main() {
   const raw = query.get("code") ?? query.get("player");
   let seasonsData;
   try {
-    [model, board, seasonsData, forecasts] = await Promise.all([
-      loadModel(), loadJson("board"), loadJson("seasons"), loadJson("forecasts")]);
+    [model, board, seasonsData, forecasts, drivers] = await Promise.all([
+      loadModel(), loadJson("board"), loadJson("seasons"), loadJson("forecasts"),
+      // The page works without it, only losing "Day by day".
+      loadJson("drivers").catch(() => null)]);
   } catch (error) {
     showError($("player-root"), error);
     return;
