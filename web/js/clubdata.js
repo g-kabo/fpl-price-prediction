@@ -158,19 +158,22 @@ export function baselineDay(days) {
   return { index: 0, date: dates[0], short: false };
 }
 
-/** How far a club's forecast has moved since `day` (from `baselineDay`): the
- *  sum, over the players counted now who were tracked then, of today's
- *  forecast minus that morning's. Null with nothing to compare. */
+/** How far a club's forecast has moved since `day` (from `baselineDay`):
+ *  {then, now, change, n}, summing over the players counted now who were
+ *  tracked then: that morning's forecasts, today's, and the difference.
+ *  Null with nothing to compare. */
 export function forecastMove(club, day) {
   const { forecasts } = ctx;
   if (!day) return null;
-  let total = 0;
+  let before = 0;
+  let after = 0;
   let n = 0;
   for (const p of club.players) {
     const then = recordedOn(forecasts.players[String(p.code)], day.index);
     if (!then || !Number.isFinite(p.pred)) continue;
-    total += p.pred - then[1];
+    before += then[1];
+    after += p.pred;
     n += 1;
   }
-  return n ? total : null;
+  return n ? { then: before, now: after, change: after - before, n } : null;
 }

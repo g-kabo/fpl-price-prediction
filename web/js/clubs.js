@@ -24,7 +24,7 @@ const MEASURES = {
   minutes: { label: "Playing time", note: "each player's predicted change weighted by his share of the club's minutes so far, so the shares add up to about eleven: the change in the side that actually plays" },
 };
 
-const state = { sort: "total", scatter: "squad", moveSort: { key: "all", dir: -1 }, tableSort: { key: "change", dir: -1 } };
+const state = { sort: "total", scatter: "squad", window: "week", tableSort: { key: "change", dir: -1 } };
 
 let board;
 
@@ -137,34 +137,61 @@ const changeCell = (value) => (value === null
   ? '<td class="num"><span class="muted">–</span></td>'
   : `<td class="num"><span class="move move-${Math.abs(value) < 0.005 ? "hold" : value > 0 ? "rise" : "fall"}">${money(value, true, 2)}</span></td>`);
 
-/** How far each club's forecast has moved: over the past month, the past
- *  week and since tracking began. */
+const MOVER_WINDOWS = { day: 1, week: 7, month: 30, all: null };
+const MOVERS_EACH = 5;
+/** The chip calls anything under £0.1m "holds", so a club has to clear that to be listed. */
+const MOVER_FLOOR = 0.1;
+
+function mover(row) {
+  const href = `club.html?team=${encodeURIComponent(row.club.team)}${shared.count === "all" ? "&count=all" : ""}`;
+  return `<a class="mv-row" href="${href}">`
+    + `<span class="tl-player">${ui.shirt(row.club.team, "sm")}<span class="tl-who">`
+    + `<span class="tl-name">${esc(row.club.team)}</span><span class="tl-sub"><span class="tl-club">${row.n} players</span></span></span></span>`
+    + `<span class="num mv-path"><span class="mv-then">${money(row.then, false, 2)}<i class="bi bi-arrow-right"></i></span>`
+    + `<strong>${money(row.now, false, 2)}</strong></span>`
+    + `<span class="num">${ui.deltaChip(row.change)}</span></a>`;
+}
+
+function moversSide(title, icon, rows, none) {
+  const body = rows.length ? rows.map(mover).join("") : `<p class="mv-none">${esc(none)}</p>`;
+  return `<div class="mv-side"><div class="mv-head"><i class="bi ${icon}"></i>${title}</div>${body}</div>`;
+}
+
+/** Whose combined forecast has moved most since an earlier recorded morning,
+ *  the way Price Watch lists its forecast movers. A club's figure is the sum
+ *  of its counted players' forecasts, so it also moves as players are counted. */
 function renderMoves() {
-  const live = board.is_live && snapshotDay(board);
-  const windows = live ? [["month", "Past month", 30], ["week", "Past week", 7], ["all", "Since tracking began", null]]
-    .map(([key, label, days]) => ({ key, label, day: baselineDay(days) })) : [];
   const note = $("club-moves-note");
-  if (!windows.length || windows.some((w) => !w.day)) {
-    note.textContent = "Forecasts are recorded every morning; movers appear from the second day.";
-    $("club-moves").innerHTML = "";
+  const out = $("club-moves");
+  note.textContent = "";
+  if (!board.is_live || !snapshotDay(board)) {
+    out.innerHTML = ui.empty("Forecast movers need the daily FPL snapshot, which could not be read.", "bi-cloud-slash");
     return;
   }
-  const rows = clubs.map((club) => ({
-    club, team: club.team,
-    ...Object.fromEntries(windows.map((w) => [w.key, forecastMove(club, w.day)])),
-  }));
-  rows.sort(byKey(state.moveSort));
-  const first = windows.find((w) => w.key === "all").day.date;
-  const shorter = windows.filter((w) => w.day.short);
-  note.textContent = `The change in each club's ${seasonLabel(TARGET)} forecast: how far the combined forecast of its `
-    + `${shared.count === "played" ? "players who have played" : "squad"} has moved since an earlier morning. `
-    + `Tracking began ${dayMonth(first)}.`
-    + (shorter.length ? ` There is not yet a ${shorter.map((w) => w.key).join(" or ")} of history, so that column measures from ${dayMonth(first)}.` : "");
-  const head = "<thead><tr>" + header("Club", "team", state.moveSort, { num: false })
-    + windows.map((w) => header(w.label, w.key, state.moveSort, { sub: `since ${dayMonth(w.day.date)}` })).join("")
-    + "</tr></thead>";
-  const body = rows.map((r) => `<tr>${clubCell(r.club)}${windows.map((w) => changeCell(r[w.key])).join("")}</tr>`).join("");
-  $("club-moves").innerHTML = `<table class="terms club-table" data-table="moves">${head}<tbody>${body}</tbody></table>`;
+  const day = baselineDay(MOVER_WINDOWS[state.window] ?? null);
+  if (!day) {
+    out.innerHTML = ui.empty("Forecasts are recorded every morning. Movers appear from the second day.", "bi-calendar-plus");
+    return;
+  }
+  const rows = [];
+  for (const club of clubs) {
+    const move = forecastMove(club, day);
+    if (move) rows.push({ club, ...move });
+  }
+  const ups = rows.filter((r) => r.change >= MOVER_FLOOR).sort((a, b) => b.change - a.change).slice(0, MOVERS_EACH);
+  const downs = rows.filter((r) => r.change <= -MOVER_FLOOR).sort((a, b) => a.change - b.change).slice(0, MOVERS_EACH);
+
+  const since = dayMonth(day.date);
+  const who = shared.count === "played" ? "players who have played" : "squad";
+  note.textContent = `Whose combined ${seasonLabel(TARGET)} forecast, over its ${who}, has moved most since the morning of ${since}.`
+    + (day.short ? ` There is not yet that much history, so this measures from ${since}.` : "");
+  if (!ups.length && !downs.length) {
+    out.innerHTML = ui.empty(`No club's forecast has moved by £0.1m or more since ${since}. Expect movement after the next gameweek.`,
+      "bi-pause-circle");
+    return;
+  }
+  out.innerHTML = moversSide("Forecast up", "bi-graph-up-arrow", ups, `No club's forecast up since ${since}.`)
+    + moversSide("Forecast down", "bi-graph-down-arrow", downs, `No club's forecast down since ${since}.`);
 }
 
 /** One row per club for the club table and the scatter beside it. A player
@@ -251,10 +278,8 @@ function sortBy(sort, key) {
 function wire() {
   document.querySelectorAll('input[name="club-scatter"]').forEach((input) =>
     input.addEventListener("change", () => { state.scatter = input.value; renderScatter(); }));
-  $("club-moves").addEventListener("click", (event) => {
-    const button = event.target.closest(".th-sort");
-    if (button) { sortBy(state.moveSort, button.dataset.key); renderMoves(); }
-  });
+  document.querySelectorAll('input[name="club-window"]').forEach((input) =>
+    input.addEventListener("change", () => { state.window = input.value; renderMoves(); }));
   $("club-table").addEventListener("click", (event) => {
     const button = event.target.closest(".th-sort");
     if (button) { sortBy(state.tableSort, button.dataset.key); renderTable(); }

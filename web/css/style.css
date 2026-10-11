@@ -1914,3 +1914,4 @@ a.tl-row:hover { color: var(--ink); }
 .move-hold { color: var(--ink-soft); }
 .club-table a.st-club { text-decoration: none; color: inherit; font-weight: 600; }
 .club-table a.st-club:hover { text-decoration: underline; }
+a.mv-row { text-decoration: none; color: inherit; }
