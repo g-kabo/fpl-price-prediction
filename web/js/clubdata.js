@@ -177,3 +177,30 @@ export function forecastMove(club, day) {
   }
   return n ? { then: before, now: after, change: after - before, n } : null;
 }
+
+/** A club's forecast, every recorded morning and today: the sum over its
+ *  counted players of `weight(p)` times his forecast that morning, for the
+ *  players tracked that day. Weights are today's (minutes and ownership are
+ *  not recorded daily), so the line moves only as forecasts do. Today comes
+ *  from the board itself. [{date, value}], oldest first. */
+export function forecastSeries(club, weight) {
+  const { board, forecasts } = ctx;
+  const today = snapshotDay(board);
+  const days = [];
+  forecasts.dates.forEach((date, day) => {
+    if (today && date >= today) return;
+    let total = 0;
+    let n = 0;
+    for (const p of club.players) {
+      const values = recordedOn(forecasts.players[String(p.code)], day);
+      if (!values) continue;
+      total += weight(p) * values[1];
+      n += 1;
+    }
+    if (n) days.push({ date, value: total });
+  });
+  if (board.is_live && today && club.n) {
+    days.push({ date: today, value: club.players.reduce((t, p) => t + weight(p) * p.pred, 0) });
+  }
+  return days;
+}
