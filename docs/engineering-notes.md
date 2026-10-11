@@ -615,6 +615,45 @@ next_cost ~ start_cost + cost_change_start + element_type + total_points
           + cleansheets_per_min + no_mins
 ```
 
+### Per-position models (tried and rejected, October 2026)
+
+The model is pooled: position enters only as dummies (GK the reference), so each
+position gets its own intercept but every slope is shared. Splitting it was tested
+on the same rolling-origin folds, using the default features throughout. These
+were one-off scripts and were not kept.
+
+| Variant | All | GK | DEF | MID | FWD |
+|---|---|---|---|---|---|
+| **Pooled, with club (default)** | **0.3054** | **0.248** | 0.274 | **0.313** | **0.397** |
+| Pooled + key stats × position¹ | 0.3051 | 0.252 | **0.267** | 0.314 | 0.401 |
+| Pooled + every stat × position | 0.3105 | 0.254 | 0.272 | 0.319 | 0.413 |
+| Separate model per position | 0.3152 | 0.260 | 0.275 | 0.320 | 0.432 |
+| Pooled, no club | 0.3077 | 0.251 | 0.273 | 0.317 | 0.400 |
+| Pooled, no club, + `saves` + `clean_sheets` | 0.3073 | 0.251 | 0.274 | 0.315 | 0.400 |
+| Separate, no club | 0.3115 | 0.254 | 0.270 | 0.322 | 0.412 |
+| Separate, no club, GK + `saves` + `clean_sheets`, DEF/MID + `clean_sheets` | 0.3113 | 0.253 | 0.270 | 0.322 | 0.412 |
+
+¹ `total_points`, `goals_scored`, `assists`, `minutes`.
+
+- **Separate models overfit the small positions.** There are only about 50
+  forwards and 50 goalkeepers a season. Forwards lose the most (0.397 → 0.432),
+  and the per-position fits with club dummies are rank-deficient. The more freedom
+  a variant gives each position, the worse it does.
+- **Key-stat interactions are a wash.** They are 0.0003 better overall and win 3
+  of the 6 folds, which is noise. They help defenders and lose the same on
+  goalkeepers and forwards, at the cost of 12 more coefficients.
+- **Removing the club dummies costs a little** (+0.0023 overall, 3 of 6 folds still
+  won), so the club effect is real but weak. It doesn't help the separate models
+  either.
+- **`saves` and `clean_sheets` add almost nothing.** Saves plus clean sheets is
+  the only consistent gain for goalkeepers (0.2592 → 0.2577, 4 of 6 folds), and the
+  separate GK model still trails the pooled one. Clean sheets do nothing for
+  defenders or midfielders, because `total_points` and `points_per_game` already
+  include the clean-sheet points. `saves` isn't in `clean.RAW_COLS`; it is in
+  every season's raw file if it's ever revisited.
+- **Kept the pooled model.** Forwards are the weakest position in every variant,
+  so look there first if this is reopened.
+
 ---
 
 ## Where on the price scale it works
