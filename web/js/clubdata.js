@@ -56,7 +56,7 @@ export const counted = (p) => shared.count === "all" || p.minutes_now > 0;
 export const minuteShare = (p) => (p.games_played > 0 ? Math.min((p.minutes_now || 0) / (p.games_played * 90), 1) : 0);
 
 /** The share of managers who own a player. */
-export const ownedShare = (p) => Number(p.selected_by_percent || 0) / 100;
+export const ownedShare = (p) => Number(p.selected_now || 0) / 100;
 
 /** A group of players under one of the four measures. */
 export function measureOf(players, measure) {

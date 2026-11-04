@@ -117,7 +117,7 @@ function hero(seasons, record) {
       ["Today", money(record.price_now)],
       ["Points", String(Math.trunc(record.points_now || 0))],
       ["Minutes", Math.trunc(record.minutes_now || 0).toLocaleString("en-GB")],
-      ["Selected", `${fixed(Number(record.selected_by_percent || 0), 1)}%`],
+      ["Selected", `${fixed(Number(record.selected_now || 0), 1)}%`],
       ["Gameweeks", fmt(Number(record.games_played || 0))],
     ]);
   } else {
@@ -302,7 +302,7 @@ function renderLanding(message = "") {
   attachSearch($("landing-search"), $("landing-results"));
 
   const popular = [...board.players]
-    .sort((a, b) => Number(b.selected_by_percent || 0) - Number(a.selected_by_percent || 0))
+    .sort((a, b) => Number(b.selected_now || 0) - Number(a.selected_now || 0))
     .slice(0, POPULAR);
 
   // Departed players worth looking up: the dearest at the end of their last season.
@@ -322,7 +322,7 @@ function renderLanding(message = "") {
   $("player-root").innerHTML = notice
     + '<section class="block"><div class="block-head"><div><h2 class="block-title">Most selected</h2>'
     + '<p class="block-note">The players most managers own right now.</p></div></div>'
-    + `<div class="tile-grid">${popular.map((p) => tile(p, `${fixed(Number(p.selected_by_percent || 0), 1)}%`)).join("")}</div></section>`
+    + `<div class="tile-grid">${popular.map((p) => tile(p, `${fixed(Number(p.selected_now || 0), 1)}%`)).join("")}</div></section>`
     + '<section class="block"><div class="block-head"><div><h2 class="block-title">Since departed</h2>'
     + '<p class="block-note">The dearest players to have left FPL, by their price on the way out.</p></div></div>'
     + `<div class="tile-grid">${departed.map((r) => tile(r, `${money(r.final_cost)}<span class="tile-when">${seasonLabel(r.season)}</span>`)).join("")}</div></section>`;

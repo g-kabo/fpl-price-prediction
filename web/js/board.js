@@ -330,7 +330,7 @@ function cardHtml(record) {
     ui.statStrip([
       ["Points", String(Math.trunc(record.points_now || 0))],
       ["Minutes", Math.trunc(record.minutes_now || 0).toLocaleString("en-GB")],
-      ["Selected", `${fixed(Number(record.selected_by_percent || 0), 1)}%`],
+      ["Selected", `${fixed(Number(record.selected_now || 0), 1)}%`],
       ["Gameweeks", fmt(games)],
     ]), clubUrl(record.team_name));
   const answer = ui.answer(model, interval, reference, REFERENCE_WORDS[xref], short,

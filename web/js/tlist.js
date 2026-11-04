@@ -16,7 +16,7 @@ export const COLUMNS = [
   ["player", "name_key", false],
   ["points", "points_now", true],
   ["minutes", "minutes_now", true],
-  ["selected", "selected_by_percent", true],
+  ["selected", "selected_now", true],
   ["ref", "ref", true],
   ["pred", "pred", true],
   ["move", "delta", true],
@@ -81,7 +81,7 @@ function row(p, href, value) {
     + `<span class="tl-club">${esc(p.team_name)}</span></span></span></span>`
     + `<span class="num tl-stat">${Math.trunc(p.points_now || 0)}</span>`
     + `<span class="num tl-stat">${Math.trunc(p.minutes_now || 0).toLocaleString("en-GB")}</span>`
-    + `<span class="num tl-stat">${fixed(Number(p.selected_by_percent || 0), 1)}%</span>`
+    + `<span class="num tl-stat">${fixed(Number(p.selected_now || 0), 1)}%</span>`
     + (value ? `<span class="num tl-stat">${p.value_now === null ? "–" : fixed(p.value_now, 1)}</span>` : "")
     + `<span class="num tl-now">${money(p.ref)}</span><span class="num tl-pred">${money(p.pred)}</span>`
     + `<span class="num">${ui.deltaChip(p.delta, "sm")}</span>${href ? "</a>" : "</button>"}`;
