@@ -345,15 +345,21 @@ function recordSentence(record) {
       + `${seasonLabel(record.past_from)}. The previous ${high ? "high" : "low"} was `
       + `${money(record.past_best, false, 2)}, for ${seasonLabel(record.past_best_for)}.`;
   }
+  if (record.scope === "historic") {
+    return `Historic ${record.direction}: ${value} is ${high ? "above" : "below"} the model's forecast from every `
+      + `past season, back to ${seasonLabel(record.past_from)}. The ${high ? "highest" : "lowest"} of those was `
+      + `${money(record.past_best, false, 2)}, for ${seasonLabel(record.past_best_for)}. This season's own `
+      + `${record.direction} is ${money(record.season_best, false, 2)}, on ${dayMonth(record.season_best_on)}.`;
+  }
   return `Season ${record.direction}: ${value} is the ${high ? "highest" : "lowest"} forecast since daily `
     + `tracking began on ${dayMonth(record.tracked_from)}, ${reached}.`;
 }
 
-/** A label for a forecast at a season or all-time high or low. */
+/** A label for a forecast at a season, all-time or historic high or low. */
 export function recordPill(record) {
   if (!record) return "";
   const icon = record.direction === "high" ? "bi-caret-up-fill" : "bi-caret-down-fill";
-  const scope = record.scope === "all" ? "All-time" : "Season";
+  const scope = { all: "All-time", historic: "Historic" }[record.scope] || "Season";
   return `<span class="record-pill record-${record.direction} record-${record.scope}" `
     + `title="${esc(recordSentence(record))}"><i class="bi ${icon}"></i>${scope} ${record.direction}</span>`;
 }

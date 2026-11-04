@@ -78,3 +78,41 @@ def test_no_earlier_morning_means_no_record():
     assert forecast_history.records(pd.DataFrame(), pd.Series({1: 5.0}), calls()) == {}
     other = history(5.0).assign(code=2)
     assert forecast_history.records(other, pd.Series({1: 5.2}), calls()) == {}
+
+
+def test_historic_high_passes_past_seasons_but_not_this_season():
+    mark = record([5.0, 7.3], 7.0, past=(4.8,))
+    assert (mark["direction"], mark["scope"]) == ("high", "historic")
+    assert mark["past_best"] == 4.8
+    assert mark["season_best"] == 7.3
+    assert mark["season_best_on"] == "2026-10-02"
+
+
+def test_historic_low_mirrors_it():
+    mark = record([4.0, 6.0], 5.0, past=(5.5, 5.2))
+    assert (mark["direction"], mark["scope"]) == ("low", "historic")
+    assert mark["past_best"] == 5.2
+    assert mark["season_best"] == 4.0
+
+
+def test_historic_needs_a_clear_gap_and_a_past_season():
+    assert record([5.0, 5.3], 5.1, past=(5.06,)) is None
+    assert record([5.0, 5.3], 5.1, past=(5.05,))["scope"] == "historic"
+    assert record([5.0, 5.3], 5.1, past=(5.2, 5.0)) is None
+    assert record([5.0, 5.3], 5.1) is None
+
+
+def test_season_label_beats_historic():
+    mark = record([5.5, 5.3], 5.2, past=(4.8,))
+    assert (mark["direction"], mark["scope"]) == ("low", "season")
+
+
+def test_flat_season_can_still_be_historic():
+    assert record([5.0, 5.0], 5.0, past=(4.8,))["scope"] == "historic"
+
+
+def test_historic_skips_players_who_have_not_played():
+    history_, today = history(5.0, 5.3), pd.Series({1: 5.1})
+    assert forecast_history.records(history_, today, calls(4.8), played=set()) == {}
+    assert forecast_history.records(history_, today, calls(4.8), played={1})[1]["scope"] == "historic"
+    assert forecast_history.records(history(5.0, 5.1), pd.Series({1: 5.2}), calls(), played=set())[1]["scope"] == "season"

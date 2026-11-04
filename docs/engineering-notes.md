@@ -437,6 +437,14 @@ could read as describing the edited figure) and the header search:
   and would otherwise only repeat the season label. These are today's model applied
   in hindsight, not forecasts made at the time. A player with no past season gets the
   season label only.
+- **Historic is the looser label, added after De Cuyper (£7.06m) sat far above his one
+  past season (£4.82m) yet below this season's £7.31m, so had no label.** It means past
+  every completed season by at least £0.05m, whatever this season did. A player gets
+  one label, all-time first, then season, then historic, so Lewis-Skelly reads "Season
+  low" though he is above his past seasons. A forecast with no minutes behind it comes
+  from the price alone, so those players don't get it (75 labels on 4 November). A
+  player with one past season is always above or below it, so this is the label most
+  likely to mean little.
 - It is worked out in Python and written to `board.json`, because Price Watch does
   not load `seasons.json` (667 KB) and the past calls need it.
 
