@@ -3,7 +3,7 @@
 // Each function returns an HTML string. Anything that came from the data
 // (names, clubs) goes through esc(); everything else is built here.
 
-import { dayMonth, esc, fixed, fmt, pyRound } from "./format.js";
+import { dayMonth, esc, fixed, fmt, pyRound, seasonLabel } from "./format.js";
 import { direction, money, shirtUri } from "./theme.js";
 import { drawContributionBars, drawDailyContributions } from "./charts.js";
 
@@ -334,10 +334,40 @@ export function clubName(team, href = null) {
     : `<span class="player-club">${esc(team || "")}</span>`;
 }
 
+/** A forecast record in a sentence. `record` comes from board.json. */
+function recordSentence(record) {
+  const high = record.direction === "high";
+  const value = money(record.value, false, 2);
+  const reached = record.since ? `first reached on ${dayMonth(record.since)}` : "reached today";
+  if (record.scope === "all") {
+    return `All-time ${record.direction}: ${value} is the ${high ? "highest" : "lowest"} forecast on record, ${reached}. `
+      + `It is ${high ? "above" : "below"} the model's forecast from every past season, back to `
+      + `${seasonLabel(record.past_from)}. The previous ${high ? "high" : "low"} was `
+      + `${money(record.past_best, false, 2)}, for ${seasonLabel(record.past_best_for)}.`;
+  }
+  return `Season ${record.direction}: ${value} is the ${high ? "highest" : "lowest"} forecast since daily `
+    + `tracking began on ${dayMonth(record.tracked_from)}, ${reached}.`;
+}
+
+/** A label for a forecast at a season or all-time high or low. */
+export function recordPill(record) {
+  if (!record) return "";
+  const icon = record.direction === "high" ? "bi-caret-up-fill" : "bi-caret-down-fill";
+  const scope = record.scope === "all" ? "All-time" : "Season";
+  return `<span class="record-pill record-${record.direction} record-${record.scope}" `
+    + `title="${esc(recordSentence(record))}"><i class="bi ${icon}"></i>${scope} ${record.direction}</span>`;
+}
+
+/** The same record spelled out, for the card and the player page. */
+export function recordNote(record) {
+  return record ? `<p class="fine">${esc(recordSentence(record))}</p>` : "";
+}
+
 /** Shirt, name plate, club and position: the top of a player card.
- *  `clubHref` makes the club name a link to its Clubs page. */
-export function playerHeader(name, team, position, meta = "", clubHref = null) {
+ *  `clubHref` makes the club name a link to its Clubs page; `badge` sits
+ *  after the club. */
+export function playerHeader(name, team, position, meta = "", clubHref = null, badge = "") {
   return `<div class="player-header">${shirt(team, "lg")}<div><h2 class="player-name">${esc(name)}</h2>`
-    + `<div class="player-sub">${positionPill(position)}${clubName(team, clubHref)}</div>`
+    + `<div class="player-sub">${positionPill(position)}${clubName(team, clubHref)}${badge}</div>`
     + `${meta}</div></div>`;
 }

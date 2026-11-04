@@ -73,12 +73,13 @@ function sortHeader(sort, key, label) {
     + `data-sort="${key}" title="Sort by ${esc(label)}">${esc(label)}<i class="bi ${icon}"></i></button>`;
 }
 
-function row(p, href, value) {
+function row(p, href, value, records) {
   const open = href ? `<a class="tl-row" href="${href(p)}">` : `<button type="button" class="tl-row" data-code="${p.code}">`;
+  const pill = records ? ui.recordPill(p.record) : "";
   return open
     + `<span class="tl-player">${ui.shirt(p.team_name, "sm")}<span class="tl-who">`
-    + `<span class="tl-name">${esc(p.web_name)}</span><span class="tl-sub">${ui.positionPill(p.element_type)}`
-    + `<span class="tl-club">${esc(p.team_name)}</span></span></span></span>`
+    + `<span class="tl-name">${esc(p.web_name)}</span><span class="tl-sub${pill ? " tl-sub-record" : ""}"><span class="tl-id">${ui.positionPill(p.element_type)}`
+    + `<span class="tl-club">${esc(p.team_name)}</span></span>${pill}</span></span></span>`
     + `<span class="num tl-stat">${Math.trunc(p.points_now || 0)}</span>`
     + `<span class="num tl-stat">${Math.trunc(p.minutes_now || 0).toLocaleString("en-GB")}</span>`
     + `<span class="num tl-stat">${fixed(Number(p.selected_now || 0), 1)}%</span>`
@@ -89,8 +90,9 @@ function row(p, href, value) {
 
 /** The header and rows, already sorted. `labels` names each column key;
  *  `href(p)` makes rows links rather than buttons carrying data-code;
- *  `value` adds points per £m (and the list needs the `tlist-value` class). */
-export function listHtml(rows, sort, labels, href = null, { value = false } = {}) {
+ *  `value` adds points per £m (and the list needs the `tlist-value` class);
+ *  `records` adds each player's forecast record, if any. */
+export function listHtml(rows, sort, labels, href = null, { value = false, records = false } = {}) {
   const head = `<div class="tlist-head">${columnsFor(value).map(([key]) => sortHeader(sort, key, labels[key])).join("")}</div>`;
-  return head + rows.map((p) => row(p, href, value)).join("");
+  return head + rows.map((p) => row(p, href, value, records)).join("");
 }
