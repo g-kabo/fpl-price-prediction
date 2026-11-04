@@ -214,8 +214,8 @@ function baselineDay(days) {
 function mover(p) {
   return `<button type="button" class="mv-row" data-code="${p.code}">`
     + `<span class="tl-player">${ui.shirt(p.team_name, "sm")}<span class="tl-who">`
-    + `<span class="tl-name">${esc(p.web_name)}</span><span class="tl-sub">${ui.positionPill(p.element_type)}`
-    + `<span class="tl-club">${esc(p.team_name)}</span></span></span></span>`
+    + `<span class="tl-name">${esc(p.web_name)}</span><span class="tl-sub${p.record ? " tl-sub-record" : ""}">${ui.positionPill(p.element_type)}`
+    + `<span class="tl-club">${esc(p.team_name)}</span>${ui.recordPill(p.record)}</span></span></span>`
     + `<span class="num mv-path"><span class="mv-then">${money(p.then, false, 2)}<i class="bi bi-arrow-right"></i></span>`
     + `<strong>${money(p.pred, false, 2)}</strong></span>`
     + `<span class="num">${ui.changeChip(p.change)}</span></button>`;

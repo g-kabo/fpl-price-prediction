@@ -108,7 +108,7 @@ function renderSquad(club) {
   bench.sort((a, b) => POSITIONS.indexOf(a.element_type) - POSITIONS.indexOf(b.element_type) || b.pred - a.pred);
   const tiles = bench.map((p) => `<a class="player-tile" href="${playerUrl(p.code)}">${ui.shirt(p.team_name, "sm")}`
     + `<span class="tl-who"><span class="tl-name">${esc(p.web_name)}</span>`
-    + `<span class="tl-sub">${ui.positionPill(p.element_type)}<span class="tl-club">${money(p.price_now)} today</span></span></span>`
+    + `<span class="tl-sub${p.record ? " tl-sub-record" : ""}">${ui.positionPill(p.element_type)}<span class="tl-club">${money(p.price_now)} today</span>${ui.recordPill(p.record)}</span></span>`
     + `<span class="tile-side">${money(p.pred)}${ui.deltaChip(p.delta, "sm")}</span></a>`).join("");
   const counting = shared.count === "all" ? "They count in the totals above." : "They are left out of the totals above unless you pick the whole squad.";
   $("club-bench").innerHTML = `<details class="details club-bench"><summary>The bench: ${bench.length} `
@@ -129,10 +129,11 @@ function renderList(club) {
     ? ` <button type="button" class="link-button" id="club-list-all">Show every position</button>`
     : "";
   $("club-list-note").innerHTML = `${rows.length} ${state.listPos ? `${state.listPos} ` : ""}players ${who}. `
-    + "Pts/£m is points so far per £m of today's price. Click a column to sort, or a player to open his page."
+    + "Pts/£m is points so far per £m of today's price. A label marks a forecast at its highest or lowest this "
+    + "season, or against every past season for all-time. Click a column to sort, or a player to open his page."
     + only;
   $("club-list").innerHTML = rows.length
-    ? listHtml(rows, state.listSort, labels, (p) => playerUrl(p.code), { value: true })
+    ? listHtml(rows, state.listSort, labels, (p) => playerUrl(p.code), { value: true, records: true })
     : ui.empty("No players to list.");
 }
 

@@ -285,7 +285,7 @@ function wireCopy(code) {
 function tile(p, sub) {
   return `<a class="player-tile" href="${playerUrl(p.code)}">${ui.shirt(p.team_name, "sm")}`
     + `<span class="tl-who"><span class="tl-name">${esc(p.web_name)}</span>`
-    + `<span class="tl-sub">${ui.positionPill(p.element_type)}<span class="tl-club">${esc(p.team_name || "")}</span></span></span>`
+    + `<span class="tl-sub${p.record ? " tl-sub-record" : ""}">${ui.positionPill(p.element_type)}<span class="tl-club">${esc(p.team_name || "")}</span>${ui.recordPill(p.record)}</span></span>`
     + `<span class="tile-side">${sub}</span></a>`;
 }
 

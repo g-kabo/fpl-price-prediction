@@ -422,8 +422,10 @@ Decisions worth keeping:
   a bug, but it will look like a gameweek effect.
 
 **Forecast records** label a player whose forecast is at a season or all-time high
-or low, on the Price Watch list and card and the player page, from
-`forecast_history.records`:
+or low, from `forecast_history.records`: on the Price Watch list, movers and card, the
+Club page's squad list and bench, the player page and its Most selected tiles. Left
+off the pitches (no room on a phone), What if (its inputs can be edited, so the label
+could read as describing the edited figure) and the header search:
 
 - **A record holds until the forecast leaves it**, and ties count, rather than
   flagging only new records: between gameweeks forecasts barely move, so a "new
