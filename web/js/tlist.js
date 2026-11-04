@@ -23,10 +23,17 @@ export const COLUMNS = [
 ];
 /** Points per £m of today's price, offered after "Sel." where a page wants it. */
 const VALUE_COLUMN = ["value", "value_now", true];
+/** The forecast record, offered after the player where a page wants it. It
+ *  starts at the highest kind, a second click starts at the lowest, and a
+ *  player with no record comes last either way. */
+const TAG_COLUMN = ["tag", "tag_rank", true];
 
-const COLUMN = Object.fromEntries([...COLUMNS, VALUE_COLUMN].map(([key, field, numeric]) => [key, [field, numeric]]));
+const COLUMN = Object.fromEntries([...COLUMNS, VALUE_COLUMN, TAG_COLUMN].map(([key, field, numeric]) => [key, [field, numeric]]));
 
-const columnsFor = (value) => (value ? [...COLUMNS.slice(0, 4), VALUE_COLUMN, ...COLUMNS.slice(4)] : COLUMNS);
+function columnsFor(value, tags) {
+  const columns = value ? [...COLUMNS.slice(0, 4), VALUE_COLUMN, ...COLUMNS.slice(4)] : COLUMNS;
+  return tags ? [columns[0], TAG_COLUMN, ...columns.slice(1)] : columns;
+}
 
 export const DEFAULT_SORT = { col: "move", desc: true };
 
@@ -57,6 +64,7 @@ export function sortRows(rows, sort) {
     ...p,
     name_key: fold(p.web_name),
     value_now: p.price_now > 0 ? (p.points_now || 0) / p.price_now : null,
+    tag_rank: p.record ? ui.RECORD_KINDS.length - ui.RECORD_KINDS.indexOf(ui.recordKind(p.record)) : null,
   })).sort(compare(sort));
 }
 
@@ -69,17 +77,18 @@ export function nextSort(sort, key) {
 function sortHeader(sort, key, label) {
   const active = sort.col === key;
   const icon = active ? (sort.desc ? "bi-caret-down-fill" : "bi-caret-up-fill") : "bi-chevron-expand";
-  return `<button type="button" class="sort-col${key !== "player" ? " num" : ""}${active ? " is-active" : ""}" `
+  return `<button type="button" class="sort-col${key !== "player" && key !== "tag" ? " num" : ""}${active ? " is-active" : ""}" `
     + `data-sort="${key}" title="Sort by ${esc(label)}">${esc(label)}<i class="bi ${icon}"></i></button>`;
 }
 
-function row(p, href, value, records) {
+function row(p, href, value, records, tags) {
   const open = href ? `<a class="tl-row" href="${href(p)}">` : `<button type="button" class="tl-row" data-code="${p.code}">`;
-  const pill = records ? ui.recordPill(p.record) : "";
+  const pill = records || tags ? ui.recordPill(p.record) : "";
   return open
     + `<span class="tl-player">${ui.shirt(p.team_name, "sm")}<span class="tl-who">`
     + `<span class="tl-name">${esc(p.web_name)}</span><span class="tl-sub${pill ? " tl-sub-record" : ""}"><span class="tl-id">${ui.positionPill(p.element_type)}`
     + `<span class="tl-club">${esc(p.team_name)}</span></span>${pill}</span></span></span>`
+    + (tags ? `<span class="tl-tag">${pill}</span>` : "")
     + `<span class="num tl-stat">${Math.trunc(p.points_now || 0)}</span>`
     + `<span class="num tl-stat">${Math.trunc(p.minutes_now || 0).toLocaleString("en-GB")}</span>`
     + `<span class="num tl-stat">${fixed(Number(p.selected_now || 0), 1)}%</span>`
@@ -91,8 +100,10 @@ function row(p, href, value, records) {
 /** The header and rows, already sorted. `labels` names each column key;
  *  `href(p)` makes rows links rather than buttons carrying data-code;
  *  `value` adds points per £m (and the list needs the `tlist-value` class);
- *  `records` adds each player's forecast record, if any. */
-export function listHtml(rows, sort, labels, href = null, { value = false, records = false } = {}) {
-  const head = `<div class="tlist-head">${columnsFor(value).map(([key]) => sortHeader(sort, key, labels[key])).join("")}</div>`;
-  return head + rows.map((p) => row(p, href, value, records)).join("");
+ *  `records` adds each player's forecast record, if any, under his name;
+ *  `tags` gives it a sortable column (and the list needs the `tlist-tags`
+ *  class), falling back to under his name where there is no room. */
+export function listHtml(rows, sort, labels, href = null, { value = false, records = false, tags = false } = {}) {
+  const head = `<div class="tlist-head">${columnsFor(value, tags).map(([key]) => sortHeader(sort, key, labels[key])).join("")}</div>`;
+  return head + rows.map((p) => row(p, href, value, records, tags)).join("");
 }

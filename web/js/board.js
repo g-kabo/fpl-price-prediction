@@ -58,6 +58,7 @@ const state = {
   search: "",
   pos: [],
   clubs: [],
+  tags: [],
   sort: { ...DEFAULT_SORT },
   pages: 1,
   selected: null,
@@ -100,6 +101,7 @@ function filtered(rows) {
   }
   if (state.pos.length) out = out.filter((p) => state.pos.includes(p.element_type));
   if (state.clubs.length) out = out.filter((p) => state.clubs.includes(p.team_name));
+  if (state.tags.length) out = out.filter((p) => state.tags.includes(ui.recordKind(p.record)));
   return out;
 }
 
@@ -282,9 +284,9 @@ function renderList() {
   }
 
   const nowLabel = state.xref !== "start_cost" ? "Today" : "August";
-  const labels = { player: "Player", points: "Pts", minutes: "Mins", selected: "Sel.", ref: nowLabel,
+  const labels = { player: "Player", tag: "Tag", points: "Pts", minutes: "Mins", selected: "Sel.", ref: nowLabel,
     pred: seasonLabel(TARGET), move: "Move" };
-  $("board-list").innerHTML = listHtml(shown, state.sort, labels, null, { records: true });
+  $("board-list").innerHTML = listHtml(shown, state.sort, labels, null, { tags: true });
   $("board-count").textContent = `Showing ${shown.length} of ${all.length} players`;
   $("board-more-wrap").hidden = shown.length >= all.length;
 }
@@ -404,6 +406,17 @@ function renderFilters() {
   $("board-clubs-panel").innerHTML = '<button type="button" class="multi-clear" id="board-clubs-clear">Clear</button>'
     + clubs.map((c, i) => `<label><input type="checkbox" value="${esc(c)}"${state.clubs.includes(c) ? " checked" : ""}> ${esc(c)}</label>`).join("");
   clubsLabel();
+
+  const count = (kind) => players.filter((p) => ui.recordKind(p.record) === kind).length;
+  $("board-tags-panel").innerHTML = '<button type="button" class="multi-clear" id="board-tags-clear">Clear</button>'
+    + ui.RECORD_KINDS.map((kind) => `<label><input type="checkbox" value="${kind}"${state.tags.includes(kind) ? " checked" : ""}> `
+      + `${ui.recordKindName(kind)} (${count(kind)})</label>`).join("");
+  tagsLabel();
+}
+
+function tagsLabel() {
+  const n = state.tags.length;
+  $("board-tags-label").textContent = n === 0 ? "All tags" : n <= 2 ? state.tags.map(ui.recordKindName).join(", ") : `${n} tags`;
 }
 
 function clubsLabel() {
@@ -459,9 +472,19 @@ function wire() {
     document.querySelectorAll("#board-clubs-panel input").forEach((i) => { i.checked = false; });
     state.clubs = []; state.pages = 1; clubsLabel(); renderList(); renderMap();
   });
+  $("board-tags-panel").addEventListener("change", () => {
+    state.tags = [...document.querySelectorAll("#board-tags-panel input:checked")].map((i) => i.value);
+    state.pages = 1; tagsLabel(); renderList(); renderMap();
+  });
+  $("board-tags-panel").addEventListener("click", (event) => {
+    if (event.target.id !== "board-tags-clear") return;
+    document.querySelectorAll("#board-tags-panel input").forEach((i) => { i.checked = false; });
+    state.tags = []; state.pages = 1; tagsLabel(); renderList(); renderMap();
+  });
   document.addEventListener("click", (event) => {
-    const details = $("board-clubs");
-    if (details.open && !details.contains(event.target)) details.open = false;
+    for (const details of [$("board-clubs"), $("board-tags")]) {
+      if (details.open && !details.contains(event.target)) details.open = false;
+    }
   });
 
   $("board-more").addEventListener("click", () => { state.pages += 1; renderList(); });

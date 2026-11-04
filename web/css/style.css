@@ -553,7 +553,8 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
 .delta-fall { background: var(--fall-fill); color: #fff; }
 .delta-hold { background: var(--tint); color: var(--ink-soft); }
 
-/* A forecast at a record: filled for all-time, outlined for the season. */
+/* A forecast at a record: filled for all-time, outlined for the season,
+   tinted for historic. */
 .record-pill {
   display: inline-flex;
   align-items: center;
@@ -572,8 +573,12 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
 .record-season.record-low { border-color: var(--fall); color: var(--fall); }
 .record-all.record-high { background: var(--rise-fill); color: var(--rise-on); }
 .record-all.record-low { background: var(--fall-fill); color: #fff; }
+.record-historic.record-high { background: rgba(0, 122, 63, 0.12); color: var(--rise); }
+.record-historic.record-low { background: rgba(214, 0, 79, 0.1); color: var(--fall); }
 .player-sub .record-season.record-high { border-color: var(--volt); color: var(--volt); }
 .player-sub .record-season.record-low { border-color: var(--fall-on-dark); color: var(--fall-on-dark); }
+.player-sub .record-historic.record-high { background: rgba(0, 255, 133, 0.16); color: var(--volt); }
+.player-sub .record-historic.record-low { background: rgba(255, 92, 147, 0.18); color: var(--fall-on-dark); }
 
 /* ---------- filters ----------------------------------------------------- */
 
@@ -584,6 +589,7 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
   align-items: center;
   margin-bottom: 14px;
 }
+.filters-tags { grid-template-columns: minmax(220px, 1.2fr) auto minmax(170px, 1fr) minmax(170px, 1fr); }
 
 .search {
   display: flex;
@@ -702,6 +708,16 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
 .tl-pred { font-family: var(--font-fig); font-size: 1.15rem; font-weight: 600; }
 .tl-pred { font-weight: 800; color: var(--aubergine); }
 .tl-stat { font-family: var(--font-fig); font-size: 1.05rem; color: var(--ink-soft); }
+
+/* The tag column needs a wide list. Narrower, the tag sits under the name. */
+.tl-tag, .sort-col[data-sort="tag"] { display: none; }
+@media (min-width: 1001px) {
+  .tlist-tags .tlist-head,
+  .tlist-tags .tl-row { grid-template-columns: minmax(0, 1fr) 112px 56px 72px 68px 84px 84px 124px; }
+  .tl-tag { display: block; }
+  .sort-col[data-sort="tag"] { display: inline-flex; }
+  .tlist-tags .tl-sub .record-pill { display: none; }
+}
 
 .more { display: flex; justify-content: center; padding: 16px 0 0; }
 
@@ -1481,6 +1497,8 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
   .tl-row .tl-id .tl-club { font-size: 0.82rem; }
   .tlist-head > :nth-child(n+2):nth-child(-n+5),
   .tl-row > :nth-child(n+2):nth-child(-n+5) { display: none; }
+  .tlist-tags .tlist-head > :nth-child(6),
+  .tlist-tags .tl-row > :nth-child(6) { display: none; }
   .nav-tabs-row .nav-tab { padding: 0 9px; font-size: 0.9rem; white-space: nowrap; }
   .filters { grid-template-columns: 1fr; }
   .settings-grid { grid-template-columns: 1fr; }

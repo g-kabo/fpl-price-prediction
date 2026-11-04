@@ -181,13 +181,14 @@ def past_calls(codes: set[int], predict_season: int) -> pd.DataFrame:
 
 
 def forecast_records(season: live.LiveSeason, projected: pd.DataFrame, predict_season: int) -> dict[int, dict]:
-    """Season and all-time forecast records, by code. Today is the board's own."""
+    """Season, all-time and historic forecast records, by code. Today is the board's own."""
     if not (season.is_live and season.fetched_at):
         return {}
     history = forecast_history.load()
     history = history[history["date"] < season.fetched_at.date()]
     today = projected.set_index("code")["pred"]
-    return forecast_history.records(history, today, past_calls(set(today.index.astype(int)), predict_season))
+    played = set(projected.loc[projected["minutes_now"] > 0, "code"].astype(int))
+    return forecast_history.records(history, today, past_calls(set(today.index.astype(int)), predict_season), played)
 
 
 def board_payload(season: live.LiveSeason, projected: pd.DataFrame, predict_season: int) -> dict:

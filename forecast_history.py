@@ -52,8 +52,9 @@ def load(season: int = config.PREDICT_SEASON, inputs: bool = False) -> pd.DataFr
     return frame
 
 
-def records(history: pd.DataFrame, today: pd.Series, past_calls: pd.DataFrame) -> dict[int, dict]:
-    """Players whose forecast today is at a season or all-time high or low.
+def records(history: pd.DataFrame, today: pd.Series, past_calls: pd.DataFrame,
+            played: set[int] | None = None) -> dict[int, dict]:
+    """Players whose forecast today is at a season, all-time or historic extreme.
 
     ``history`` holds the earlier mornings (``date``, ``code``,
     ``pred_next_start``), ``today`` is today's forecast by code, and
@@ -63,6 +64,11 @@ def records(history: pd.DataFrame, today: pd.Series, past_calls: pd.DataFrame) -
     :data:`RECORD_MIN_RANGE` has no record worth naming, and with no earlier
     morning there is nothing to compare with. All-time needs a past season
     to beat, or it would only repeat the season label.
+
+    A player with neither can still be at a historic high or low: past every
+    completed season by at least :data:`RECORD_MIN_RANGE`, whatever this
+    season's own peak or trough. Only for those in ``played`` (everyone if
+    None), as a forecast with no minutes behind it comes from the price alone.
     """
     if history.empty:
         return {}
@@ -79,6 +85,10 @@ def records(history: pd.DataFrame, today: pd.Series, past_calls: pd.DataFrame) -
         days = rows["pred_next_start"]
         low, high = min(days.min(), value), max(days.max(), value)
         if round(high - low, 3) < RECORD_MIN_RANGE or value not in (low, high):
+            if played is None or code in played:
+                mark = _historic(value, rows, past.get(code))
+                if mark:
+                    out[int(code)] = mark
             continue
 
         direction = "high" if value == high else "low"
@@ -105,3 +115,29 @@ def records(history: pd.DataFrame, today: pd.Series, past_calls: pd.DataFrame) -
                 )
         out[int(code)] = record
     return out
+
+
+def _historic(value: float, rows: pd.DataFrame, calls: pd.DataFrame | None) -> dict | None:
+    """A forecast past every completed season, or None."""
+    if calls is None:
+        return None
+    rounded = calls["call"].round(3)
+    if round(value - rounded.max(), 3) >= RECORD_MIN_RANGE:
+        direction, best, target = "high", max, rounded.max()
+    elif round(rounded.min() - value, 3) >= RECORD_MIN_RANGE:
+        direction, best, target = "low", min, rounded.min()
+    else:
+        return None
+    days = rows["pred_next_start"]
+    season_best = best(days.max() if direction == "high" else days.min(), value)
+    reached = rows.loc[days == season_best, "date"]
+    return {
+        "direction": direction,
+        "scope": "historic",
+        "value": value,
+        "past_best": float(target),
+        "past_best_for": int(calls.loc[rounded == target, "season"].max()) + 1,
+        "past_from": int(calls["season"].min()) + 1,
+        "season_best": float(season_best),
+        "season_best_on": min(reached).isoformat() if len(reached) else None,
+    }
