@@ -175,7 +175,7 @@ export function drawClubTrend(el, series, selected, targetSeason) {
   const own = series[selected] || [];
   const marker = own.length <= 14 ? { size: 7, color: AUBERGINE, line: { width: MARK_RING, color: SURFACE } } : undefined;
   traces.push({ type: "scatter", mode: marker ? "lines+markers" : "lines", x: own.map((d) => d.date),
-    y: own.map((d) => d.value), line: { color: AUBERGINE, width: 3 }, marker, name: selected,
+    y: own.map((d) => d.value), line: { color: AUBERGINE, width: 3 }, ...(marker && { marker }), name: selected,
     customdata: own.map((d) => dayMonth(d.date)),
     hovertemplate: `<b>${selected}</b> · %{customdata}<br>Average forecast change £%{y:+.2f}m<extra></extra>` });
 
@@ -215,7 +215,7 @@ export function drawPlayerForecasts(el, players, { legend = false } = {}) {
       type: "scatter", mode: marker ? "lines+markers" : "lines", name: legend ? p.position : p.name,
       legendgroup: p.position, showlegend: legend && first,
       x: p.days.map((d) => d.date), y: p.days.map((d) => d.value),
-      line: { color: colour, width: 2 }, marker, opacity: 0.85,
+      line: { color: colour, width: 2 }, ...(marker && { marker }), opacity: 0.85,
       customdata: p.days.map((d) => dayMonth(d.date)),
       hovertemplate: `<b>${p.name}</b> · ${p.position}<br>%{customdata}: £%{y:.2f}m<extra></extra>`,
     };

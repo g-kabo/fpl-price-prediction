@@ -697,7 +697,7 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
 .tl-name { font-weight: 700; font-size: 1.02rem; line-height: 1.2; }
 .tl-sub { display: flex; align-items: center; gap: 8px; font-size: 0.88rem; color: var(--ink-soft); }
 .tl-sub-record { flex-wrap: wrap; row-gap: 2px; }
-.tl-id { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.tl-id { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; }
 .tl-now,
 .tl-pred { font-family: var(--font-fig); font-size: 1.15rem; font-weight: 600; }
 .tl-pred { font-weight: 800; color: var(--aubergine); }
@@ -779,6 +779,7 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
    implied by the two. */
 @media (max-width: 560px) {
   .mv-row { grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; padding: 0 14px; }
+  .mv-row .tl-sub { flex-wrap: wrap; row-gap: 2px; }
   .mv-then { display: none; }
 }
 
@@ -1472,7 +1473,12 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
   .wrap { padding: 0 16px; }
   .header-inner { gap: 16px; }
   .brand span:last-child { display: none; }
-  .tlist-head, .tl-row { grid-template-columns: minmax(0, 1fr) 64px 92px; gap: 8px; padding: 0 12px; }
+  #board-window { flex-wrap: wrap; border-radius: 22px; }
+  .tlist-head, .tl-row { grid-template-columns: minmax(0, 1fr) 64px 84px; gap: 8px; padding: 0 8px; }
+  .tl-row .tl-player { gap: 8px; }
+  /* A club too long to sit beside the position drops below it. */
+  .tl-row .tl-id { flex-wrap: wrap; gap: 2px 6px; }
+  .tl-row .tl-id .tl-club { font-size: 0.82rem; }
   .tlist-head > :nth-child(n+2):nth-child(-n+5),
   .tl-row > :nth-child(n+2):nth-child(-n+5) { display: none; }
   .nav-tabs-row .nav-tab { padding: 0 9px; font-size: 0.9rem; white-space: nowrap; }
