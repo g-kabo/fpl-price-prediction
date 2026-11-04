@@ -162,10 +162,43 @@ def _project(season: live.LiveSeason, meta: dict) -> pd.DataFrame:
     return projected
 
 
-def board_payload(season: live.LiveSeason, projected: pd.DataFrame) -> dict:
+def past_calls(codes: set[int], predict_season: int) -> pd.DataFrame:
+    """The model's call from each completed season, as the player page makes it."""
+    seasons = model_store.get_seasons()
+    seasons = seasons[seasons["code"].isin(codes) & (seasons["season"] < predict_season)]
+    if seasons.empty:
+        return pd.DataFrame(columns=["code", "season", "call"])
+    inputs = []
+    for _, player in seasons.iterrows():
+        values = schema.with_ratios(schema.form_values(player))
+        values[schema.POSITION_FIELD] = player["element_type"]
+        values[schema.TEAM_FIELD] = player["team_name"]
+        inputs.append(form.row_from_values(values))
+    calls = model_store.get_model().predict(
+        pd.concat(inputs, ignore_index=True)[schema.MODEL_INPUT_COLUMNS])
+    return pd.DataFrame({"code": seasons["code"].to_numpy(), "season": seasons["season"].to_numpy(),
+                         "call": np.asarray(calls)})
+
+
+def forecast_records(season: live.LiveSeason, projected: pd.DataFrame, predict_season: int) -> dict[int, dict]:
+    """Season and all-time forecast records, by code. Today is the board's own."""
+    if not (season.is_live and season.fetched_at):
+        return {}
+    history = forecast_history.load()
+    history = history[history["date"] < season.fetched_at.date()]
+    today = projected.set_index("code")["pred"]
+    return forecast_history.records(history, today, past_calls(set(today.index.astype(int)), predict_season))
+
+
+def board_payload(season: live.LiveSeason, projected: pd.DataFrame, predict_season: int) -> dict:
     keep = [c for c in BOARD_KEEP if c in projected.columns]
     records = [{k: _clean(v) for k, v in row.items()}
                for row in projected[keep].to_dict("records")]
+    forecast_marks = forecast_records(season, projected, predict_season)
+    for record in records:
+        mark = forecast_marks.get(int(record["code"]))
+        if mark:
+            record["record"] = mark
     return {
         "fetched_at": season.fetched_at.isoformat() if season.fetched_at else None,
         "as_of_label": season.as_of_label,
@@ -430,7 +463,7 @@ def main(argv: list[str] | None = None) -> None:
 
     print("Writing the static site's data:")
     _write("model.json", model_payload())
-    _write("board.json", board_payload(season, projected))
+    _write("board.json", board_payload(season, projected, meta["predict_season"]))
     seasons = seasons_payload(projected, meta)
     _write("seasons.json", seasons)
     _write("players.json", players_payload(seasons))

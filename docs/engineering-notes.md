@@ -401,8 +401,8 @@ only the seven columns it draws. Two features use it:
   against the price that day as a step line (FPL prices jump overnight, they don't
   drift). Both are £m, so one axis.
 - **Forecast movers** (Price Watch, under the XI): the biggest changes in forecast
-  since yesterday, the past week or the first recorded day. League-wide, like the
-  XI; the filters belong to the list and the map.
+  since yesterday, the past week, the past month or the first recorded day.
+  League-wide, like the XI; the filters belong to the list and the map.
 
 Decisions worth keeping:
 
@@ -420,6 +420,23 @@ Decisions worth keeping:
 - The history is what the page showed *with the model of that day*. A refit
   mid-season shows up as a step in every forecast trend. That's accurate, not
   a bug, but it will look like a gameweek effect.
+
+**Forecast records** label a player whose forecast is at a season or all-time high
+or low, on the Price Watch list and card and the player page, from
+`forecast_history.records`:
+
+- **A record holds until the forecast leaves it**, and ties count, rather than
+  flagging only new records: between gameweeks forecasts barely move, so a "new
+  today" label would be missing on most days (3 highs and 7 lows on 4 November).
+- **A forecast must have moved at least £0.05m this season.** Without that floor, 80
+  highs and 230 lows on 4 November were mostly tiny moves; with it, 50 and 129.
+- **All-time compares with the model's call from each completed season**, as the
+  player page makes them, because daily forecasts only began on 29 September 2026
+  and would otherwise only repeat the season label. These are today's model applied
+  in hindsight, not forecasts made at the time. A player with no past season gets the
+  season label only.
+- It is worked out in Python and written to `board.json`, because Price Watch does
+  not load `seasons.json` (667 KB) and the past calls need it.
 
 On the static site (`web/`), `export_static.py` writes the history as
 `forecasts.json`: every recorded morning *before* the snapshot's date, so the

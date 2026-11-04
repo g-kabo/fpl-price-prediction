@@ -133,7 +133,7 @@ function hero(seasons, record) {
   return '<div class="wrap player-hero-inner">'
     + `<div class="player-id">${ui.shirt(latest.team_name, "xl")}<div>`
     + `<h1 class="player-title">${esc(latest.web_name)}</h1>`
-    + `<div class="player-sub">${ui.positionPill(latest.element_type)}${ui.clubName(latest.team_name, clubHref(latest.team_name))}</div>`
+    + `<div class="player-sub">${ui.positionPill(latest.element_type)}${ui.clubName(latest.team_name, clubHref(latest.team_name))}${ui.recordPill(record && record.record)}</div>`
     + `<div class="player-meta">${esc(span)}.</div>${strip}</div></div>`
     + `<div class="hero-side"><div class="chips">${status}</div><div class="hero-actions">`
     + '<button type="button" class="btn-on-dark" id="player-copy"><i class="bi bi-link-45deg"></i><span>Copy link</span></button>'
@@ -146,7 +146,7 @@ function forecastSection(record, interval) {
   const games = Number(record.games_played || 0);
   const note = `<p class="fine">Projected from ${fmt(games)} gameweeks to a full 38: `
     + `${fmt(record.total_points)} points and ${fmt(record.minutes)} minutes. Read against today's `
-    + `price, as Price Watch does by default.</p>`;
+    + `price, as Price Watch does by default.</p>${ui.recordNote(record.record)}`;
   return '<section class="panel player-panel">'
     + ui.answer(model, interval, record.price_now, "today's price", "Today",
       `Predicted ${seasonLabel(TARGET)} price`, note + ui.pooledNote(model, record.team_name))

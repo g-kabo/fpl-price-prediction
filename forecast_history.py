@@ -31,6 +31,10 @@ INPUT_COLUMNS = ["start_price", "proj_minutes", "proj_total_points", "proj_point
                  "selected_by_percent", "element_type", "team_name"]
 
 
+#: The least a forecast must have moved this season, in £m, to earn a record.
+RECORD_MIN_RANGE = 0.05
+
+
 def load(season: int = config.PREDICT_SEASON, inputs: bool = False) -> pd.DataFrame:
     """Every recorded day of ``season``, oldest first. Empty if none.
 
@@ -46,3 +50,58 @@ def load(season: int = config.PREDICT_SEASON, inputs: bool = False) -> pd.DataFr
     )
     frame["date"] = pd.to_datetime(frame["date"]).dt.date
     return frame
+
+
+def records(history: pd.DataFrame, today: pd.Series, past_calls: pd.DataFrame) -> dict[int, dict]:
+    """Players whose forecast today is at a season or all-time high or low.
+
+    ``history`` holds the earlier mornings (``date``, ``code``,
+    ``pred_next_start``), ``today`` is today's forecast by code, and
+    ``past_calls`` the model's call from each completed season (``code``,
+    ``season``, ``call``). A record holds until the forecast leaves it, and
+    ties count. A season whose forecasts have stayed within
+    :data:`RECORD_MIN_RANGE` has no record worth naming, and with no earlier
+    morning there is nothing to compare with. All-time needs a past season
+    to beat, or it would only repeat the season label.
+    """
+    if history.empty:
+        return {}
+    tracked_from = min(history["date"])
+    earlier = dict(tuple(history.groupby("code")))
+    past = dict(tuple(past_calls.groupby("code"))) if not past_calls.empty else {}
+
+    out: dict[int, dict] = {}
+    for code, value in today.dropna().items():
+        rows = earlier.get(code)
+        if rows is None:
+            continue
+        value = round(float(value), 3)
+        days = rows["pred_next_start"]
+        low, high = min(days.min(), value), max(days.max(), value)
+        if round(high - low, 3) < RECORD_MIN_RANGE or value not in (low, high):
+            continue
+
+        direction = "high" if value == high else "low"
+        best = max if direction == "high" else min
+        reached = rows.loc[days == value, "date"]
+        record = {
+            "direction": direction,
+            "scope": "season",
+            "value": value,
+            "since": min(reached).isoformat() if len(reached) else None,
+            "tracked_from": tracked_from.isoformat(),
+        }
+        calls = past.get(code)
+        if calls is not None:
+            rounded = calls["call"].round(3)
+            target = best(rounded)
+            if best(value, target) == value:
+                record.update(
+                    scope="all",
+                    past_best=float(target),
+                    # A call from a season forecasts the one after it.
+                    past_best_for=int(calls.loc[rounded == target, "season"].max()) + 1,
+                    past_from=int(calls["season"].min()) + 1,
+                )
+        out[int(code)] = record
+    return out

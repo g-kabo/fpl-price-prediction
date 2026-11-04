@@ -40,7 +40,7 @@ const REFERENCE_WORDS = { price_now: "today's price", start_cost: "his August pr
 /** Forecast movers' comparison windows, in days back; null is the first
  *  recorded day. A window reaching back before the record starts falls back
  *  to that first day, and the note names the day used. */
-const MOVER_WINDOWS = { day: 1, week: 7, all: null };
+const MOVER_WINDOWS = { day: 1, week: 7, month: 30, all: null };
 
 /** Players shown on each side of the forecast movers. */
 const MOVERS_EACH = 5;
@@ -284,7 +284,7 @@ function renderList() {
   const nowLabel = state.xref !== "start_cost" ? "Today" : "August";
   const labels = { player: "Player", points: "Pts", minutes: "Mins", selected: "Sel.", ref: nowLabel,
     pred: seasonLabel(TARGET), move: "Move" };
-  $("board-list").innerHTML = listHtml(shown, state.sort, labels);
+  $("board-list").innerHTML = listHtml(shown, state.sort, labels, null, { records: true });
   $("board-count").textContent = `Showing ${shown.length} of ${all.length} players`;
   $("board-more-wrap").hidden = shown.length >= all.length;
 }
@@ -320,7 +320,7 @@ function cardHtml(record) {
 
   const games = Number(record.games_played || 0);
   const note = `<p class="fine">Projected from ${fmt(games)} gameweeks to a full 38: `
-    + `${fmt(record.total_points)} points and ${fmt(record.minutes)} minutes.</p>`;
+    + `${fmt(record.total_points)} points and ${fmt(record.minutes)} minutes.</p>${ui.recordNote(record.record)}`;
   const link = '<div class="card-links">'
     + `<a class="btn-ghost" href="player.html?code=${record.code}"><i class="bi bi-person-badge"></i>Player page</a>`
     + `<a class="btn-ghost" href="lab.html?season=${SEASON}&amp;player=${record.code}">`
@@ -332,7 +332,7 @@ function cardHtml(record) {
       ["Minutes", Math.trunc(record.minutes_now || 0).toLocaleString("en-GB")],
       ["Selected", `${fixed(Number(record.selected_now || 0), 1)}%`],
       ["Gameweeks", fmt(games)],
-    ]), clubUrl(record.team_name));
+    ]), clubUrl(record.team_name), ui.recordPill(record.record));
   const answer = ui.answer(model, interval, reference, REFERENCE_WORDS[xref], short,
     `Predicted ${seasonLabel(TARGET)} price`, `<div>${note}${ui.pooledNote(model, record.team_name)}${link}</div>`);
   const why = ui.whyThisPrice(model, values, [short, reference]);

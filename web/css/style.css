@@ -553,6 +553,28 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
 .delta-fall { background: var(--fall-fill); color: #fff; }
 .delta-hold { background: var(--tint); color: var(--ink-soft); }
 
+/* A forecast at a record: filled for all-time, outlined for the season. */
+.record-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 7px 0 5px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-family: var(--font-fig);
+  font-weight: 700;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+.record-pill i { font-size: 0.68rem; }
+.record-season.record-high { border-color: var(--rise); color: var(--rise); }
+.record-season.record-low { border-color: var(--fall); color: var(--fall); }
+.record-all.record-high { background: var(--rise-fill); color: var(--rise-on); }
+.record-all.record-low { background: var(--fall-fill); color: #fff; }
+.player-sub .record-season.record-high { border-color: var(--volt); color: var(--volt); }
+.player-sub .record-season.record-low { border-color: var(--fall-on-dark); color: var(--fall-on-dark); }
+
 /* ---------- filters ----------------------------------------------------- */
 
 .filters {
@@ -674,6 +696,8 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
 .tl-who { display: flex; flex-direction: column; min-width: 0; }
 .tl-name { font-weight: 700; font-size: 1.02rem; line-height: 1.2; }
 .tl-sub { display: flex; align-items: center; gap: 8px; font-size: 0.88rem; color: var(--ink-soft); }
+.tl-sub-record { flex-wrap: wrap; row-gap: 2px; }
+.tl-id { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .tl-now,
 .tl-pred { font-family: var(--font-fig); font-size: 1.15rem; font-weight: 600; }
 .tl-pred { font-weight: 800; color: var(--aubergine); }
