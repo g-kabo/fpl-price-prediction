@@ -52,7 +52,7 @@ TESTS_DIR = WEB_DIR / "tests"
 BOARD_KEEP = list(dict.fromkeys(
     schema.NUMERIC_NAMES
     + ["code", "web_name", "team_name", "element_type", "pred", "price_now",
-       "points_now", "minutes_now", "selected_by_percent", "games_played"]))
+       "points_now", "minutes_now", "selected_now", "games_played"]))
 
 #: Per-row fields of ``seasons.json``, in order.
 SEASON_FIELDS = (["season", "code", "web_name", "team_name", "element_type", "form_team"]
@@ -149,11 +149,14 @@ def _project(season: live.LiveSeason, meta: dict) -> pd.DataFrame:
     projected["pred_raw"] = raw
     projected["pred"] = raw.round(3)
 
+    # The *_now columns are today's real figures, for display. The model's
+    # inputs stay as projected, clamped to the training range, so the page
+    # recomputes the same prediction as ``pred``.
     lookup = current.set_index("code")
     for column, source in (("team_name", "team_name"), ("element_type", "element_type"),
                            ("points_now", "total_points"), ("minutes_now", "minutes"),
                            ("price_now", "final_cost"),
-                           ("selected_by_percent", "selected_by_percent")):
+                           ("selected_now", "selected_by_percent")):
         projected[column] = projected["code"].map(lookup[source])
     projected["element_type"] = projected["element_type"].astype(str)
     return projected
