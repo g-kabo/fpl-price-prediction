@@ -349,7 +349,7 @@ function recordSentence(record) {
     return `Historic ${record.direction}: ${value} is ${high ? "above" : "below"} the model's forecast from every `
       + `past season, back to ${seasonLabel(record.past_from)}. The ${high ? "highest" : "lowest"} of those was `
       + `${money(record.past_best, false, 2)}, for ${seasonLabel(record.past_best_for)}. This season's own `
-      + `${record.direction} is ${money(record.season_best, false, 2)}, on ${dayMonth(record.season_best_on)}.`;
+      + `${record.direction} is ${money(record.season_best, false, 2)}, ${record.season_best_on ? `on ${dayMonth(record.season_best_on)}` : "reached today"}.`;
   }
   return `Season ${record.direction}: ${value} is the ${high ? "highest" : "lowest"} forecast since daily `
     + `tracking began on ${dayMonth(record.tracked_from)}, ${reached}.`;

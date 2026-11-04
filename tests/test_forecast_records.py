@@ -116,3 +116,10 @@ def test_historic_skips_players_who_have_not_played():
     assert forecast_history.records(history_, today, calls(4.8), played=set()) == {}
     assert forecast_history.records(history_, today, calls(4.8), played={1})[1]["scope"] == "historic"
     assert forecast_history.records(history(5.0, 5.1), pd.Series({1: 5.2}), calls(), played=set())[1]["scope"] == "season"
+
+
+def test_historic_reached_today_has_no_earlier_date():
+    mark = record([5.02, 5.01], 5.0, past=(5.5,))
+    assert (mark["direction"], mark["scope"]) == ("low", "historic")
+    assert mark["season_best"] == 5.0
+    assert mark["season_best_on"] is None
