@@ -445,6 +445,11 @@ could read as describing the edited figure) and the header search:
   from the price alone, so those players don't get it (75 labels on 4 November). A
   player with one past season is always above or below it, so this is the label most
   likely to mean little.
+- **On Price Watch the record is a sortable column and a filter**, with the pill back
+  under the name below 1001px, where a column would squeeze the name. Sorting runs
+  all-time high to all-time low with untagged players last either way, and the filter
+  also applies to the market map, like the others. The Club page keeps the pill under
+  the name.
 - It is worked out in Python and written to `board.json`, because Price Watch does
   not load `seasons.json` (667 KB) and the past calls need it.
 

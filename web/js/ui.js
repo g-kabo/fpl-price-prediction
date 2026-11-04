@@ -355,13 +355,26 @@ function recordSentence(record) {
     + `tracking began on ${dayMonth(record.tracked_from)}, ${reached}.`;
 }
 
+/** Every kind of record, highest to lowest. */
+export const RECORD_KINDS = ["all-high", "season-high", "historic-high", "historic-low", "season-low", "all-low"];
+
+const RECORD_SCOPES = { all: "All-time", season: "Season", historic: "Historic" };
+
+/** A record's place in RECORD_KINDS, or null for no record. */
+export const recordKind = (record) => (record ? `${record.scope}-${record.direction}` : null);
+
+/** "all-high" as "All-time high". */
+export function recordKindName(kind) {
+  const [scope, direction] = kind.split("-");
+  return `${RECORD_SCOPES[scope]} ${direction}`;
+}
+
 /** A label for a forecast at a season, all-time or historic high or low. */
 export function recordPill(record) {
   if (!record) return "";
   const icon = record.direction === "high" ? "bi-caret-up-fill" : "bi-caret-down-fill";
-  const scope = { all: "All-time", historic: "Historic" }[record.scope] || "Season";
   return `<span class="record-pill record-${record.direction} record-${record.scope}" `
-    + `title="${esc(recordSentence(record))}"><i class="bi ${icon}"></i>${scope} ${record.direction}</span>`;
+    + `title="${esc(recordSentence(record))}"><i class="bi ${icon}"></i>${recordKindName(recordKind(record))}</span>`;
 }
 
 /** The same record spelled out, for the card and the player page. */

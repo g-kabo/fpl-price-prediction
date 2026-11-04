@@ -95,14 +95,15 @@
 
     <section class="block">
       <div class="wrap">
-        <div class="block-head"><div><h2 class="block-title">Transfer list</h2><p class="block-note">Every current player. Filters apply to the list and the market map below it. A label marks a forecast at its highest or lowest: this season, all-time, or historic, which compares with past seasons only.</p></div></div>
-        <div class="filters">
+        <div class="block-head"><div><h2 class="block-title">Transfer list</h2><p class="block-note">Every current player. Filters apply to the list and the market map below it. A tag marks a forecast at its highest or lowest: this season, all-time, or historic, which compares with past seasons only.</p></div></div>
+        <div class="filters filters-tags">
           <div class="search"><i class="bi bi-search"></i><input id="board-search" class="search-input" type="search" placeholder="Find a player" aria-label="Find a player" autocomplete="off"></div>
           <div class="pos-filter" id="board-pos" role="group" aria-label="Positions"></div>
           <details class="multi" id="board-clubs"><summary><span id="board-clubs-label">All clubs</span><i class="bi bi-chevron-down"></i></summary><div class="multi-panel" id="board-clubs-panel"></div></details>
+          <details class="multi" id="board-tags"><summary><span id="board-tags-label">All tags</span><i class="bi bi-chevron-down"></i></summary><div class="multi-panel" id="board-tags-panel"></div></details>
         </div>
         <div id="board-count" class="list-count"></div>
-        <div id="board-list" class="tlist"></div>
+        <div id="board-list" class="tlist tlist-tags"></div>
         <div id="board-more-wrap" class="more"><button type="button" id="board-more" class="btn-ghost"><i class="bi bi-chevron-down"></i>Show more players</button></div>
       </div>
     </section>
