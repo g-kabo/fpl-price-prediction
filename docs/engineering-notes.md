@@ -364,6 +364,34 @@ history.pivot(index="date", columns="web_name", values="price")
 `python record_predictions.py --backfill` also records every earlier snapshot in
 git history. It needs the full history, so run it locally, not in the Action.
 
+### Reconstructed days: 2, 3 and 4 November 2026
+
+The daily run failed from 31 October, for two unrelated reasons:
+
+- **Haaland passed the training range.** His ownership reached 78.9% against a
+  training maximum of 78.4%. `projection.clamp` held the model input at 78.4, but
+  `export_static._project` then overwrote that column with the real figure, so the
+  page recomputed a different forecast from the list's, and the parity check
+  rightly refused to publish (31 October and 1 November; the data was still
+  committed). The real figure now travels as `selected_now`, alongside `price_now`
+  and `points_now`; `selected_by_percent` on the board is always the model's input.
+- **`ubuntu-latest` moved to Ubuntu 26.04.** `actions/python-versions` has no build
+  of Python 3.14.4 for it (26.04 starts at 3.14.6), so `setup-python` failed and no
+  snapshot was taken on 2, 3 or 4 November. `.python-version` is now 3.14.10.
+
+Those three history files were rebuilt from Wayback Machine copies of
+`bootstrap-static`, run through the normal `snapshot.save` and
+`record_predictions.build_rows`. Their `fetched_at` is the time of the copy: 12:00
+on the 2nd, 13:41 on the 3rd and 16:00 on the 4th, UTC. A later real run on the 4th
+replaces its file. The archive has no fixture list, so games played came from the
+current one, treating anything kicked off after the copy as not yet started.
+
+Rebuilding 1 November the same way and comparing with the real file matched price,
+start price, points, minutes, games played and projected points on all 670 players.
+Ownership, transfers and FPL's price-change figures differ with the time of day (24
+players' ownership, by up to 0.3 points), which moved those players' forecasts by at
+most £0.005m. Read these three days' transfer and ownership figures as approximate.
+
 ### Forecast trend and forecast movers
 
 The export reads the history back through `forecast_history.py`, which loads
