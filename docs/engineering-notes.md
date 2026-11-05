@@ -463,6 +463,11 @@ could read as describing the edited figure) and the header search:
   club charts through a stand-in for Plotly that rejects an undefined trace property.
   It was written after that mistake left the Club charts blank for weeks and a tag
   with no date crashed the list. It needs no browser, so it can't catch layout.
+- **New controls are optional in the script.** GitHub Pages caches files for ten
+  minutes, so just after a release a new `board.js` can meet an old `index.html`. A
+  missing switch once stopped the page at "Loading the live data", so `board.js` skips
+  any control added since the last release (#87 is the general fix). `render.mjs` can't
+  see this, as it has no page.
 - It is worked out in Python and written to `board.json`, because Price Watch does
   not load `seasons.json` (667 KB) and the past calls need it.
 

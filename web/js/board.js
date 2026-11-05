@@ -290,6 +290,7 @@ const byOwnership = (a, b) => Number(b.selected_now || 0) - Number(a.selected_no
  *  first. League-wide, like the movers above it. */
 function renderTagChanges() {
   const out = $("board-tag-changes");
+  if (!out) return; // a cached older page, just after a release
   const changes = board.tag_changes;
   if (!board.is_live || !changes) {
     out.innerHTML = "";
@@ -465,7 +466,8 @@ function renderFilters() {
   const newOption = board.tag_changes
     ? `<label class="multi-new"><input type="checkbox" value="new"${state.newTags ? " checked" : ""}> New since ${dayMonth(board.tag_changes.since)} (${newCount})</label>`
     : "";
-  $("board-played-count").textContent = `(${players.filter((p) => !(p.minutes_now > 0)).length})`;
+  const playedCount = $("board-played-count");
+  if (playedCount) playedCount.textContent = `(${players.filter((p) => !(p.minutes_now > 0)).length})`;
   $("board-tags-panel").innerHTML = '<button type="button" class="multi-clear" id="board-tags-clear">Clear</button>'
     + newOption
     + ui.RECORD_KINDS.map((kind) => `<label><input type="checkbox" value="${kind}"${state.tags.includes(kind) ? " checked" : ""}> `
@@ -538,11 +540,13 @@ function wire() {
     state.tags = ticked.filter((value) => value !== "new");
     state.pages = 1; tagsLabel(); renderList(); renderMap();
   });
-  $("board-played").addEventListener("change", (event) => {
+  // Both are absent from a cached older page, for a few minutes after a
+  // release; without them the rest of the page should still draw.
+  $("board-played")?.addEventListener("change", (event) => {
     state.hideUnplayed = event.target.checked;
     state.pages = 1; renderList(); renderMap();
   });
-  $("board-tag-changes").addEventListener("click", (event) => {
+  $("board-tag-changes")?.addEventListener("click", (event) => {
     if (event.target.id === "board-show-new") {
       state.newTags = true;
       document.querySelector('#board-tags-panel input[value="new"]').checked = true;
