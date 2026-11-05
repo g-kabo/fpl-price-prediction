@@ -37,6 +37,18 @@ RECORD_MIN_RANGE = 0.05
 #: Under this many minutes a record is marked as resting on a small sample.
 FEW_MINUTES = 270
 
+#: Records compare forecasts at the precision the site shows them, £0.01m, so
+#: two forecasts that read the same are a tie, and a change too small to see
+#: can't take a tag away. Only the comparison rounds: the history, club totals
+#: and day-by-day splits keep the full figure.
+RECORD_PLACES = 2
+
+
+def _shown(values: pd.Series) -> pd.Series:
+    """Forecasts as the site shows them. Python's ``round``, like the site's
+    ``fixed``; ``Series.round`` can land the other way on a tie (2.675)."""
+    return values.map(lambda value: round(float(value), RECORD_PLACES))
+
 
 def load(season: int = config.PREDICT_SEASON, inputs: bool = False) -> pd.DataFrame:
     """Every recorded day of ``season``, oldest first. Empty if none.
@@ -62,8 +74,8 @@ def records(history: pd.DataFrame, today: pd.Series, past_calls: pd.DataFrame,
     ``history`` holds the earlier mornings (``date``, ``code``,
     ``pred_next_start``), ``today`` is today's forecast by code, and
     ``past_calls`` the model's call from each completed season (``code``,
-    ``season``, ``call``). A record holds until the forecast leaves it, and
-    ties count. A season whose forecasts have stayed within
+    ``season``, ``call``). Forecasts compare to the nearest £0.01m. A record
+    holds until the forecast leaves it, and ties count. A season whose forecasts have stayed within
     :data:`RECORD_MIN_RANGE` has no record worth naming, and with no earlier
     morning there is nothing to compare with. All-time needs a past season
     to beat, or it would only repeat the season label.
@@ -84,8 +96,8 @@ def records(history: pd.DataFrame, today: pd.Series, past_calls: pd.DataFrame,
         rows = earlier.get(code)
         if rows is None:
             continue
-        value = round(float(value), 3)
-        days = rows["pred_next_start"]
+        value = round(float(value), RECORD_PLACES)
+        days = _shown(rows["pred_next_start"])
         low, high = min(days.min(), value), max(days.max(), value)
         if round(high - low, 3) < RECORD_MIN_RANGE or value not in (low, high):
             if played is None or code in played:
@@ -106,7 +118,7 @@ def records(history: pd.DataFrame, today: pd.Series, past_calls: pd.DataFrame,
         }
         calls = past.get(code)
         if calls is not None:
-            rounded = calls["call"].round(3)
+            rounded = _shown(calls["call"])
             target = best(rounded)
             if best(value, target) == value:
                 record.update(
@@ -124,14 +136,14 @@ def _historic(value: float, rows: pd.DataFrame, calls: pd.DataFrame | None) -> d
     """A forecast past every completed season, or None."""
     if calls is None:
         return None
-    rounded = calls["call"].round(3)
+    rounded = _shown(calls["call"])
     if round(value - rounded.max(), 3) >= RECORD_MIN_RANGE:
         direction, best, target = "high", max, rounded.max()
     elif round(rounded.min() - value, 3) >= RECORD_MIN_RANGE:
         direction, best, target = "low", min, rounded.min()
     else:
         return None
-    days = rows["pred_next_start"]
+    days = _shown(rows["pred_next_start"])
     season_best = best(days.max() if direction == "high" else days.min(), value)
     reached = rows.loc[days == season_best, "date"]
     return {

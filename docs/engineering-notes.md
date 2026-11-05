@@ -450,6 +450,13 @@ could read as describing the edited figure) and the header search:
   all-time high to all-time low with untagged players last either way, and the filter
   also applies to the market map, like the others. The Club page keeps the pill under
   the name.
+- **Records compare forecasts to the nearest £0.01m, as the site shows them**
+  (`RECORD_PLACES`). Cunha lost a season low on 5 November when an ownership wobble
+  moved his forecast from £7.696m to £7.698m, both shown as £7.70m. Only the comparison
+  rounds: the history, club totals and Day by day keep the full figure, because they add
+  up exactly. A tiny move across a rounding edge (£7.694m to £7.696m) can still change
+  a tag, but then the number on screen changes too. It uses Python's `round`, like the
+  site's `fixed`, not `Series.round`, which can land the other way on a tie.
 - **A star marks a tag resting on under 270 minutes** (`FEW_MINUTES`), with a quieter
   pill and a sentence saying how many. It doesn't remove the tag: 97 of 292 tags on 4
   November were under that, and Woltemade's all-time high rested on 19 minutes.
