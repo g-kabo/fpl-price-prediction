@@ -334,8 +334,18 @@ export function clubName(team, href = null) {
     : `<span class="player-club">${esc(team || "")}</span>`;
 }
 
-/** A forecast record in a sentence. `record` comes from board.json. */
+/** A forecast record in a sentence, with a warning if it rests on few minutes. */
 function recordSentence(record) {
+  const few = record.few_minutes;
+  if (few === undefined || few === null) return recordClaim(record);
+  const sample = few === 0
+    ? "He has no minutes yet, so it comes from his price alone."
+    : `It rests on only ${few} minute${few === 1 ? "" : "s"} so far, scaled up to a full season.`;
+  return `${recordClaim(record)} ${sample}`;
+}
+
+/** What the record is. `record` comes from board.json. */
+function recordClaim(record) {
   const high = record.direction === "high";
   const value = money(record.value, false, 2);
   const reached = record.since ? `first reached on ${dayMonth(record.since)}` : "reached today";
@@ -369,12 +379,15 @@ export function recordKindName(kind) {
   return `${RECORD_SCOPES[scope]} ${direction}`;
 }
 
-/** A label for a forecast at a season, all-time or historic high or low. */
-export function recordPill(record) {
+/** A label for a forecast at a season, all-time or historic high or low:
+ *  quieter and starred if it rests on few minutes, and marked if it is new. */
+export function recordPill(record, { showNew = true } = {}) {
   if (!record) return "";
   const icon = record.direction === "high" ? "bi-caret-up-fill" : "bi-caret-down-fill";
-  return `<span class="record-pill record-${record.direction} record-${record.scope}" `
-    + `title="${esc(recordSentence(record))}"><i class="bi ${icon}"></i>${recordKindName(recordKind(record))}</span>`;
+  const few = record.few_minutes !== undefined && record.few_minutes !== null;
+  return `<span class="record-pill record-${record.direction} record-${record.scope}${few ? " record-few" : ""}" `
+    + `title="${esc(recordSentence(record))}"><i class="bi ${icon}"></i>${recordKindName(recordKind(record))}${few ? "*" : ""}`
+    + `${record.new && showNew ? '<span class="record-new">New</span>' : ""}</span>`;
 }
 
 /** The same record spelled out, for the card and the player page. */

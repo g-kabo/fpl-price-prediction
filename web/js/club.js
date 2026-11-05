@@ -130,7 +130,7 @@ function renderList(club) {
     : "";
   $("club-list-note").innerHTML = `${rows.length} ${state.listPos ? `${state.listPos} ` : ""}players ${who}. `
     + "Pts/£m is points so far per £m of today's price. A label marks a forecast at its highest or lowest: this "
-    + "season, all-time, or historic, which compares with past seasons only. Click a column to sort, or a player to open his page."
+    + "season, all-time, or historic, which compares with past seasons only; a star means it rests on under 270 minutes. Click a column to sort, or a player to open his page."
     + only;
   $("club-list").innerHTML = rows.length
     ? listHtml(rows, state.listSort, labels, (p) => playerUrl(p.code), { value: true, records: true })

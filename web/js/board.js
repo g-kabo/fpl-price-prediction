@@ -59,6 +59,8 @@ const state = {
   pos: [],
   clubs: [],
   tags: [],
+  newTags: false,
+  hideUnplayed: false,
   sort: { ...DEFAULT_SORT },
   pages: 1,
   selected: null,
@@ -102,6 +104,8 @@ function filtered(rows) {
   if (state.pos.length) out = out.filter((p) => state.pos.includes(p.element_type));
   if (state.clubs.length) out = out.filter((p) => state.clubs.includes(p.team_name));
   if (state.tags.length) out = out.filter((p) => state.tags.includes(ui.recordKind(p.record)));
+  if (state.newTags) out = out.filter((p) => p.record && p.record.new);
+  if (state.hideUnplayed) out = out.filter((p) => p.minutes_now > 0);
   return out;
 }
 
@@ -269,6 +273,54 @@ function renderMovers() {
     + moversSide("Forecast down", "bi-graph-down-arrow", downs, `No forecast down since ${since}.`);
 }
 
+// ---------------------------------------------------------------- tag changes
+
+function tagChangeRow(p, side) {
+  return `<button type="button" class="mv-row tag-row" data-code="${p.code}">`
+    + `<span class="tl-player">${ui.shirt(p.team_name, "sm")}<span class="tl-who">`
+    + `<span class="tl-name">${esc(p.web_name)}</span><span class="tl-sub">${ui.positionPill(p.element_type)}`
+    + `<span class="tl-club">${esc(p.team_name)}</span></span></span></span>`
+    + `<span class="num mv-path"><strong>${money(p.pred, false, 2)}</strong></span>`
+    + `<span class="num">${side}</span></button>`;
+}
+
+const byOwnership = (a, b) => Number(b.selected_now || 0) - Number(a.selected_now || 0);
+
+/** Who gained or lost a tag since the last recorded morning, most owned
+ *  first. League-wide, like the movers above it. */
+function renderTagChanges() {
+  const out = $("board-tag-changes");
+  const changes = board.tag_changes;
+  if (!board.is_live || !changes) {
+    out.innerHTML = "";
+    return;
+  }
+  const since = dayMonth(changes.since);
+  const gained = players.filter((p) => p.record && p.record.new).sort(byOwnership);
+  const byCode = new Map(players.map((p) => [p.code, p]));
+  const lost = changes.lost.map((l) => ({ ...byCode.get(l.code), was: l.was })).filter((p) => p.code).sort(byOwnership);
+  const head = '<h3 class="tag-changes-title">Tag changes</h3>';
+  if (!gained.length && !lost.length) {
+    out.innerHTML = `${head}<p class="block-note">No tags have changed since the morning of ${since}. `
+      + "Expect changes after the next gameweek.</p>";
+    return;
+  }
+  const side = (title, icon, rows, none) => `<div class="mv-side"><div class="mv-head"><i class="bi ${icon}"></i>${title}</div>`
+    + (rows.length ? rows.join("") : `<p class="mv-none">${esc(none)}</p>`) + "</div>";
+  const more = gained.length > MOVERS_EACH || lost.length > MOVERS_EACH ? ` The ${MOVERS_EACH} most owned of each are shown.` : "";
+  const show = gained.length
+    ? ' <button type="button" class="link-button" id="board-show-new">Show new tags in the transfer list</button>' : "";
+  out.innerHTML = `${head}<p class="block-note">Since the morning of ${since}: ${gained.length} `
+    + `player${gained.length === 1 ? "" : "s"} gained a tag or moved to a different one, and ${lost.length} lost `
+    + `${lost.length === 1 ? "his" : "theirs"}.${more}${show}</p><div class="movers">`
+    + side(`New tags (${gained.length})`, "bi-tag-fill",
+      gained.slice(0, MOVERS_EACH).map((p) => tagChangeRow(p, ui.recordPill(p.record, { showNew: false }))), `No new tags since ${since}.`)
+    + side(`Lost tags (${lost.length})`, "bi-tag",
+      lost.slice(0, MOVERS_EACH).map((p) => tagChangeRow(p, `<span class="tag-was">Was ${esc(ui.recordKindName(p.was).toLowerCase())}</span>`)),
+      `No tags lost since ${since}.`)
+    + "</div>";
+}
+
 // ---------------------------------------------------------------- the list
 
 function renderList() {
@@ -391,6 +443,7 @@ function renderAll() {
   renderStatus();
   renderPitch();
   renderMovers();
+  renderTagChanges();
   renderList();
   renderMap();
   refreshCard();
@@ -408,7 +461,13 @@ function renderFilters() {
   clubsLabel();
 
   const count = (kind) => players.filter((p) => ui.recordKind(p.record) === kind).length;
+  const newCount = players.filter((p) => p.record && p.record.new).length;
+  const newOption = board.tag_changes
+    ? `<label class="multi-new"><input type="checkbox" value="new"${state.newTags ? " checked" : ""}> New since ${dayMonth(board.tag_changes.since)} (${newCount})</label>`
+    : "";
+  $("board-played-count").textContent = `(${players.filter((p) => !(p.minutes_now > 0)).length})`;
   $("board-tags-panel").innerHTML = '<button type="button" class="multi-clear" id="board-tags-clear">Clear</button>'
+    + newOption
     + ui.RECORD_KINDS.map((kind) => `<label><input type="checkbox" value="${kind}"${state.tags.includes(kind) ? " checked" : ""}> `
       + `${ui.recordKindName(kind)} (${count(kind)})</label>`).join("");
   tagsLabel();
@@ -416,7 +475,8 @@ function renderFilters() {
 
 function tagsLabel() {
   const n = state.tags.length;
-  $("board-tags-label").textContent = n === 0 ? "All tags" : n <= 2 ? state.tags.map(ui.recordKindName).join(", ") : `${n} tags`;
+  const named = n === 0 ? "All tags" : n <= 2 ? state.tags.map(ui.recordKindName).join(", ") : `${n} tags`;
+  $("board-tags-label").textContent = !state.newTags ? named : n === 0 ? "New tags" : `New: ${named}`;
 }
 
 function clubsLabel() {
@@ -473,13 +533,30 @@ function wire() {
     state.clubs = []; state.pages = 1; clubsLabel(); renderList(); renderMap();
   });
   $("board-tags-panel").addEventListener("change", () => {
-    state.tags = [...document.querySelectorAll("#board-tags-panel input:checked")].map((i) => i.value);
+    const ticked = [...document.querySelectorAll("#board-tags-panel input:checked")].map((i) => i.value);
+    state.newTags = ticked.includes("new");
+    state.tags = ticked.filter((value) => value !== "new");
     state.pages = 1; tagsLabel(); renderList(); renderMap();
+  });
+  $("board-played").addEventListener("change", (event) => {
+    state.hideUnplayed = event.target.checked;
+    state.pages = 1; renderList(); renderMap();
+  });
+  $("board-tag-changes").addEventListener("click", (event) => {
+    if (event.target.id === "board-show-new") {
+      state.newTags = true;
+      document.querySelector('#board-tags-panel input[value="new"]').checked = true;
+      state.pages = 1; tagsLabel(); renderList(); renderMap();
+      $("board-tags").closest(".block").scrollIntoView({ block: "start" });
+      return;
+    }
+    const row = event.target.closest("[data-code]");
+    if (row) openCard(row.dataset.code);
   });
   $("board-tags-panel").addEventListener("click", (event) => {
     if (event.target.id !== "board-tags-clear") return;
     document.querySelectorAll("#board-tags-panel input").forEach((i) => { i.checked = false; });
-    state.tags = []; state.pages = 1; tagsLabel(); renderList(); renderMap();
+    state.tags = []; state.newTags = false; state.pages = 1; tagsLabel(); renderList(); renderMap();
   });
   document.addEventListener("click", (event) => {
     for (const details of [$("board-clubs"), $("board-tags")]) {
