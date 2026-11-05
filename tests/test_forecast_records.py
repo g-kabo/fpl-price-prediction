@@ -169,3 +169,32 @@ def test_few_minutes_is_noted_only_under_the_threshold():
     assert "few_minutes" not in marks[2]
     assert marks[3]["few_minutes"] == 0
     assert marks[4]["few_minutes"] == 0
+
+
+def test_a_change_too_small_to_see_keeps_the_tag():
+    # Cunha on 5 Nov: £7.696m to £7.698m, both shown as £7.70m.
+    mark = record([7.85, 7.696], 7.698)
+    assert (mark["direction"], mark["scope"]) == ("low", "season")
+    assert mark["since"] == "2026-10-02"
+    assert mark["value"] == 7.7
+
+
+def test_a_change_that_shows_still_moves_the_tag():
+    assert record([7.85, 7.70], 7.71) is None
+    assert record([7.85, 7.70], 7.69)["direction"] == "low"
+
+
+def test_rounding_edge_changes_the_tag_with_the_number_on_screen():
+    assert record([7.85, 7.694], 7.696) is None
+    assert record([7.85, 7.696], 7.694)["since"] is None
+
+
+def test_past_seasons_compare_as_shown():
+    assert record([5.0], 5.2, past=(5.204,))["scope"] == "all"
+    assert record([5.0], 5.2, past=(5.206,))["scope"] == "season"
+
+
+def test_ties_round_as_the_site_does():
+    # 7.675 is just under in binary, so Python and the site both show 7.67.
+    assert forecast_history._shown(pd.Series([7.675, 2.675, 7.696])).tolist() == [7.67, 2.67, 7.7]
+
