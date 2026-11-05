@@ -180,22 +180,27 @@ def past_calls(codes: set[int], predict_season: int) -> pd.DataFrame:
                          "call": np.asarray(calls)})
 
 
-def forecast_records(season: live.LiveSeason, projected: pd.DataFrame, predict_season: int) -> dict[int, dict]:
-    """Season, all-time and historic forecast records, by code. Today is the board's own."""
+def forecast_records(season: live.LiveSeason, projected: pd.DataFrame,
+                     predict_season: int) -> tuple[dict[int, dict], dict | None]:
+    """Season, all-time and historic forecast records, by code, and what
+    changed since the last morning. Today is the board's own."""
     if not (season.is_live and season.fetched_at):
-        return {}
+        return {}, None
     history = forecast_history.load()
     history = history[history["date"] < season.fetched_at.date()]
     today = projected.set_index("code")["pred"]
     played = set(projected.loc[projected["minutes_now"] > 0, "code"].astype(int))
-    return forecast_history.records(history, today, past_calls(set(today.index.astype(int)), predict_season), played)
+    marks, changes = forecast_history.with_changes(
+        history, today, past_calls(set(today.index.astype(int)), predict_season), played)
+    forecast_history.mark_few_minutes(marks, projected.set_index("code")["minutes_now"])
+    return marks, changes
 
 
 def board_payload(season: live.LiveSeason, projected: pd.DataFrame, predict_season: int) -> dict:
     keep = [c for c in BOARD_KEEP if c in projected.columns]
     records = [{k: _clean(v) for k, v in row.items()}
                for row in projected[keep].to_dict("records")]
-    forecast_marks = forecast_records(season, projected, predict_season)
+    forecast_marks, tag_changes = forecast_records(season, projected, predict_season)
     for record in records:
         mark = forecast_marks.get(int(record["code"]))
         if mark:
@@ -208,6 +213,7 @@ def board_payload(season: live.LiveSeason, projected: pd.DataFrame, predict_seas
         "gameweek_label": season.gameweek_label,
         "gameweeks_finished": int(season.progress.gameweeks_finished),
         "stale_after_hours": live.STALE_AFTER_HOURS,
+        "tag_changes": tag_changes,
         "players": records,
     }
 

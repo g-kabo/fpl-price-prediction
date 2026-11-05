@@ -123,3 +123,49 @@ def test_historic_reached_today_has_no_earlier_date():
     assert (mark["direction"], mark["scope"]) == ("low", "historic")
     assert mark["season_best"] == 5.0
     assert mark["season_best_on"] is None
+
+
+def mornings(*days):
+    """History with minutes, as export_static reads it."""
+    return history(*days).assign(minutes=90)
+
+
+def test_new_when_the_tag_was_not_held_on_the_last_morning():
+    marks, changes = forecast_history.with_changes(mornings(5.0, 5.05, 5.0), pd.Series({1: 5.2}), calls())
+    assert marks[1]["new"] is True
+    assert changes == {"since": "2026-10-03", "lost": []}
+
+
+def test_same_tag_climbing_again_is_not_new():
+    marks, _ = forecast_history.with_changes(mornings(5.0, 5.1), pd.Series({1: 5.2}), calls())
+    assert marks[1]["scope"] == "season"
+    assert "new" not in marks[1]
+
+
+def test_moving_to_a_different_tag_is_new_and_not_lost():
+    marks, changes = forecast_history.with_changes(mornings(5.0, 5.3), pd.Series({1: 5.2}), calls(4.8))
+    assert marks[1]["scope"] == "historic"
+    assert marks[1]["new"] is True
+    assert changes["lost"] == []
+
+
+def test_dropping_a_tag_is_lost():
+    marks, changes = forecast_history.with_changes(mornings(5.0, 5.3), pd.Series({1: 5.2}), calls())
+    assert marks == {}
+    assert changes["lost"] == [{"code": 1, "was": "season-high"}]
+
+
+def test_no_changes_until_two_mornings_exist():
+    marks, changes = forecast_history.with_changes(mornings(5.0), pd.Series({1: 5.2}), calls())
+    assert marks[1]["direction"] == "high"
+    assert changes is None
+    assert forecast_history.with_changes(pd.DataFrame(), pd.Series({1: 5.2}), calls()) == ({}, None)
+
+
+def test_few_minutes_is_noted_only_under_the_threshold():
+    marks = {1: {}, 2: {}, 3: {}, 4: {}}
+    forecast_history.mark_few_minutes(marks, pd.Series({1: 19, 2: 270, 3: 0}))
+    assert marks[1]["few_minutes"] == 19
+    assert "few_minutes" not in marks[2]
+    assert marks[3]["few_minutes"] == 0
+    assert marks[4]["few_minutes"] == 0

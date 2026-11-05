@@ -21,7 +21,7 @@ import pandas as pd
 import config
 from record_predictions import HISTORY_DIR
 
-COLUMNS = ["date", "gameweeks_finished", "code", "price",
+COLUMNS = ["date", "gameweeks_finished", "code", "price", "minutes",
            "pred_next_start", "pred_next_lower", "pred_next_upper"]
 
 #: What the model was given that morning, for "what changed" (see
@@ -33,6 +33,9 @@ INPUT_COLUMNS = ["start_price", "proj_minutes", "proj_total_points", "proj_point
 
 #: The least a forecast must have moved this season, in £m, to earn a record.
 RECORD_MIN_RANGE = 0.05
+
+#: Under this many minutes a record is marked as resting on a small sample.
+FEW_MINUTES = 270
 
 
 def load(season: int = config.PREDICT_SEASON, inputs: bool = False) -> pd.DataFrame:
@@ -141,3 +144,43 @@ def _historic(value: float, rows: pd.DataFrame, calls: pd.DataFrame | None) -> d
         "season_best": float(season_best),
         "season_best_on": min(reached).isoformat() if len(reached) else None,
     }
+
+
+def with_changes(history: pd.DataFrame, today: pd.Series, past_calls: pd.DataFrame,
+                 played: set[int] | None = None) -> tuple[dict[int, dict], dict | None]:
+    """:func:`records`, plus what changed since the last recorded morning.
+
+    A record gets ``new`` when its player did not hold that kind of record
+    that morning, whether he had none or a different one. The second value
+    names that morning and who held a record then and holds none now; it is
+    None until there are two mornings to compare. That morning is judged as
+    today is, with today's past calls.
+    """
+    marks = records(history, today, past_calls, played)
+    if history.empty or history["date"].nunique() < 2:
+        return marks, None
+
+    last = max(history["date"])
+    morning = history[history["date"] == last]
+    before = records(history[history["date"] < last], morning.set_index("code")["pred_next_start"],
+                     past_calls, set(morning.loc[morning["minutes"] > 0, "code"].astype(int)))
+
+    def kind(mark: dict | None) -> str | None:
+        return f"{mark['scope']}-{mark['direction']}" if mark else None
+
+    for code, mark in marks.items():
+        if kind(mark) != kind(before.get(code)):
+            mark["new"] = True
+    today_codes = {int(code) for code in today.dropna().index}
+    lost = [{"code": code, "was": kind(mark)} for code, mark in before.items()
+            if code in today_codes and code not in marks]
+    return marks, {"since": last.isoformat(), "lost": lost}
+
+
+def mark_few_minutes(marks: dict[int, dict], minutes: pd.Series) -> None:
+    """Note the minutes on each record that rests on under FEW_MINUTES."""
+    for code, mark in marks.items():
+        played = minutes.get(code, 0)
+        played = 0 if pd.isna(played) else int(played)
+        if played < FEW_MINUTES:
+            mark["few_minutes"] = played

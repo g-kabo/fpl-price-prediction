@@ -53,6 +53,9 @@ jobs:
       # The JavaScript model must agree with Python before anything ships.
       - run: node web/tests/parity.mjs
 
+      # Draw every player, so a page-breaking error stops here, not on the site.
+      - run: node web/tests/render.mjs
+
       - name: Assemble the site
         run: |
           mkdir _site

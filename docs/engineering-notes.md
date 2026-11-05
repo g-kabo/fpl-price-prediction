@@ -450,6 +450,24 @@ could read as describing the edited figure) and the header search:
   all-time high to all-time low with untagged players last either way, and the filter
   also applies to the market map, like the others. The Club page keeps the pill under
   the name.
+- **A star marks a tag resting on under 270 minutes** (`FEW_MINUTES`), with a quieter
+  pill and a sentence saying how many. It doesn't remove the tag: 97 of 292 tags on 4
+  November were under that, and Woltemade's all-time high rested on 19 minutes.
+- **"New" means a kind of tag the player didn't hold on the last recorded morning.**
+  So a season high that climbs again is not new, while moving from season high to
+  historic high is. Yesterday's tags are worked out with today's past calls, so only
+  the day's forecasts differ. A model refit would change many forecasts at once and
+  show as a burst of new tags.
+- **`web/tests/render.mjs` draws what the model tests can't see**, and `pages.yml` runs
+  it before publishing: every player's tag and list rows, sorted every way, and the
+  club charts through a stand-in for Plotly that rejects an undefined trace property.
+  It was written after that mistake left the Club charts blank for weeks and a tag
+  with no date crashed the list. It needs no browser, so it can't catch layout.
+- **New controls are optional in the script.** GitHub Pages caches files for ten
+  minutes, so just after a release a new `board.js` can meet an old `index.html`. A
+  missing switch once stopped the page at "Loading the live data", so `board.js` skips
+  any control added since the last release (#87 is the general fix). `render.mjs` can't
+  see this, as it has no page.
 - It is worked out in Python and written to `board.json`, because Price Watch does
   not load `seasons.json` (667 KB) and the past calls need it.
 
