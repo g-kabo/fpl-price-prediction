@@ -20,8 +20,8 @@ def history(*days):
     return pd.DataFrame(rows)
 
 
-def calls(*preds):
-    return pd.DataFrame({"code": 1, "season": range(2020, 2020 + len(preds)), "call": list(preds)})
+def calls(*prices):
+    return pd.DataFrame({"code": 1, "season": range(2020, 2020 + len(prices)), "price": list(prices)})
 
 
 def record(days, today, past=()):
@@ -60,8 +60,8 @@ def test_all_time_needs_to_pass_every_past_season():
     mark = record([5.0], 5.2, past=(5.1, 4.9))
     assert mark["scope"] == "all"
     assert mark["past_best"] == 5.1
-    assert mark["past_best_for"] == 2021
-    assert mark["past_from"] == 2021
+    assert mark["past_best_for"] == 2020
+    assert mark["past_from"] == 2020
 
 
 def test_all_time_low_mirrors_it():
@@ -102,9 +102,10 @@ def test_historic_needs_a_clear_gap_and_a_past_season():
     assert record([5.0, 5.3], 5.1) is None
 
 
-def test_season_label_beats_historic():
+def test_historic_beats_season():
+    # A season low that is still above every past season is a historic high.
     mark = record([5.5, 5.3], 5.2, past=(4.8,))
-    assert (mark["direction"], mark["scope"]) == ("low", "season")
+    assert (mark["direction"], mark["scope"]) == ("high", "historic")
 
 
 def test_flat_season_can_still_be_historic():
