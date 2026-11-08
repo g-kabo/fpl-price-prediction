@@ -20,7 +20,7 @@ import { loadJson, loadModel, showError } from "./data.js";
 import { esc, fixed, fmt, seasonLabel } from "./format.js";
 import { drawForecastTrend, drawTrackRecord } from "./charts.js";
 import { attachSearch, clubUrl, initNavSearch, playerUrl } from "./nav.js";
-import { boardValues, currentClub, driverDays, seasonRows, seasonValues, snapshotDay, tagOn, trendDays, withRatios } from "./records.js";
+import { boardValues, currentClub, driverDays, seasonRows, seasonValues, snapshotDay, trendDays, withRatios } from "./records.js";
 import { money } from "./theme.js";
 import * as ui from "./ui.js";
 
@@ -168,20 +168,8 @@ function leftSection(last) {
     + "</section>";
 }
 
-function trendSection(days, record) {
-  return `<section class="panel player-panel">${ui.forecastTrend(days)}${ui.tagTimeline(tagDays(days, record))}</section>`;
-}
-
-/** The tag he held on each of the trend's days: each recorded morning's from
- *  forecasts.json, today's from the board. Nothing before the second morning
- *  tracked, and an older forecasts.json without tags gives an empty timeline. */
-function tagDays(days, record) {
-  if (!forecasts.tags) return [];
-  const today = snapshotDay(board);
-  return days.map((d) => ({
-    date: d.date,
-    kind: d.date === today ? ui.recordKind(record.record) : tagOn(forecasts, record.code, forecasts.dates.indexOf(d.date)),
-  }));
+function trendSection(days) {
+  return `<section class="panel player-panel">${ui.forecastTrend(days)}</section>`;
 }
 
 /** "Why this price" sits beside "Day by day" in the second row of the grid;
@@ -260,7 +248,7 @@ function renderPlayer(code) {
     days = trendDays(forecasts, board, record, interval);
     why = ui.whyThisPrice(model, values, ["Today", record.price_now]);
     daily = drivers ? ui.dailyChange(model, driverDays(drivers, record, values, snapshotDay(board))) : null;
-    parts.push(forecastSection(record, interval), trendSection(days, record), whySection(why, !daily));
+    parts.push(forecastSection(record, interval), trendSection(days), whySection(why, !daily));
     if (daily) parts.push(`<section class="panel player-panel">${daily.html}</section>`);
   } else {
     parts.push(leftSection(seasons[seasons.length - 1]));

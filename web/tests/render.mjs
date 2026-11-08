@@ -100,7 +100,7 @@ for (const n of [1, 14, 15, 40]) {
   attempt(`player forecasts, ${n} days`, () => drawPlayerForecasts({}, players, { legend: true }));
 }
 
-// Tag changes over a window, and each player's tag timeline.
+// Tag changes over a window.
 const forecasts = JSON.parse(readFileSync(join(here, "../data/forecasts.json"), "utf8"));
 const { tagChanges, tagOn } = await import("../js/records.js");
 const mornings = forecasts.dates.length;
@@ -123,13 +123,6 @@ if (forecasts.tags && mornings >= 2) {
   }
   check("no tag is held on the first morning", board.players.every((p) => tagOn(forecasts, p.code, 0) === null));
 }
-for (const p of tagged.slice(0, 400)) {
-  const days = forecasts.dates.map((date, i) => ({ date, kind: tagOn(forecasts, p.code, i) }))
-    .concat({ date: board.fetched_at.slice(0, 10), kind: ui.recordKind(p.record) });
-  const html = attempt(`${p.web_name} tag timeline`, () => ui.tagTimeline(days));
-  check(`${p.web_name} timeline`, html && !/undefined|null|NaN/.test(html.replace(/No tag/g, "")), html.slice(0, 80));
-}
-check("a player who never held a tag has no timeline", ui.tagTimeline([{ date: "2026-10-01", kind: null }]) === "");
 
 console.log(`${rows.length} players and ${tagged.length} tags drawn.`);
 if (failures) {
