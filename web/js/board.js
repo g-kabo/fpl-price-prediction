@@ -227,9 +227,33 @@ function mover(p) {
     + `<span class="num">${ui.changeChip(p.change)}</span></button>`;
 }
 
-function moversSide(title, icon, rows, none) {
-  const body = rows.length ? rows.map(mover).join("") : `<p class="mv-none">${esc(none)}</p>`;
-  return `<div class="mv-side"><div class="mv-head"><i class="bi ${icon}"></i>${title}</div>${body}</div>`;
+/** The full lists behind the header buttons, by key, as last drawn. */
+const fullLists = new Map();
+let listModal = null;
+
+/** A table of mover rows, `MOVERS_EACH` of them; when there are more, a
+ *  header button opens the full list in a popup. `rows` are HTML strings. */
+function moversSide(key, title, icon, rows, none) {
+  fullLists.set(key, { title, icon, rows });
+  const body = rows.length ? rows.slice(0, MOVERS_EACH).join("") : `<p class="mv-none">${esc(none)}</p>`;
+  const toggle = rows.length > MOVERS_EACH
+    ? `<button type="button" class="mv-toggle" data-expand="${key}" title="Show all ${rows.length}">`
+      + `Show all ${rows.length}<i class="bi bi-arrows-fullscreen"></i></button>`
+    : "";
+  return `<div class="mv-side"><div class="mv-head"><i class="bi ${icon}"></i>${title}${toggle}</div>${body}</div>`;
+}
+
+/** Open the popup for a header button; true when the click was one. */
+function openFullList(event) {
+  const button = event.target.closest("[data-expand]");
+  if (!button) return false;
+  const list = fullLists.get(button.dataset.expand);
+  if (!list) return true;
+  $("board-list-title").innerHTML = `<i class="bi ${list.icon}"></i>${list.title}`;
+  $("board-list-body").innerHTML = list.rows.join("");
+  listModal ??= new bootstrap.Modal($("board-list-modal"));
+  listModal.show();
+  return true;
 }
 
 /** Whose forecast has moved most since an earlier recorded morning. Today's
@@ -257,8 +281,8 @@ function renderMovers() {
     const then = recordedOn(forecasts.players[String(p.code)], day);
     if (then && Number.isFinite(p.pred)) rows.push({ ...p, then: then[1], change: p.pred - then[1] });
   }
-  const ups = rows.filter((r) => r.change >= MOVER_FLOOR).sort((a, b) => b.change - a.change).slice(0, MOVERS_EACH);
-  const downs = rows.filter((r) => r.change <= -MOVER_FLOOR).sort((a, b) => a.change - b.change).slice(0, MOVERS_EACH);
+  const ups = rows.filter((r) => r.change >= MOVER_FLOOR).sort((a, b) => b.change - a.change);
+  const downs = rows.filter((r) => r.change <= -MOVER_FLOOR).sort((a, b) => a.change - b.change);
 
   const since = dayMonth(forecasts.dates[day]);
   note.textContent = `Whose ${seasonLabel(TARGET)} forecast has moved most since the morning of ${since}. `
@@ -269,8 +293,8 @@ function renderMovers() {
       + "after the next gameweek.", "bi-pause-circle");
     return;
   }
-  out.innerHTML = moversSide("Forecast up", "bi-graph-up-arrow", ups, `No forecast up since ${since}.`)
-    + moversSide("Forecast down", "bi-graph-down-arrow", downs, `No forecast down since ${since}.`);
+  out.innerHTML = moversSide("up", "Forecast up", "bi-graph-up-arrow", ups.map(mover), `No forecast up since ${since}.`)
+    + moversSide("down", "Forecast down", "bi-graph-down-arrow", downs.map(mover), `No forecast down since ${since}.`);
 }
 
 // ---------------------------------------------------------------- tag changes
@@ -306,18 +330,17 @@ function renderTagChanges() {
       + "Expect changes after the next gameweek.</p>";
     return;
   }
-  const side = (title, icon, rows, none) => `<div class="mv-side"><div class="mv-head"><i class="bi ${icon}"></i>${title}</div>`
-    + (rows.length ? rows.join("") : `<p class="mv-none">${esc(none)}</p>`) + "</div>";
-  const more = gained.length > MOVERS_EACH || lost.length > MOVERS_EACH ? ` The ${MOVERS_EACH} most owned of each are shown.` : "";
+  const more = gained.length > MOVERS_EACH || lost.length > MOVERS_EACH
+    ? ` The ${MOVERS_EACH} most owned of each are shown; each table's button shows them all.` : "";
   const show = gained.length
     ? ' <button type="button" class="link-button" id="board-show-new">Show new tags in the transfer list</button>' : "";
   out.innerHTML = `${head}<p class="block-note">Since the morning of ${since}: ${gained.length} `
     + `player${gained.length === 1 ? "" : "s"} gained a tag or moved to a different one, and ${lost.length} lost `
     + `${lost.length === 1 ? "his" : "theirs"}.${more}${show}</p><div class="movers">`
-    + side(`New tags (${gained.length})`, "bi-tag-fill",
-      gained.slice(0, MOVERS_EACH).map((p) => tagChangeRow(p, ui.recordPill(p.record, { showNew: false }))), `No new tags since ${since}.`)
-    + side(`Lost tags (${lost.length})`, "bi-tag",
-      lost.slice(0, MOVERS_EACH).map((p) => tagChangeRow(p, `<span class="tag-was">Was ${esc(ui.recordKindName(p.was).toLowerCase())}</span>`)),
+    + moversSide("new-tags", `New tags (${gained.length})`, "bi-tag-fill",
+      gained.map((p) => tagChangeRow(p, ui.recordPill(p.record, { showNew: false }))), `No new tags since ${since}.`)
+    + moversSide("lost-tags", `Lost tags (${lost.length})`, "bi-tag",
+      lost.map((p) => tagChangeRow(p, `<span class="tag-was">Was ${esc(ui.recordKindName(p.was).toLowerCase())}</span>`)),
       `No tags lost since ${since}.`)
     + "</div>";
 }
@@ -488,6 +511,14 @@ function clubsLabel() {
 
 function wire() {
   card = new bootstrap.Offcanvas($("board-card"));
+  // A player picked from the popup: close it, then open the card.
+  $("board-list-body")?.addEventListener("click", (event) => {
+    const row = event.target.closest("[data-code]");
+    if (!row) return;
+    const code = row.dataset.code;
+    $("board-list-modal").addEventListener("hidden.bs.modal", () => openCard(code), { once: true });
+    listModal.hide();
+  });
 
   $("board-settings-toggle").addEventListener("click", (event) => {
     const panel = $("board-settings");
@@ -512,6 +543,7 @@ function wire() {
   document.querySelectorAll('input[name="board-window"]').forEach((input) =>
     input.addEventListener("change", () => { state.window = input.value; renderMovers(); }));
   $("board-movers").addEventListener("click", (event) => {
+    if (openFullList(event)) return;
     const row = event.target.closest("[data-code]");
     if (row) openCard(row.dataset.code);
   });
@@ -547,6 +579,7 @@ function wire() {
     state.pages = 1; renderList(); renderMap();
   });
   $("board-tag-changes")?.addEventListener("click", (event) => {
+    if (openFullList(event)) return;
     if (event.target.id === "board-show-new") {
       state.newTags = true;
       document.querySelector('#board-tags-panel input[value="new"]').checked = true;
