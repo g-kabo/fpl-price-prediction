@@ -789,6 +789,33 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
 }
 .mv-head i { color: var(--cyan); }
 
+.mv-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--on-dark);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.mv-toggle:hover { background: rgba(255, 255, 255, 0.12); }
+.mv-toggle:focus-visible { box-shadow: var(--focus); outline: 0; }
+.mv-toggle i { font-size: 0.7rem; }
+
+.mv-modal { border: 0; border-radius: var(--radius); overflow: hidden; }
+.mv-modal .modal-header { height: auto; min-height: 48px; padding: 0 20px; border: 0; }
+.mv-modal .modal-title { display: flex; align-items: center; gap: 8px; font-size: 0.95rem; font-weight: 700; }
+.mv-modal .modal-title i { color: var(--cyan); }
+.mv-modal .modal-body > .mv-row:first-child { border-top: 0; }
+#board-list-modal .modal-dialog { max-width: 640px; }
+.modal-backdrop.show { opacity: 0.45; background: var(--aubergine); }
+
 .mv-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto 104px;
