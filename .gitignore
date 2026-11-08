@@ -42,3 +42,7 @@ docs/running-locally.md
 
 # Feature backlog: personal planning, kept out of the public repo
 docs/future-ideas.md
+# Its browsable HTML copy, and the script and template that build it
+docs/future-ideas.html
+docs/ideas_html.py
+docs/ideas_template.html
