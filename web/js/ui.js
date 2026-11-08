@@ -328,6 +328,38 @@ export function forecastTrend(days) {
     + "after a gameweek, as points and minutes come in, and a little with each price change.</p></div>";
 }
 
+/** Which days a player held a forecast tag, under his forecast trend: one cell
+ *  per recorded morning and today, coloured by kind, so "Historic high" reads
+ *  as a run of days or a one-day blip. `days` is [{date, kind}] oldest first,
+ *  `kind` a RECORD_KINDS entry or null. Empty when he never held one. */
+export function tagTimeline(days) {
+  if (!days.some((d) => d.kind)) return "";
+  const cells = days.map((d) => {
+    const name = d.kind ? recordKindName(d.kind) : "No tag";
+    return `<span class="tt-cell${d.kind ? ` tt-${d.kind}` : ""}" title="${esc(dayMonth(d.date))}: ${esc(name)}"></span>`;
+  }).join("");
+
+  // Today's run: how many mornings, counting back, he has held this tag.
+  const last = days[days.length - 1];
+  let run = 0;
+  while (run < days.length && days[days.length - 1 - run].kind === last.kind) run++;
+  const first = days[days.length - run];
+  const held = days.filter((d) => d.kind).length;
+  const lede = last.kind
+    ? `${recordKindName(last.kind)} for ${run === 1 ? "today only" : `${run} mornings, since ${dayMonth(first.date)}`}`
+      + (held > run ? `; a tag on ${held} of ${days.length} mornings tracked.` : ".")
+    : `No tag today. He held one on ${held} of ${days.length} mornings tracked.`;
+  const legend = RECORD_KINDS.filter((k) => days.some((d) => d.kind === k))
+    .map((k) => `<span class="tt-key"><span class="tt-cell tt-${k}"></span>${esc(recordKindName(k))}</span>`).join("");
+  return '<div class="tag-timeline"><h3 class="section-title">Tag timeline</h3>'
+    + `<p class="why-lede">${lede}</p>`
+    + `<div class="tt-strip" role="img" aria-label="${esc(lede)}">${cells}</div>`
+    + `<div class="tt-axis"><span>${esc(dayMonth(days[0].date))}</span><span>Today</span></div>`
+    + `<div class="tt-legend">${legend}</div>`
+    + '<p class="fine">Each morning is judged as today is, against the mornings before it, so a tag shown here '
+    + "is the one the list would have shown that morning. The first morning tracked has nothing to compare with.</p></div>";
+}
+
 /** A club's name, as a link to its Clubs page when `href` is given. */
 export function clubName(team, href = null) {
   return href ? `<a class="player-club club-link" href="${href}">${esc(team || "")}</a>`

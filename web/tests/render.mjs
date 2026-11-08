@@ -100,6 +100,37 @@ for (const n of [1, 14, 15, 40]) {
   attempt(`player forecasts, ${n} days`, () => drawPlayerForecasts({}, players, { legend: true }));
 }
 
+// Tag changes over a window, and each player's tag timeline.
+const forecasts = JSON.parse(readFileSync(join(here, "../data/forecasts.json"), "utf8"));
+const { tagChanges, tagOn } = await import("../js/records.js");
+const mornings = forecasts.dates.length;
+if (forecasts.tags && mornings >= 2) {
+  // Since the last recorded morning must say what the export's own "New" marks and
+  // lost list say, or the panel and the list's "New since" filter disagree.
+  const latest = tagChanges(forecasts, board.players, mornings - 1);
+  const marked = board.players.filter((p) => p.record && p.record.new).map((p) => p.code).sort();
+  check("tag changes since the last morning match the New marks",
+    JSON.stringify(latest.gained.map((p) => p.code).sort()) === JSON.stringify(marked),
+    `${latest.gained.length} against ${marked.length}`);
+  const lostCodes = (board.tag_changes ? board.tag_changes.lost : []).map((l) => l.code).sort();
+  check("tag changes since the last morning match the lost list",
+    JSON.stringify(latest.lost.map((p) => p.code).sort()) === JSON.stringify(lostCodes));
+  // Every window's baseline day draws, and a longer one never loses the count of tags held today.
+  for (let day = 1; day < mornings; day++) {
+    const { gained, lost } = tagChanges(forecasts, board.players, day);
+    check(`tag changes from day ${day} are players`, [...gained, ...lost].every((p) => p.code && p.web_name));
+    check(`lost tags from day ${day} were real kinds`, lost.every((p) => ui.RECORD_KINDS.includes(p.was)));
+  }
+  check("no tag is held on the first morning", board.players.every((p) => tagOn(forecasts, p.code, 0) === null));
+}
+for (const p of tagged.slice(0, 400)) {
+  const days = forecasts.dates.map((date, i) => ({ date, kind: tagOn(forecasts, p.code, i) }))
+    .concat({ date: board.fetched_at.slice(0, 10), kind: ui.recordKind(p.record) });
+  const html = attempt(`${p.web_name} tag timeline`, () => ui.tagTimeline(days));
+  check(`${p.web_name} timeline`, html && !/undefined|null|NaN/.test(html.replace(/No tag/g, "")), html.slice(0, 80));
+}
+check("a player who never held a tag has no timeline", ui.tagTimeline([{ date: "2026-10-01", kind: null }]) === "");
+
 console.log(`${rows.length} players and ${tagged.length} tags drawn.`);
 if (failures) {
   console.error(`${failures} failure(s).`);

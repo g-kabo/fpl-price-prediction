@@ -194,6 +194,16 @@ def forecast_records(season: live.LiveSeason, projected: pd.DataFrame,
     return marks, changes
 
 
+def tag_timeline(season: live.LiveSeason, projected: pd.DataFrame, predict_season: int) -> dict:
+    """The tag each player held on each recorded morning before today."""
+    if not (season.is_live and season.fetched_at):
+        return {}
+    history = forecast_history.load()
+    history = history[history["date"] < season.fetched_at.date()]
+    return forecast_history.timeline(
+        history, past_prices(set(projected["code"].astype(int)), projected, predict_season))
+
+
 def board_payload(season: live.LiveSeason, projected: pd.DataFrame, predict_season: int) -> dict:
     keep = [c for c in BOARD_KEEP if c in projected.columns]
     records = [{k: _clean(v) for k, v in row.items()}
@@ -226,7 +236,7 @@ def history_payload(codes: set[int], predict_season: int) -> dict:
     return out
 
 
-def forecasts_payload(season: live.LiveSeason, codes: set[int]) -> dict:
+def forecasts_payload(season: live.LiveSeason, codes: set[int], tags: dict | None = None) -> dict:
     """Each recorded morning before today: price and forecast per player.
 
     Today is left out: the page takes it from board.json, the same frame it
@@ -238,6 +248,11 @@ def forecasts_payload(season: live.LiveSeason, codes: set[int]) -> dict:
     with ``day`` an index into ``dates``, and ``[day]`` alone from a day he
     was missing. Between gameweeks most forecasts hold for days on end, so
     this keeps a full season's file to a fraction of one row per day.
+
+    ``tags`` (from :func:`tag_timeline`) adds ``tags``: a code to change
+    points ``[day, kind]`` in the same ``dates``, ``kind`` null from the day
+    he held none. A player who never held one is left out, and days before
+    the second morning hold none. Today's tag is the board's own.
     """
     history = forecast_history.load()
     if season.is_live and season.fetched_at:
@@ -262,11 +277,24 @@ def forecasts_payload(season: live.LiveSeason, codes: set[int]) -> dict:
                 points.append([day, *values] if values else [day])
                 last = values
         players[str(code)] = points
-    return {
+
+    held: dict[str, list] = {}
+    for code in {c for day in (tags or {}).values() for c in day}:
+        points, last = [], None
+        for i, date in enumerate(dates):
+            value = (tags or {}).get(date, {}).get(code)
+            if value != last:
+                points.append([i, value])
+                last = value
+        held[str(code)] = points
+    out = {
         "dates": [d.isoformat() for d in dates],
         "gameweeks": [int(gameweeks[d]) for d in dates],
         "players": players,
     }
+    if tags is not None:
+        out["tags"] = held
+    return out
 
 
 def drivers_payload(season: live.LiveSeason, codes: set[int], ranges: dict) -> dict:
@@ -474,7 +502,9 @@ def main(argv: list[str] | None = None) -> None:
     _write("players.json", players_payload(seasons))
     _write("history.json", history_payload(set(projected["code"].astype(int)),
                                            meta["predict_season"]))
-    _write("forecasts.json", forecasts_payload(season, set(projected["code"].astype(int))))
+    _write("forecasts.json", forecasts_payload(
+        season, set(projected["code"].astype(int)),
+        tag_timeline(season, projected, meta["predict_season"])))
     _write("drivers.json", drivers_payload(season, set(projected["code"].astype(int)), meta["ranges"]))
     if args.parity:
         _write("parity.json", parity_payload(projected, meta), TESTS_DIR)

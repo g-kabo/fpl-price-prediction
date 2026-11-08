@@ -16,7 +16,7 @@ import { dayMonth, esc, fixed, fmt, fold, seasonLabel } from "./format.js";
 import { DEFAULT_X, X_FIELDS, drawForecastTrend, drawPriceHistory, drawPriceScatter } from "./charts.js";
 import { clubUrl, initNavSearch } from "./nav.js";
 import { DEFAULT_SORT, listHtml, nextSort, sortRows } from "./tlist.js";
-import { boardValues, driverDays, recordedOn, snapshotDay, trendDays } from "./records.js";
+import { boardValues, driverDays, recordedOn, snapshotDay, tagChanges, trendDays } from "./records.js";
 import { direction, money } from "./theme.js";
 import * as ui from "./ui.js";
 
@@ -310,20 +310,43 @@ function tagChangeRow(p, side) {
 
 const byOwnership = (a, b) => Number(b.selected_now || 0) - Number(a.selected_now || 0);
 
-/** Who gained or lost a tag since the last recorded morning, most owned
- *  first. League-wide, like the movers above it. */
+/** Who gained or lost a tag since an earlier recorded morning, as
+ *  {since, gained, lost, latest}, most owned first, or null with none to
+ *  compare with. `latest` is true when that morning is the last one recorded,
+ *  the one the "New" marks and the list's "New since" filter compare with.
+ *  Follows the window the movers above use; the first morning holds no tags
+ *  (nothing earlier to compare with), so the comparison starts from the second. */
+function tagChangesFor(span) {
+  const days = forecasts.dates.length;
+  if (forecasts.tags && days >= 2) {
+    const day = Math.max(baselineDay(MOVER_WINDOWS[span] ?? null), 1);
+    const { gained, lost } = tagChanges(forecasts, players, day);
+    return { since: forecasts.dates[day], gained: gained.sort(byOwnership), lost: lost.sort(byOwnership),
+      latest: day === days - 1 };
+  }
+  // A cached older forecasts.json, just after a release: the last morning only.
+  const changes = board.tag_changes;
+  if (!changes) return null;
+  const byCode = new Map(players.map((p) => [p.code, p]));
+  return {
+    since: changes.since,
+    gained: players.filter((p) => p.record && p.record.new).sort(byOwnership),
+    lost: changes.lost.map((l) => ({ ...byCode.get(l.code), was: l.was })).filter((p) => p.code).sort(byOwnership),
+    latest: true,
+  };
+}
+
+/** The Tag changes panel, for the movers' window. League-wide, like them. */
 function renderTagChanges() {
   const out = $("board-tag-changes");
   if (!out) return; // a cached older page, just after a release
-  const changes = board.tag_changes;
-  if (!board.is_live || !changes) {
+  const changes = board.is_live ? tagChangesFor(state.window) : null;
+  if (!changes) {
     out.innerHTML = "";
     return;
   }
+  const { gained, lost } = changes;
   const since = dayMonth(changes.since);
-  const gained = players.filter((p) => p.record && p.record.new).sort(byOwnership);
-  const byCode = new Map(players.map((p) => [p.code, p]));
-  const lost = changes.lost.map((l) => ({ ...byCode.get(l.code), was: l.was })).filter((p) => p.code).sort(byOwnership);
   const head = '<h3 class="tag-changes-title">Tag changes</h3>';
   if (!gained.length && !lost.length) {
     out.innerHTML = `${head}<p class="block-note">No tags have changed since the morning of ${since}. `
@@ -332,7 +355,9 @@ function renderTagChanges() {
   }
   const more = gained.length > MOVERS_EACH || lost.length > MOVERS_EACH
     ? ` The ${MOVERS_EACH} most owned of each are shown; each table's button shows them all.` : "";
-  const show = gained.length
+  // The list's "New" filter compares with the last morning, so it matches
+  // this panel only when the panel does too.
+  const show = gained.length && changes.latest
     ? ' <button type="button" class="link-button" id="board-show-new">Show new tags in the transfer list</button>' : "";
   out.innerHTML = `${head}<p class="block-note">Since the morning of ${since}: ${gained.length} `
     + `player${gained.length === 1 ? "" : "s"} gained a tag or moved to a different one, and ${lost.length} lost `
@@ -541,7 +566,7 @@ function wire() {
     renderPitch();
   });
   document.querySelectorAll('input[name="board-window"]').forEach((input) =>
-    input.addEventListener("change", () => { state.window = input.value; renderMovers(); }));
+    input.addEventListener("change", () => { state.window = input.value; renderMovers(); renderTagChanges(); }));
   $("board-movers").addEventListener("click", (event) => {
     if (openFullList(event)) return;
     const row = event.target.closest("[data-code]");

@@ -201,6 +201,38 @@ def test_ties_round_as_the_site_does():
 
 
 
+def test_timeline_holds_each_morning_s_tag_and_skips_the_first():
+    days = forecast_history.timeline(mornings(5.0, 5.3, 5.2, 5.4), calls())
+    assert list(days) == [date(2026, 10, 2), date(2026, 10, 3), date(2026, 10, 4)]
+    assert days[date(2026, 10, 2)] == {1: "season-high"}
+    assert days[date(2026, 10, 3)] == {}
+    assert days[date(2026, 10, 4)] == {1: "season-high"}
+    assert forecast_history.timeline(mornings(5.0), calls()) == {}
+
+
+def test_timeline_agrees_with_the_changes_for_the_last_morning():
+    # test_dropping_a_tag_is_lost: he held a season high on the last morning.
+    history_ = mornings(5.0, 5.3)
+    _, changes = forecast_history.with_changes(history_, pd.Series({1: 5.2}), calls())
+    held = forecast_history.timeline(history_, calls())[date(2026, 10, 2)]
+    assert changes["lost"] == [{"code": 1, "was": held[1]}]
+
+
+def test_forecasts_payload_carries_tags_as_change_points(monkeypatch):
+    import export_static
+    from types import SimpleNamespace
+
+    frame = mornings(5.0, 5.3, 5.2, 5.4).assign(
+        gameweeks_finished=3, price=5.0, pred_next_lower=4.0, pred_next_upper=6.0)
+    monkeypatch.setattr(export_static.forecast_history, "load", lambda *a, **k: frame)
+    season = SimpleNamespace(is_live=False, fetched_at=None)
+    tags = forecast_history.timeline(frame, calls())
+    payload = export_static.forecasts_payload(season, {1}, tags)
+    # Tagged on morning 1, none on 2, tagged again on 3; none on the first.
+    assert payload["tags"] == {"1": [[1, "season-high"], [2, None], [3, "season-high"]]}
+    assert "tags" not in export_static.forecasts_payload(season, {1})
+
+
 def test_past_prices_skip_players_with_no_completed_season(monkeypatch):
     import export_static
 

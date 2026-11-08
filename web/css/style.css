@@ -582,6 +582,21 @@ h1, h2, h3 { font-family: var(--font-fig); color: inherit; text-wrap: balance; }
 .record-all.record-low { background: var(--fall-fill); color: #fff; }
 .record-historic.record-high { background: rgba(0, 122, 63, 0.12); color: var(--rise); }
 .record-historic.record-low { background: rgba(214, 0, 79, 0.1); color: var(--fall); }
+/* Tag timeline: a cell per morning, drawn like the pills: solid for all-time,
+   tinted for historic, outlined for season. */
+.tag-timeline { margin-top: 28px; }
+.tt-strip { display: flex; gap: 2px; height: 22px; }
+.tt-cell { flex: 1 1 0; min-width: 3px; border-radius: 3px; background: var(--line); }
+.tt-axis { display: flex; justify-content: space-between; margin-top: 4px; font-size: 0.75rem; color: var(--ink-soft); }
+.tt-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 0 8px; font-size: 0.8rem; color: var(--ink-soft); }
+.tt-key { display: inline-flex; align-items: center; gap: 6px; }
+.tt-key .tt-cell { flex: none; width: 14px; height: 14px; }
+.tt-all-high { background: var(--rise-fill); }
+.tt-all-low { background: var(--fall-fill); }
+.tt-historic-high { background: rgba(0, 122, 63, 0.3); }
+.tt-historic-low { background: rgba(214, 0, 79, 0.28); }
+.tt-season-high { background: transparent; box-shadow: inset 0 0 0 2px var(--rise); }
+.tt-season-low { background: transparent; box-shadow: inset 0 0 0 2px var(--fall); }
 .player-sub .record-season.record-high { border-color: var(--volt); color: var(--volt); }
 .player-sub .record-season.record-low { border-color: var(--fall-on-dark); color: var(--fall-on-dark); }
 .player-sub .record-historic.record-high { background: rgba(0, 255, 133, 0.16); color: var(--volt); }
