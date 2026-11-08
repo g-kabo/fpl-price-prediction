@@ -432,22 +432,26 @@ could read as describing the edited figure) and the header search:
   today" label would be missing on most days (3 highs and 7 lows on 4 November).
 - **A forecast must have moved at least £0.05m this season.** Without that floor, 80
   highs and 230 lows on 4 November were mostly tiny moves; with it, 50 and 129.
-- **All-time compares with the model's call from each completed season**, as the
-  player page makes them, because daily forecasts only began on 29 September 2026
-  and would otherwise only repeat the season label. These are today's model applied
-  in hindsight, not forecasts made at the time. A player with no past season gets the
-  season label only.
+- **All-time compares with the player's real start and end prices**, as the Price
+  History chart draws them: every completed season, and this one so far (its start and
+  today's price). Daily forecasts only began on 29 September 2026, so they can't give a
+  long history. It first compared with the model's call from each completed season
+  (today's model in hindsight), which gave a wrong answer for Mbeumo: his £8.42m
+  forecast sat above every start and end price on the chart (best £8.30m) yet below the
+  model's £9.29m call for 2024-25, so he had no historic label. A player with no past
+  season gets the season label only.
 - **Historic is the looser label, added after De Cuyper (£7.06m) sat far above his one
   past season (£4.82m) yet below this season's £7.31m, so had no label.** It means past
-  every completed season by at least £0.05m, whatever this season did. A player gets
-  one label, all-time first, then season, then historic, so Lewis-Skelly reads "Season
-  low" though he is above his past seasons. A forecast with no minutes behind it comes
-  from the price alone, so those players don't get it (75 labels on 4 November). A
+  every start and end price by at least £0.05m, whatever this forecast's own season
+  did. A player gets one label, all-time first, then historic, then season, so a season
+  low that is still above every past price reads "Historic high". A forecast with no
+  minutes behind it comes from the price alone, so those players don't get it. A
   player with one past season is always above or below it, so this is the label most
   likely to mean little.
 - **On Price Watch the record is a sortable column and a filter**, with the pill back
   under the name below 1001px, where a column would squeeze the name. Sorting runs
-  all-time high to all-time low with untagged players last either way, and the filter
+  from the rarest kind (all-time, then historic, then season, a high before a low of the
+  same scope) with untagged players last either way, and the filter
   also applies to the market map, like the others. The Club page keeps the pill under
   the name.
 - **Records compare forecasts to the nearest £0.01m, as the site shows them**
@@ -462,7 +466,7 @@ could read as describing the edited figure) and the header search:
   November were under that, and Woltemade's all-time high rested on 19 minutes.
 - **"New" means a kind of tag the player didn't hold on the last recorded morning.**
   So a season high that climbs again is not new, while moving from season high to
-  historic high is. Yesterday's tags are worked out with today's past calls, so only
+  historic high is. Yesterday's tags are worked out with today's past prices, so only
   the day's forecasts differ. A model refit would change many forecasts at once and
   show as a burst of new tags.
 - **`web/tests/render.mjs` draws what the model tests can't see**, and `pages.yml` runs

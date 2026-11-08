@@ -351,22 +351,23 @@ function recordClaim(record) {
   const reached = record.since ? `first reached on ${dayMonth(record.since)}` : "reached today";
   if (record.scope === "all") {
     return `All-time ${record.direction}: ${value} is the ${high ? "highest" : "lowest"} forecast on record, ${reached}. `
-      + `It is ${high ? "above" : "below"} the model's forecast from every past season, back to `
+      + `It is ${high ? "above" : "below"} every start and end price he has had, back to `
       + `${seasonLabel(record.past_from)}. The previous ${high ? "high" : "low"} was `
-      + `${money(record.past_best, false, 2)}, for ${seasonLabel(record.past_best_for)}.`;
+      + `${money(record.past_best, false, 2)}, in ${seasonLabel(record.past_best_for)}.`;
   }
   if (record.scope === "historic") {
-    return `Historic ${record.direction}: ${value} is ${high ? "above" : "below"} the model's forecast from every `
-      + `past season, back to ${seasonLabel(record.past_from)}. The ${high ? "highest" : "lowest"} of those was `
-      + `${money(record.past_best, false, 2)}, for ${seasonLabel(record.past_best_for)}. This season's own `
-      + `${record.direction} is ${money(record.season_best, false, 2)}, ${record.season_best_on ? `on ${dayMonth(record.season_best_on)}` : "reached today"}.`;
+    return `Historic ${record.direction}: ${value} is ${high ? "above" : "below"} every start and end price he has `
+      + `had, back to ${seasonLabel(record.past_from)}. The ${high ? "highest" : "lowest"} of those was `
+      + `${money(record.past_best, false, 2)}, in ${seasonLabel(record.past_best_for)}. This season's own `
+      + `${record.direction} forecast is ${money(record.season_best, false, 2)}, ${record.season_best_on ? `on ${dayMonth(record.season_best_on)}` : "reached today"}.`;
   }
   return `Season ${record.direction}: ${value} is the ${high ? "highest" : "lowest"} forecast since daily `
     + `tracking began on ${dayMonth(record.tracked_from)}, ${reached}.`;
 }
 
-/** Every kind of record, highest to lowest. */
-export const RECORD_KINDS = ["all-high", "season-high", "historic-high", "historic-low", "season-low", "all-low"];
+/** Every kind of record, rarest first; a high and a low of the same scope tie
+ *  in rarity, so the high goes first. */
+export const RECORD_KINDS = ["all-high", "all-low", "historic-high", "historic-low", "season-high", "season-low"];
 
 const RECORD_SCOPES = { all: "All-time", season: "Season", historic: "Historic" };
 

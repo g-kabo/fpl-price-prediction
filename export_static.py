@@ -162,22 +162,17 @@ def _project(season: live.LiveSeason, meta: dict) -> pd.DataFrame:
     return projected
 
 
-def past_calls(codes: set[int], predict_season: int) -> pd.DataFrame:
-    """The model's call from each completed season, as the player page makes it."""
+def past_prices(codes: set[int], projected: pd.DataFrame, predict_season: int) -> pd.DataFrame:
+    """Every start and end price a player has had, as the Price History chart
+    draws them: each completed season, and this one so far."""
     seasons = model_store.get_seasons()
     seasons = seasons[seasons["code"].isin(codes) & (seasons["season"] < predict_season)]
-    if seasons.empty:
-        return pd.DataFrame(columns=["code", "season", "call"])
-    inputs = []
-    for _, player in seasons.iterrows():
-        values = schema.with_ratios(schema.form_values(player))
-        values[schema.POSITION_FIELD] = player["element_type"]
-        values[schema.TEAM_FIELD] = player["team_name"]
-        inputs.append(form.row_from_values(values))
-    calls = model_store.get_model().predict(
-        pd.concat(inputs, ignore_index=True)[schema.MODEL_INPUT_COLUMNS])
-    return pd.DataFrame({"code": seasons["code"].to_numpy(), "season": seasons["season"].to_numpy(),
-                         "call": np.asarray(calls)})
+    rows = [seasons[["code", "season", "start_cost"]].rename(columns={"start_cost": "price"}),
+            seasons[["code", "season", "final_cost"]].rename(columns={"final_cost": "price"})]
+    now = projected[projected["code"].isin(codes)].assign(season=predict_season)
+    rows += [now[["code", "season", "start_cost"]].rename(columns={"start_cost": "price"}),
+             now[["code", "season", "price_now"]].rename(columns={"price_now": "price"})]
+    return pd.concat(rows, ignore_index=True).dropna(subset=["price"])
 
 
 def forecast_records(season: live.LiveSeason, projected: pd.DataFrame,
@@ -191,7 +186,7 @@ def forecast_records(season: live.LiveSeason, projected: pd.DataFrame,
     today = projected.set_index("code")["pred"]
     played = set(projected.loc[projected["minutes_now"] > 0, "code"].astype(int))
     marks, changes = forecast_history.with_changes(
-        history, today, past_calls(set(today.index.astype(int)), predict_season), played)
+        history, today, past_prices(set(today.index.astype(int)), projected, predict_season), played)
     forecast_history.mark_few_minutes(marks, projected.set_index("code")["minutes_now"])
     return marks, changes
 

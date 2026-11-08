@@ -67,21 +67,21 @@ def load(season: int = config.PREDICT_SEASON, inputs: bool = False) -> pd.DataFr
     return frame
 
 
-def records(history: pd.DataFrame, today: pd.Series, past_calls: pd.DataFrame,
+def records(history: pd.DataFrame, today: pd.Series, past_prices: pd.DataFrame,
             played: set[int] | None = None) -> dict[int, dict]:
     """Players whose forecast today is at a season, all-time or historic extreme.
 
     ``history`` holds the earlier mornings (``date``, ``code``,
     ``pred_next_start``), ``today`` is today's forecast by code, and
-    ``past_calls`` the model's call from each completed season (``code``,
-    ``season``, ``call``). Forecasts compare to the nearest £0.01m. A record
+    ``past_prices`` every start and end price from past and current seasons
+    (``code``, ``season``, ``price``). Forecasts compare to the nearest £0.01m. A record
     holds until the forecast leaves it, and ties count. A season whose forecasts have stayed within
     :data:`RECORD_MIN_RANGE` has no record worth naming, and with no earlier
     morning there is nothing to compare with. All-time needs a past season
     to beat, or it would only repeat the season label.
 
     A player with neither can still be at a historic high or low: past every
-    completed season by at least :data:`RECORD_MIN_RANGE`, whatever this
+    start and end price by at least :data:`RECORD_MIN_RANGE`, whatever this
     season's own peak or trough. Only for those in ``played`` (everyone if
     None), as a forecast with no minutes behind it comes from the price alone.
     """
@@ -89,7 +89,7 @@ def records(history: pd.DataFrame, today: pd.Series, past_calls: pd.DataFrame,
         return {}
     tracked_from = min(history["date"])
     earlier = dict(tuple(history.groupby("code")))
-    past = dict(tuple(past_calls.groupby("code"))) if not past_calls.empty else {}
+    past = dict(tuple(past_prices.groupby("code"))) if not past_prices.empty else {}
 
     out: dict[int, dict] = {}
     for code, value in today.dropna().items():
@@ -118,25 +118,27 @@ def records(history: pd.DataFrame, today: pd.Series, past_calls: pd.DataFrame,
         }
         calls = past.get(code)
         if calls is not None:
-            rounded = _shown(calls["call"])
+            rounded = _shown(calls["price"])
             target = best(rounded)
             if best(value, target) == value:
                 record.update(
                     scope="all",
                     past_best=float(target),
-                    # A call from a season forecasts the one after it.
-                    past_best_for=int(calls.loc[rounded == target, "season"].max()) + 1,
-                    past_from=int(calls["season"].min()) + 1,
+                    past_best_for=int(calls.loc[rounded == target, "season"].max()),
+                    past_from=int(calls["season"].min()),
                 )
+        if record["scope"] == "season" and (played is None or code in played):
+            # Past every earlier season says more than a season extreme.
+            record = _historic(value, rows, calls) or record
         out[int(code)] = record
     return out
 
 
 def _historic(value: float, rows: pd.DataFrame, calls: pd.DataFrame | None) -> dict | None:
-    """A forecast past every completed season, or None."""
+    """A forecast past every past start and end price, or None."""
     if calls is None:
         return None
-    rounded = _shown(calls["call"])
+    rounded = _shown(calls["price"])
     if round(value - rounded.max(), 3) >= RECORD_MIN_RANGE:
         direction, best, target = "high", max, rounded.max()
     elif round(rounded.min() - value, 3) >= RECORD_MIN_RANGE:
@@ -151,14 +153,14 @@ def _historic(value: float, rows: pd.DataFrame, calls: pd.DataFrame | None) -> d
         "scope": "historic",
         "value": value,
         "past_best": float(target),
-        "past_best_for": int(calls.loc[rounded == target, "season"].max()) + 1,
-        "past_from": int(calls["season"].min()) + 1,
+        "past_best_for": int(calls.loc[rounded == target, "season"].max()),
+        "past_from": int(calls["season"].min()),
         "season_best": float(season_best),
         "season_best_on": min(reached).isoformat() if len(reached) else None,
     }
 
 
-def with_changes(history: pd.DataFrame, today: pd.Series, past_calls: pd.DataFrame,
+def with_changes(history: pd.DataFrame, today: pd.Series, past_prices: pd.DataFrame,
                  played: set[int] | None = None) -> tuple[dict[int, dict], dict | None]:
     """:func:`records`, plus what changed since the last recorded morning.
 
@@ -166,16 +168,16 @@ def with_changes(history: pd.DataFrame, today: pd.Series, past_calls: pd.DataFra
     that morning, whether he had none or a different one. The second value
     names that morning and who held a record then and holds none now; it is
     None until there are two mornings to compare. That morning is judged as
-    today is, with today's past calls.
+    today is, with today's past prices.
     """
-    marks = records(history, today, past_calls, played)
+    marks = records(history, today, past_prices, played)
     if history.empty or history["date"].nunique() < 2:
         return marks, None
 
     last = max(history["date"])
     morning = history[history["date"] == last]
     before = records(history[history["date"] < last], morning.set_index("code")["pred_next_start"],
-                     past_calls, set(morning.loc[morning["minutes"] > 0, "code"].astype(int)))
+                     past_prices, set(morning.loc[morning["minutes"] > 0, "code"].astype(int)))
 
     def kind(mark: dict | None) -> str | None:
         return f"{mark['scope']}-{mark['direction']}" if mark else None
