@@ -199,3 +199,14 @@ def test_ties_round_as_the_site_does():
     # 7.675 is just under in binary, so Python and the site both show 7.67.
     assert forecast_history._shown(pd.Series([7.675, 2.675, 7.696])).tolist() == [7.67, 2.67, 7.7]
 
+
+
+def test_past_prices_skip_players_with_no_completed_season(monkeypatch):
+    import export_static
+
+    seasons = pd.DataFrame({"code": [1], "season": [2025], "start_cost": [5.0], "final_cost": [5.5]})
+    monkeypatch.setattr(export_static.model_store, "get_seasons", lambda: seasons)
+    projected = pd.DataFrame({"code": [1, 2], "start_cost": [5.5, 4.5], "price_now": [5.6, 4.6]})
+    prices = export_static.past_prices({1, 2}, projected, 2026)
+    assert set(prices["code"]) == {1}
+    assert sorted(prices["season"].unique()) == [2025, 2026]

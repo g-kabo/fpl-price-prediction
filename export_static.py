@@ -164,12 +164,15 @@ def _project(season: live.LiveSeason, meta: dict) -> pd.DataFrame:
 
 def past_prices(codes: set[int], projected: pd.DataFrame, predict_season: int) -> pd.DataFrame:
     """Every start and end price a player has had, as the Price History chart
-    draws them: each completed season, and this one so far."""
+    draws them: each completed season, and this one so far for a player who
+    has completed one."""
     seasons = model_store.get_seasons()
     seasons = seasons[seasons["code"].isin(codes) & (seasons["season"] < predict_season)]
     rows = [seasons[["code", "season", "start_cost"]].rename(columns={"start_cost": "price"}),
             seasons[["code", "season", "final_cost"]].rename(columns={"final_cost": "price"})]
-    now = projected[projected["code"].isin(codes)].assign(season=predict_season)
+    # A player with no completed season has nothing to compare with: his own
+    # prices this season would only be compared with themselves.
+    now = projected[projected["code"].isin(set(seasons["code"]))].assign(season=predict_season)
     rows += [now[["code", "season", "start_cost"]].rename(columns={"start_cost": "price"}),
              now[["code", "season", "price_now"]].rename(columns={"price_now": "price"})]
     return pd.concat(rows, ignore_index=True).dropna(subset=["price"])
