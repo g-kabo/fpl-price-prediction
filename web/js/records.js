@@ -33,6 +33,36 @@ export function recordedOn(points, day) {
   return found;
 }
 
+/** The kind of tag a player held on recorded morning `day` ("historic-high"),
+ *  or null for none. forecasts.json's `tags` keep change points only, so this
+ *  is the last at or before that day. */
+export function tagOn(forecasts, code, day) {
+  let kind = null;
+  for (const [at, value] of (forecasts.tags || {})[String(code)] || []) {
+    if (at > day) break;
+    kind = value;
+  }
+  return kind;
+}
+
+/** Players who hold a different tag, or one where they had none, today than on
+ *  recorded morning `day` (`gained`), and those who held one then and none now
+ *  (`lost`, each with `was`). Compares the two mornings only, so a tag that
+ *  came and went in between counts as neither. Players with no forecast today
+ *  are skipped. */
+export function tagChanges(forecasts, players, day) {
+  const gained = [];
+  const lost = [];
+  for (const p of players) {
+    if (!Number.isFinite(p.pred)) continue;
+    const now = p.record ? `${p.record.scope}-${p.record.direction}` : null;
+    const then = tagOn(forecasts, p.code, day);
+    if (now && now !== then) gained.push(p);
+    else if (!now && then) lost.push({ ...p, was: then });
+  }
+  return { gained, lost };
+}
+
 /** This player's recorded mornings, with today taken from the board itself,
  *  so the trend always ends on the number shown above it. */
 export function trendDays(forecasts, board, record, interval) {

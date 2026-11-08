@@ -160,6 +160,32 @@ def _historic(value: float, rows: pd.DataFrame, calls: pd.DataFrame | None) -> d
     }
 
 
+def kind(mark: dict | None) -> str | None:
+    """A record's kind, "historic-high" for example, or None for no record."""
+    return f"{mark['scope']}-{mark['direction']}" if mark else None
+
+
+def _morning_marks(history: pd.DataFrame, day, past_prices: pd.DataFrame) -> dict[int, dict]:
+    """The records a recorded morning held, judged as today is: against the
+    mornings before it, with today's past prices."""
+    morning = history[history["date"] == day]
+    return records(history[history["date"] < day], morning.set_index("code")["pred_next_start"],
+                   past_prices, set(morning.loc[morning["minutes"] > 0, "code"].astype(int)))
+
+
+def timeline(history: pd.DataFrame, past_prices: pd.DataFrame) -> dict:
+    """The record each player held on each recorded morning, by date then code.
+
+    ``{date: {code: kind}}``, with players holding none left out. The first
+    morning has nothing to compare with, so it is left out and nobody holds a
+    record on it. Each morning is judged as :func:`with_changes` judges the
+    last, so the page can compare any two mornings the same way.
+    """
+    return {day: {int(code): kind(mark) for code, mark in
+                  _morning_marks(history, day, past_prices).items()}
+            for day in sorted(history["date"].unique())[1:]}
+
+
 def with_changes(history: pd.DataFrame, today: pd.Series, past_prices: pd.DataFrame,
                  played: set[int] | None = None) -> tuple[dict[int, dict], dict | None]:
     """:func:`records`, plus what changed since the last recorded morning.
@@ -175,12 +201,7 @@ def with_changes(history: pd.DataFrame, today: pd.Series, past_prices: pd.DataFr
         return marks, None
 
     last = max(history["date"])
-    morning = history[history["date"] == last]
-    before = records(history[history["date"] < last], morning.set_index("code")["pred_next_start"],
-                     past_prices, set(morning.loc[morning["minutes"] > 0, "code"].astype(int)))
-
-    def kind(mark: dict | None) -> str | None:
-        return f"{mark['scope']}-{mark['direction']}" if mark else None
+    before = _morning_marks(history, last, past_prices)
 
     for code, mark in marks.items():
         if kind(mark) != kind(before.get(code)):
