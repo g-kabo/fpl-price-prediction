@@ -288,6 +288,14 @@ it with no server and no cold start (Render's free tier sleeps after 15 minutes)
 - **Dropped:** the "same answer as the batch pipeline" line on What if. It needed
   `output/`, which is not committed, so it never showed on a hosted copy anyway.
 - **GitHub Pages needs a public repo on the free plan.**
+- **The deploy retries (November 2026).** From 2026-11-24, `deploy-pages` kept
+  failing with "No artifacts named … were found", a second after the upload had
+  succeeded: GitHub takes a while to list a new artifact. Moving to
+  `deploy-pages@v5` didn't help (that was tried first); waiting did. `pages.yml`
+  now tries again after 1 and then 4 minutes, and the first real run deployed on
+  the second try. The artifact is named per run attempt, because "Re-run failed
+  jobs" uploads a second copy and `deploy-pages` won't choose between two
+  artifacts with the same name.
 
 ---
 
